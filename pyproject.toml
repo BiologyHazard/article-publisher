@@ -1,0 +1,11 @@
+[project]
+name = "2026-06-02-bilibili-article"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "pillow>=12.2.0",
+    "python-dotenv>=1.0.0",
+    "requests>=2.34.2",
+]

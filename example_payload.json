@@ -1,0 +1,979 @@
+{
+  "arg": {
+    "type": 4,
+    "template_id": 1,
+    "category_id": 15,
+    "article_id": 350788,
+    "title": "专栏标题",
+    "private_pub": 2,
+    "reprint": 0,
+    "original": 1,
+    "list_id": 1061428,
+    "comment_selected": 0,
+    "up_closed_reply": 0,
+    "timer_pub_time": 0,
+    "only_fans_level": 0,
+    "only_fans_dnd": 0,
+    "image_urls": [
+      "http://i0.hdslb.com/bfs/new_dyn/75bcaeda5e715d7a31a164e07cc091621349647254.png"
+    ],
+    "summary": "一级标题\n\n二级标题\n\n三级标题\n\n普通文本\n\n极小字号\n\n粗体\n\n斜体\n\n下划线\n\n删除线\n\n红色文字\n\n红色背景\n\n左对齐\n\n居中对齐\n\n右对齐\n\n无缩进\n\n一级缩进\n\n二级缩进\n\n\n\n\n\n有序列表之一\n\n\n\n有序列表之二\n\n\n\n\n\n有序列表之二点一\n\n\n\n\n\n有序列表之二点一点一\n\n\n\n\n\n无序列表之一\n\n\n\n无序列表之二\n\n\n\n\n\n无序列表之二点一\n\n\n\n\n\n无序列表之二点一点一\n\n\n\n\n\n上面有一条分割线\n\n\n\n这是一个引用\n\n引用引用\n\n[[doge_金箍]][[笑哭]][[蹲蹲]]",
+    "opus": {
+      "opus_source": 2,
+      "title": "专栏标题",
+      "content": {
+        "paragraphs": [
+          {
+            "para_type": 9,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              },
+              "heading_type": 1
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "一级标题",
+                    "font_size": 24,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "xxLarge"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 9,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              },
+              "heading_type": 2
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "二级标题",
+                    "font_size": 22,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "xLarge"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 9,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              },
+              "heading_type": 3
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "三级标题",
+                    "font_size": 20,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "large"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 1,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              }
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "普通文本",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 1,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              }
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "极小字号",
+                    "font_size": 13,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "small"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 1,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              }
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "粗体",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {
+                      "bold": true
+                    },
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 1,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              }
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "斜体",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {
+                      "italic": true
+                    },
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 1,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              }
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "下划线",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {
+                      "underline": true
+                    },
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 1,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              }
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "删除线",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {
+                      "strikethrough": true
+                    },
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 1,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              }
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "红色文字",
+                    "font_size": 17,
+                    "color": "#c9272c",
+                    "dark_color": "#E18281",
+                    "style": {},
+                    "font_level": "regular",
+                    "bili_theme": "Re7"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 1,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              }
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "红色背景",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular",
+                    "bg_style": {
+                      "style": 1,
+                      "color": {
+                        "color": "#ffd9e4",
+                        "dark_color": "#472030",
+                        "bili_theme": "Pi2"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 1,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              }
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "左对齐",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 1,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              },
+              "align": 1
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "居中对齐",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 1,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              },
+              "align": 2
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "右对齐",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 1,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              },
+              "align": 0
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "无缩进",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 1,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 1
+              },
+              "align": 0
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "一级缩进",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 1,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 2
+              }
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "二级缩进",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 5,
+            "format": {
+              "align": 0,
+              "list_format": {
+                "level": 1,
+                "order": 1,
+                "theme": "arabic_num"
+              },
+              "combine_hash": "list_1780421967155_49ms6y5"
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "有序列表之一",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 5,
+            "format": {
+              "align": 0,
+              "list_format": {
+                "level": 1,
+                "order": 2,
+                "theme": "arabic_num"
+              },
+              "combine_hash": "list_1780421967155_49ms6y5"
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "有序列表之二",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 5,
+            "format": {
+              "align": 0,
+              "list_format": {
+                "level": 2,
+                "order": 1,
+                "theme": "lower_letter"
+              },
+              "combine_hash": "list_1780421967156_vncnoo4"
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "有序列表之二点一",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 5,
+            "format": {
+              "align": 0,
+              "list_format": {
+                "level": 3,
+                "order": 1,
+                "theme": "roman_num"
+              },
+              "combine_hash": "list_1780421967157_qucqsqr"
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "有序列表之二点一点一",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 6,
+            "format": {
+              "align": 0,
+              "list_format": {
+                "level": 1,
+                "order": 1,
+                "theme": "dot"
+              },
+              "combine_hash": "list_1780421967157_ds0bvnf"
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "无序列表之一",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 6,
+            "format": {
+              "align": 0,
+              "list_format": {
+                "level": 1,
+                "order": 2,
+                "theme": "dot"
+              },
+              "combine_hash": "list_1780421967157_ds0bvnf"
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "无序列表之二",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 6,
+            "format": {
+              "align": 0,
+              "list_format": {
+                "level": 2,
+                "order": 1,
+                "theme": "square"
+              },
+              "combine_hash": "list_1780421967158_apfq4a6"
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "无序列表之二点一",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 6,
+            "format": {
+              "align": 0,
+              "list_format": {
+                "level": 3,
+                "order": 1,
+                "theme": "circle"
+              },
+              "combine_hash": "list_1780421967158_1h1rdgr"
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "无序列表之二点一点一",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 1,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              }
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 4,
+                  "link": {
+                    "show_text": "链接展示文字",
+                    "link": "https://member.bilibili.com/platform/upload/text/new-edit?aid=350788",
+                    "icon": "",
+                    "icon_suffix": "",
+                    "link_type": 16,
+                    "biz_id": "",
+                    "pics": [],
+                    "style": {
+                      "bold": false,
+                      "italic": false,
+                      "strikethrough": false,
+                      "underline": false,
+                      "font_size": 0,
+                      "font_level": "regular"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 3,
+            "line": {
+              "line_type": 1
+            }
+          },
+          {
+            "para_type": 1,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              }
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "上面有一条分割线",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 4,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              },
+              "combine_hash": "blockquote_1780421967159_0.40501190813454013"
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "这是一个引用",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 4,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              },
+              "combine_hash": "blockquote_1780421967159_0.40501190813454013"
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "引用引用",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 1,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              }
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 2,
+                  "emote": {
+                    "raw_text": "[doge_金箍]"
+                  }
+                },
+                {
+                  "node_type": 2,
+                  "emote": {
+                    "raw_text": "[笑哭]"
+                  }
+                },
+                {
+                  "node_type": 2,
+                  "emote": {
+                    "raw_text": "[蹲蹲]"
+                  }
+                },
+                {
+                  "node_type": 2,
+                  "emote": {
+                    "raw_text": "[星星眼]"
+                  }
+                },
+                {
+                  "node_type": 2,
+                  "emote": {
+                    "raw_text": "[微笑]"
+                  }
+                },
+                {
+                  "node_type": 2,
+                  "emote": {
+                    "raw_text": "[吃瓜]"
+                  }
+                },
+                {
+                  "node_type": 2,
+                  "emote": {
+                    "raw_text": "[打call]"
+                  }
+                },
+                {
+                  "node_type": 2,
+                  "emote": {
+                    "raw_text": "[打call]"
+                  }
+                },
+                {
+                  "node_type": 2,
+                  "emote": {
+                    "raw_text": "[OK]"
+                  }
+                },
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "这些是emoji",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 8,
+            "code": {
+              "lang": "python",
+              "content": "这是代码块的第一行\n第二行\n第三行\n\n第五行"
+            }
+          },
+          {
+            "para_type": 1,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              }
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "右边是一个 Latex 公式：",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                },
+                {
+                  "node_type": 5,
+                  "formula": {
+                    "latex_content": "E = mc^2"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 1,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              }
+            },
+            "text": {
+              "nodes": [
+                {
+                  "node_type": 1,
+                  "word": {
+                    "words": "下面有两张图片，第一张没有描述，第二张有描述",
+                    "font_size": 17,
+                    "color": "",
+                    "dark_color": "",
+                    "style": {},
+                    "font_level": "regular"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "para_type": 2,
+            "pic": {
+              "pics": [
+                {
+                  "url": "http://i0.hdslb.com/bfs/new_dyn/4624f8b9a4772e36e9ca2e522085904a1349647254.png",
+                  "width": 128,
+                  "height": 128,
+                  "size": 5.66,
+                  "ai_gen_pic": 0
+                }
+              ],
+              "style": 0
+            }
+          },
+          {
+            "para_type": 2,
+            "pic": {
+              "pics": [
+                {
+                  "url": "http://i0.hdslb.com/bfs/new_dyn/eae3465442cf505296f9f3df6c60f5e51349647254.png",
+                  "width": 256,
+                  "height": 256,
+                  "size": 12.72,
+                  "comment": "这是图片的描述",
+                  "ai_gen_pic": 0
+                }
+              ],
+              "style": 0
+            }
+          },
+          {
+            "para_type": 1,
+            "format": {
+              "indent": {
+                "first_line_indent": 0,
+                "indent": 0
+              }
+            },
+            "text": {
+              "nodes": []
+            }
+          }
+        ]
+      },
+      "pub_info": {
+        "editor_version": "eva3-3.0.0"
+      },
+      "attachments": {
+        "is_aigc": 0
+      }
+    }
+  }
+}
