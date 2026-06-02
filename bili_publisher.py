@@ -633,15 +633,9 @@ def publish_article(
     summary = build_summary(paragraphs)
     print(f"  摘要: {summary[:60]}...")
 
-    # ---- 提取所有图片URL ----
-    image_urls = []
-    for p in paragraphs:
-        if p.get("para_type") == 2:
-            for pic in p.get("pic", {}).get("pics", []):
-                if pic.get("url"):
-                    image_urls.append(pic["url"])
-
     # ---- 构造请求参数 ----
+    # 注意：image_urls 是文章封面（自定义封面），不是正文图片列表，
+    #       如果不需要自定义封面则不传此字段
     arg: dict = {
         "type": 4,
         "template_id": 1,
@@ -671,8 +665,6 @@ def publish_article(
             },
         },
     }
-    if image_urls:
-        arg["image_urls"] = image_urls
     if article_id is not None:
         arg["article_id"] = article_id
 
