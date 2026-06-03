@@ -152,26 +152,23 @@ result = publish_article(client, article_dir, up_closed_reply=1)
 ## 项目文件结构
 
 ```
-├── main.py                 # 入口脚本
-├── bili_publisher.py       # 核心逻辑（API封装、Markdown解析）
-├── .env                    # 认证配置（已gitignore）
-├── .env.example            # 环境变量模板
-├── example_payload.json    # 真实payload示例（供参考）
-├── PAYLOAD_GUIDE.md        # Payload 详解文档
-├── API_REFERENCE.md        # 完整 API 参考文档
-├── pyproject.toml          # Python 项目配置
-├── README.md               # 本文件
+├── main.py                     # 入口脚本
+├── bili_publisher.py           # 核心逻辑（API 封装、Markdown 解析）
+├── .env                        # 认证配置（已 gitignore）
+├── .env.example                # 环境变量模板
+├── pyproject.toml              # Python 项目配置
+├── README.md                   # 本文件
 ├── articles/
 │   └── article1/
 │       ├── main.md
-│       ├── payload.json    # 运行时自动导出（调试用）
+│       ├── payload.json        # 运行时自动导出（调试用）
 │       └── images/
 │           ├── image.png
 │           └── og-image.png
 └── docs/ 相关文档
-    ├── API_REFERENCE.md
-    ├── PAYLOAD_GUIDE.md
-    └── example_payload.json
+    ├── API_REFERENCE.md        # 完整 API 参考文档
+    ├── PAYLOAD_GUIDE.md        # Payload 详解文档
+    └── example_payload.json    # 真实payload示例（供参考）
 ```
 
 ---
