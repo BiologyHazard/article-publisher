@@ -1,0 +1,20 @@
+{
+  "code": 0,
+  "data": {
+    "document": {
+      "display_setting": {
+        "show_authors": true,
+        "show_comment_count": false,
+        "show_create_time": false,
+        "show_like_count": false,
+        "show_pv": false,
+        "show_related_matters": false,
+        "show_uv": false
+      },
+      "document_id": "UXiMw9NeNiH3ypkyaXmc5VR7nvc",
+      "revision_id": 483,
+      "title": "飞书云文档 api 测试 - 这是文章标题"
+    }
+  },
+  "msg": "success"
+}

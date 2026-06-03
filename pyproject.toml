@@ -1,11 +1,19 @@
 [project]
-name = "2026-06-02-bilibili-article"
+name = "bilibili-article"
 version = "0.1.0"
-description = "Add your description here"
+description = "Make bilibili articles with ease."
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "lark-oapi>=1.6.8",
     "pillow>=12.2.0",
     "python-dotenv>=1.0.0",
     "requests>=2.34.2",
 ]
+
+[build-system]
+requires = ["uv_build>=0.11,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv]
+package = true
