@@ -9,6 +9,5 @@ wheels/
 # Virtual environments
 .venv
 
-# Environment variables (contains SESSDATA, bili_jct, etc.)
+# Environment variables
 .env
-config.json
