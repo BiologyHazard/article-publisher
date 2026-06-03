@@ -52,23 +52,33 @@ def publish_article(
     original: int = 0,
     comment_selected: int = 0,
     up_closed_reply: int = 0,
+    timer_pub_time: int = 0,
+    list_id: int = 0,
+    image_urls: list[str] | None = None,
+    is_aigc: int = 0,
+    hashtag_ids: list[int] | None = None,
     payload_path: str | None = None,
 ) -> dict:
     """
     将转换后的内容发布到 B站 草稿箱。
 
     参数:
-        client:          已认证的 BiliClient 实例
-        converter:       内容转换器实例
-        title:           文章标题
-        category_id:     分区 ID (15=生活, 4=游戏...)
-        article_id:      已有草稿 ID（None 表示新建）
-        private_pub:     可见性 (2=公开, 1=仅自己可见)
-        reprint:         转载设置 (1=禁止转载)
-        original:        原创声明 (0=不声明, 1=声明原创)
-        comment_selected:精选评论 (0=关闭, 1=开启)
-        up_closed_reply: 关闭评论 (0=允许评论, 1=关闭评论)
-        payload_path:    payload 导出路径（None 表示不导出）
+        client:           已认证的 BiliClient 实例
+        converter:        内容转换器实例
+        title:            文章标题
+        category_id:      分区 ID (15=生活, 4=游戏...)
+        article_id:       已有草稿 ID（None 表示新建）
+        private_pub:      可见性 (2=公开, 1=仅自己可见)
+        reprint:          转载设置 (1=禁止转载)
+        original:         原创声明 (0=不声明, 1=声明原创)
+        comment_selected: 精选评论 (0=关闭, 1=开启)
+        up_closed_reply:  关闭评论 (0=允许评论, 1=关闭评论)
+        timer_pub_time:   定时发布时间戳 (0=不定时, UTC+8)
+        list_id:          文集 ID (0=不加入文集)
+        image_urls:       自定义封面 URL 列表（最多一张）
+        is_aigc:          AI 辅助创作声明 (0=否, 1=是)
+        hashtag_ids:      话题 ID 列表
+        payload_path:     payload 导出路径（None 表示不导出）
 
     返回:
         API 响应 JSON
@@ -88,10 +98,10 @@ def publish_article(
         "private_pub": private_pub,
         "reprint": reprint,
         "original": original,
-        "list_id": 0,
+        "list_id": list_id,
         "comment_selected": comment_selected,
         "up_closed_reply": up_closed_reply,
-        "timer_pub_time": 0,
+        "timer_pub_time": timer_pub_time,
         "only_fans_level": 0,
         "only_fans_dnd": 0,
         "summary": summary,
@@ -105,12 +115,16 @@ def publish_article(
                 "editor_version": "eva3-3.0.0",
             },
             "attachments": {
-                "is_aigc": 0,
+                "is_aigc": is_aigc,
             },
         },
     }
     if article_id is not None:
         arg["article_id"] = article_id
+    if image_urls:
+        arg["image_urls"] = image_urls
+    if hashtag_ids:
+        arg["hashtag_ids"] = hashtag_ids
 
     # 导出 payload（调试用）
     if payload_path:

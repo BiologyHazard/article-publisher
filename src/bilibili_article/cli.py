@@ -74,7 +74,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="飞书云文档 ID",
     )
 
-    # 公共选项
+    # 文章元信息
     parser.add_argument(
         "--category",
         type=int,
@@ -86,8 +86,72 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="设为仅自己可见",
     )
+    parser.add_argument(
+        "--close-comments",
+        action="store_true",
+        help="关闭评论",
+    )
+    parser.add_argument(
+        "--select-comments",
+        action="store_true",
+        help="开启精选评论",
+    )
+    parser.add_argument(
+        "--original",
+        action="store_true",
+        help="声明为原创",
+    )
+    parser.add_argument(
+        "--aigc",
+        action="store_true",
+        help="声明内容包含 AI 辅助创作",
+    )
+    parser.add_argument(
+        "--cover",
+        type=str,
+        default=None,
+        help="自定义封面图片路径",
+    )
+    parser.add_argument(
+        "--publish-time",
+        type=str,
+        default=None,
+        help=(
+            "定时发布时间（UTC+8），格式：YYYY-MM-DD HH:MM，"
+            "最早为当前时间+2小时，最晚为7天内"
+        ),
+    )
+    parser.add_argument(
+        "--list-id",
+        type=int,
+        default=0,
+        help="文集 ID（0=不加入文集）",
+    )
+    parser.add_argument(
+        "--hashtags",
+        type=str,
+        default=None,
+        help="话题 ID，逗号分隔，如：123,456",
+    )
+    parser.add_argument(
+        "--update",
+        type=int,
+        default=None,
+        metavar="ARTICLE_ID",
+        help="更新已有草稿（传入草稿 ID）",
+    )
 
     return parser
+
+
+def _parse_publish_time(text: str) -> int:
+    """将 'YYYY-MM-DD HH:MM' 格式的时间字符串转为 UTC 时间戳。"""
+    import datetime
+
+    dt = datetime.datetime.strptime(text, "%Y-%m-%d %H:%M")
+    # 用户输入的是北京时间 (UTC+8)，转为 UTC 时间戳
+    dt_utc = dt.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8)))
+    return int(dt_utc.timestamp())
 
 
 def main() -> None:
@@ -96,6 +160,15 @@ def main() -> None:
 
     category_id = args.category
     private_pub = 1 if args.private else 2
+    up_closed_reply = 1 if args.close_comments else 0
+    comment_selected = 1 if args.select_comments else 0
+    original = 1 if args.original else 0
+    is_aigc = 1 if args.aigc else 0
+    timer_pub_time = _parse_publish_time(args.publish_time) if args.publish_time else 0
+    hashtag_ids = (
+        [int(x) for x in args.hashtags.split(",") if x] if args.hashtags else None
+    )
+    article_id = args.update
 
     #  加载 B站认证
     cfg = load_auth()
@@ -106,11 +179,47 @@ def main() -> None:
 
     client = BiliClient(cfg["SESSDATA"], cfg["bili_jct"], cfg["buvid3"])
 
+    # 上传封面图
+    image_urls: list[str] | None = None
+    if args.cover:
+        print(f"  上传封面图: {args.cover}")
+        image_info = client.upload_image(args.cover)
+        image_urls = [image_info["url"]]
+        print(f"    → {image_info['url']}")
+
     try:
         if args.mode in ("lark",):
-            _run_lark(client, args.doc_id, category_id, private_pub)
+            _run_lark(
+                client,
+                args.doc_id,
+                category_id,
+                private_pub,
+                up_closed_reply,
+                comment_selected,
+                original,
+                timer_pub_time,
+                args.list_id,
+                image_urls,
+                is_aigc,
+                hashtag_ids,
+                article_id,
+            )
         else:  # markdown / md
-            _run_markdown(client, args.article_dir, category_id, private_pub)
+            _run_markdown(
+                client,
+                args.article_dir,
+                category_id,
+                private_pub,
+                up_closed_reply,
+                comment_selected,
+                original,
+                timer_pub_time,
+                args.list_id,
+                image_urls,
+                is_aigc,
+                hashtag_ids,
+                article_id,
+            )
     except BiliApiError as e:
         print(f"\n❌ API 错误 [{e.code}]: {e.message}")
         sys.exit(1)
@@ -124,6 +233,15 @@ def _run_markdown(
     article_dir: str,
     category_id: int,
     private_pub: int,
+    up_closed_reply: int = 0,
+    comment_selected: int = 0,
+    original: int = 0,
+    timer_pub_time: int = 0,
+    list_id: int = 0,
+    image_urls: list[str] | None = None,
+    is_aigc: int = 0,
+    hashtag_ids: list[int] | None = None,
+    article_id: int | None = None,
 ) -> None:
     """Markdown 模式：处理本地文章目录。"""
     article_dir = os.path.abspath(article_dir)
@@ -147,7 +265,7 @@ def _run_markdown(
     print(f"\n📄 专栏: {article_dir}")
     print("-" * 40)
 
-    converter = MarkdownConverter(client, article_dir)
+    converter = MarkdownConverter(client, article_dir, md_content)
     payload_path = os.path.join(article_dir, "payload.json")
 
     result = publish_article(
@@ -156,6 +274,15 @@ def _run_markdown(
         title=title,
         category_id=category_id,
         private_pub=private_pub,
+        up_closed_reply=up_closed_reply,
+        comment_selected=comment_selected,
+        original=original,
+        timer_pub_time=timer_pub_time,
+        list_id=list_id,
+        image_urls=image_urls,
+        is_aigc=is_aigc,
+        hashtag_ids=hashtag_ids,
+        article_id=article_id,
         payload_path=payload_path,
     )
     _print_success(result)
@@ -166,6 +293,15 @@ def _run_lark(
     doc_id: str,
     category_id: int,
     private_pub: int,
+    up_closed_reply: int = 0,
+    comment_selected: int = 0,
+    original: int = 0,
+    timer_pub_time: int = 0,
+    list_id: int = 0,
+    image_urls: list[str] | None = None,
+    is_aigc: int = 0,
+    hashtag_ids: list[int] | None = None,
+    article_id: int | None = None,
 ) -> None:
     """飞书云文档模式：从飞书文档 ID 导入。"""
     lark_cfg = load_lark_auth()
@@ -199,6 +335,15 @@ def _run_lark(
         title=title,
         category_id=category_id,
         private_pub=private_pub,
+        up_closed_reply=up_closed_reply,
+        comment_selected=comment_selected,
+        original=original,
+        timer_pub_time=timer_pub_time,
+        list_id=list_id,
+        image_urls=image_urls,
+        is_aigc=is_aigc,
+        hashtag_ids=hashtag_ids,
+        article_id=article_id,
         payload_path=payload_path,
     )
     _print_success(result)

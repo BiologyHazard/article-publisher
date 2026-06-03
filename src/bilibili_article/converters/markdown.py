@@ -64,11 +64,13 @@ def _parse_inline(text: str) -> list[InlineNode]:
 class MarkdownConverter(BaseConverter):
     """将 Markdown 字符串转换为 Opus paragraphs 列表。"""
 
-    def __init__(self, client: BiliClient, base_dir: str):
+    def __init__(self, client: BiliClient, base_dir: str, md: str = ""):
         self.client = client
         self.base_dir = base_dir
+        self._md = md
 
-    def convert(self, md: str) -> list[Paragraph]:  # type: ignore[misc]
+    def convert(self) -> list[Paragraph]:  # type: ignore[misc,override]
+        md = self._md
         lines = md.split("\n")
         paragraphs: list[Paragraph] = []  # type: ignore[valid-type]
         buffer: list[InlineNode] = []  # type: ignore[valid-type]

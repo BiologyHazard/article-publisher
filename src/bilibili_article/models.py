@@ -342,5 +342,6 @@ class ArgPayload(TypedDict, total=False):
     only_fans_level: int
     only_fans_dnd: int
     image_urls: list[str]  # NotRequired（自定义封面，可选）
+    hashtag_ids: list[int]  # NotRequired（话题 ID 列表，可选）
     summary: str
     opus: OpusBody
