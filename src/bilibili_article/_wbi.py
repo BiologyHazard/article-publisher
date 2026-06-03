@@ -4,11 +4,15 @@ WBI 签名工具
 用于 B站 API 请求的 WBI 签名。
 """
 
+from __future__ import annotations
+
 import hashlib
 import time
 import urllib.parse
+from typing import TYPE_CHECKING
 
-import requests
+if TYPE_CHECKING:
+    import requests
 
 MIXIN_KEY_TABLE = [
     46,

@@ -7,7 +7,10 @@ B站 API 客户端封装。
 - 保存草稿
 """
 
+from __future__ import annotations
+
 import os
+from typing import TYPE_CHECKING
 
 import requests
 from PIL import Image
@@ -18,6 +21,9 @@ from bilibili_article._wbi import (
     get_mixin_key,
     sign_wbi_params,
 )
+
+if TYPE_CHECKING:
+    from bilibili_article.models import ArgPayload
 
 
 class BiliApiError(Exception):
@@ -156,7 +162,7 @@ class BiliClient:
     # 专栏草稿箱
     # ------------------------------------------------------------------
 
-    def save_draft(self, arg_payload: dict) -> dict:
+    def save_draft(self, arg_payload: ArgPayload) -> dict:  # type: ignore[misc]
         """
         将专栏保存到草稿箱。
         arg_payload 即请求体中 arg 字段的内容。
@@ -165,7 +171,7 @@ class BiliClient:
         url = f"{BILI_API_BASE}/x/dynamic/feed/article/draft/add"
         params = self.sign({"csrf": self.csrf})
         body = {"arg": arg_payload}
-        resp = self.session.post(url, params=params, json=body)
+        resp = self.session.post(url, params=params, json=body)  # type: ignore[arg-type]
         result = resp.json()
         if result.get("code") != 0:
             raise BiliApiError(

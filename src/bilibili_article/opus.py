@@ -5,6 +5,28 @@ B站 Opus 格式数据构建器。
 段落 (paragraph) 和内联节点 (node) 数据结构。
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from bilibili_article.models import (
+        BlockquoteParagraph,
+        CodeParagraph,
+        DividerParagraph,
+        EmoteNode,
+        FormulaNode,
+        HeadingParagraph,
+        ImageParagraph,
+        ImagePic,
+        InlineNode,
+        LinkNode,
+        OrderedListParagraph,
+        TextNode,
+        TextParagraph,
+        UnorderedListParagraph,
+    )
+
 # =============================================================================
 # 文本节点常量
 # =============================================================================
@@ -31,7 +53,7 @@ def make_text_node(
     strikethrough: bool = False,
     color: str = "",
     dark_color: str = "",
-) -> dict:
+) -> TextNode:
     """构造一个 Opus 文本节点 (node_type=1)。"""
     style: dict[str, bool] = {}
     if bold:
@@ -43,30 +65,28 @@ def make_text_node(
     if strikethrough:
         style["strikethrough"] = True
 
-    node: dict = {
+    node: TextNode = {
         "node_type": 1,
         "word": {
             "words": words,
             "font_size": font_size,
             "color": color,
             "dark_color": dark_color,
-            "style": style,
+            "style": style,  # type: ignore[typeddict-item]
             "font_level": font_level,
         },
     }
-    if not style:
-        node["word"]["style"] = {}
     return node
 
 
-def make_heading_node(words: str, level: int) -> dict:
+def make_heading_node(words: str, level: int) -> TextNode:
     """构造标题节点。"""
     cfg = {
         1: {"font_size": 24, "font_level": "xxLarge"},
         2: {"font_size": 22, "font_level": "xLarge"},
         3: {"font_size": 20, "font_level": "large"},
     }.get(level, {"font_size": 20, "font_level": "large"})
-    return {
+    node: TextNode = {
         "node_type": 1,
         "word": {
             "words": words,
@@ -77,11 +97,12 @@ def make_heading_node(words: str, level: int) -> dict:
             "font_level": cfg["font_level"],
         },
     }
+    return node
 
 
-def make_link_node(show_text: str, url: str) -> dict:
+def make_link_node(show_text: str, url: str) -> LinkNode:
     """构造超链接节点 (node_type=4)。"""
-    return {
+    node: LinkNode = {
         "node_type": 4,
         "link": {
             "show_text": show_text,
@@ -101,26 +122,29 @@ def make_link_node(show_text: str, url: str) -> dict:
             },
         },
     }
+    return node
 
 
-def make_formula_node(latex_content: str) -> dict:
+def make_formula_node(latex_content: str) -> FormulaNode:
     """构造 Latex 公式节点 (node_type=5)。"""
-    return {
+    node: FormulaNode = {
         "node_type": 5,
         "formula": {
             "latex_content": latex_content,
         },
     }
+    return node
 
 
-def make_emote_node(raw_text: str) -> dict:
+def make_emote_node(raw_text: str) -> EmoteNode:
     """构造表情节点 (node_type=2)。"""
-    return {
+    node: EmoteNode = {
         "node_type": 2,
         "emote": {
             "raw_text": raw_text,
         },
     }
+    return node
 
 
 # =============================================================================
@@ -129,13 +153,13 @@ def make_emote_node(raw_text: str) -> dict:
 
 
 def make_text_paragraph(
-    nodes: list[dict],
+    nodes: list[InlineNode],
     *,
     align: int | None = None,
     indent_level: int = 0,
-) -> dict:
+) -> TextParagraph:
     """构造普通文本段落 (para_type=1)。"""
-    para: dict = {
+    para: TextParagraph = {
         "para_type": 1,
         "format": {
             "indent": {
@@ -146,14 +170,14 @@ def make_text_paragraph(
         "text": {"nodes": nodes},
     }
     if align is not None and align != 0:
-        para["format"]["align"] = align
+        para["format"]["align"] = align  # type: ignore[typeddict-item]
     return para
 
 
-def make_heading_paragraph(words: str, level: int) -> dict:
+def make_heading_paragraph(words: str, level: int) -> HeadingParagraph:
     """构造标题段落 (para_type=9)。"""
     heading_type = {1: 1, 2: 2, 3: 3}.get(level, 3)
-    return {
+    para: HeadingParagraph = {
         "para_type": 9,
         "format": {
             "indent": {"first_line_indent": 0, "indent": 0},
@@ -161,6 +185,7 @@ def make_heading_paragraph(words: str, level: int) -> dict:
         },
         "text": {"nodes": [make_heading_node(words, level)]},
     }
+    return para
 
 
 def make_image_paragraph(
@@ -169,9 +194,9 @@ def make_image_paragraph(
     height: int,
     size: float = 0,
     comment: str = "",
-) -> dict:
+) -> ImageParagraph:
     """构造图片段落 (para_type=2)。"""
-    pic: dict = {
+    pic: ImagePic = {  # type: ignore[misc]
         "url": img_url,
         "width": width,
         "height": height,
@@ -180,28 +205,30 @@ def make_image_paragraph(
     }
     if comment:
         pic["comment"] = comment
-    return {
+    para: ImageParagraph = {
         "para_type": 2,
         "pic": {
             "pics": [pic],
             "style": 0,
         },
     }
+    return para
 
 
-def make_divider_paragraph() -> dict:
+def make_divider_paragraph() -> DividerParagraph:
     """构造分隔线段落 (para_type=3)。"""
-    return {"para_type": 3, "line": {"line_type": 1}}
+    para: DividerParagraph = {"para_type": 3, "line": {"line_type": 1}}
+    return para
 
 
 def make_blockquote_paragraph(
-    nodes: list[dict],
+    nodes: list[InlineNode],
     combine_hash: str,
     *,
     align: int | None = None,
-) -> dict:
+) -> BlockquoteParagraph:
     """构造引用段落 (para_type=4)。"""
-    para: dict = {
+    para: BlockquoteParagraph = {
         "para_type": 4,
         "format": {
             "indent": {"first_line_indent": 0, "indent": 0},
@@ -210,23 +237,23 @@ def make_blockquote_paragraph(
         "text": {"nodes": nodes},
     }
     if align is not None and align != 0:
-        para["format"]["align"] = align
+        para["format"]["align"] = align  # type: ignore[typeddict-item]
     return para
 
 
 def make_ordered_list_paragraph(
-    nodes: list[dict],
+    nodes: list[InlineNode],
     level: int,
     order: int,
     combine_hash: str,
     *,
     align: int | None = None,
-) -> dict:
+) -> OrderedListParagraph:
     """构造有序列表段落 (para_type=5)。"""
     theme = {1: "arabic_num", 2: "lower_letter", 3: "roman_num"}.get(
         level, "arabic_num"
     )
-    para: dict = {
+    para: OrderedListParagraph = {
         "para_type": 5,
         "format": {
             "align": align if align is not None else 0,
@@ -243,16 +270,16 @@ def make_ordered_list_paragraph(
 
 
 def make_unordered_list_paragraph(
-    nodes: list[dict],
+    nodes: list[InlineNode],
     level: int,
     order: int,
     combine_hash: str,
     *,
     align: int | None = None,
-) -> dict:
+) -> UnorderedListParagraph:
     """构造无序列表段落 (para_type=6)。"""
     theme = {1: "dot", 2: "square", 3: "circle"}.get(level, "dot")
-    para: dict = {
+    para: UnorderedListParagraph = {
         "para_type": 6,
         "format": {
             "align": align if align is not None else 0,
@@ -268,12 +295,13 @@ def make_unordered_list_paragraph(
     return para
 
 
-def make_code_paragraph(content: str, lang: str = "") -> dict:
+def make_code_paragraph(content: str, lang: str = "") -> CodeParagraph:
     """构造代码块段落 (para_type=8)。"""
-    return {
+    para: CodeParagraph = {
         "para_type": 8,
         "code": {
             "lang": lang,
             "content": content,
         },
     }
+    return para

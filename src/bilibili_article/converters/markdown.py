@@ -5,8 +5,11 @@ Markdown → Opus 转换器。
 支持图片自动上传到 B站 图床。
 """
 
+from __future__ import annotations
+
 import os
 import re
+from typing import TYPE_CHECKING
 
 from bilibili_article.client import BiliApiError, BiliClient
 from bilibili_article.converters.base import BaseConverter
@@ -18,6 +21,9 @@ from bilibili_article.opus import (
     make_text_paragraph,
 )
 
+if TYPE_CHECKING:
+    from bilibili_article.models import InlineNode, Paragraph
+
 # 内联 Markdown 解析：**粗体** *斜体* ~~删除线~~ `行内代码`
 _INLINE_PATTERN = re.compile(
     r"~~(.*?)~~"  # ~~删除线~~
@@ -28,9 +34,10 @@ _INLINE_PATTERN = re.compile(
 )
 
 
-def _parse_inline(text: str) -> list[dict]:
+def _parse_inline(text: str) -> list[InlineNode]:
     """将一行纯文本解析为 Opus 文本节点列表。"""
-    nodes: list[dict] = []
+    nodes: list[InlineNode] = []
+
     for match in _INLINE_PATTERN.finditer(text):
         if match.group(1) is not None:  # ~~删除线~~
             nodes.append(make_text_node(match.group(1), strikethrough=True))
@@ -44,11 +51,11 @@ def _parse_inline(text: str) -> list[dict]:
             ch = match.group(5)
             if (
                 nodes
-                and not nodes[-1]["word"]["style"]
-                and nodes[-1]["word"]["font_level"] == "regular"
-                and not nodes[-1]["word"]["color"]
+                and not nodes[-1]["word"]["style"]  # type: ignore[union-attr]
+                and nodes[-1]["word"]["font_level"] == "regular"  # type: ignore[union-attr]
+                and not nodes[-1]["word"]["color"]  # type: ignore[union-attr]
             ):
-                nodes[-1]["word"]["words"] += ch
+                nodes[-1]["word"]["words"] += ch  # type: ignore[union-attr]
             else:
                 nodes.append(make_text_node(ch))
     return nodes
@@ -61,10 +68,10 @@ class MarkdownConverter(BaseConverter):
         self.client = client
         self.base_dir = base_dir
 
-    def convert(self, md: str) -> list[dict]:
+    def convert(self, md: str) -> list[Paragraph]:  # type: ignore[misc]
         lines = md.split("\n")
-        paragraphs: list[dict] = []
-        buffer: list[dict] = []
+        paragraphs: list[Paragraph] = []  # type: ignore[valid-type]
+        buffer: list[InlineNode] = []  # type: ignore[valid-type]
 
         def flush():
             nonlocal buffer
@@ -104,9 +111,9 @@ class MarkdownConverter(BaseConverter):
             buffer.extend(_parse_inline(stripped))
 
         flush()
-        return paragraphs
+        return paragraphs  # type: ignore[return-type]
 
-    def _process_image(self, match: re.Match, paragraphs: list[dict]) -> None:
+    def _process_image(self, match: re.Match, paragraphs: list[Paragraph]) -> None:  # type: ignore[misc]
         """处理图片：上传并追加图片段落。"""
         raw_path = match.group(1)
         img_path = (

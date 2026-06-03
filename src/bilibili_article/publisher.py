@@ -4,19 +4,23 @@
 负责构造完整的 Opus 请求参数 (arg payload) 并调用 B站 API 保存草稿。
 """
 
+from __future__ import annotations
+
 import json
 import os
-import re
+from typing import TYPE_CHECKING
 
-from bilibili_article.client import BiliClient
-from bilibili_article.converters.base import BaseConverter
+if TYPE_CHECKING:
+    from bilibili_article.client import BiliClient
+    from bilibili_article.converters.base import BaseConverter
+    from bilibili_article.models import ArgPayload, InlineNode, Paragraph
 
 
-def build_summary(paragraphs: list[dict]) -> str:
+def build_summary(paragraphs: list[Paragraph]) -> str:  # type: ignore[misc]
     """从段落列表中提取纯文本摘要（取前 200 字）。"""
     texts: list[str] = []
 
-    def extract(nodes: list[dict]) -> None:
+    def extract(nodes: list[InlineNode]) -> None:  # type: ignore[misc]
         for node in nodes:
             if node.get("node_type") == 1:
                 texts.append(node.get("word", {}).get("words", ""))
@@ -76,7 +80,7 @@ def publish_article(
     summary = build_summary(paragraphs)
     print(f"  摘要: {summary[:60]}...")
 
-    arg: dict = {
+    arg: ArgPayload = {  # type: ignore[valid-type,misc]
         "type": 4,
         "template_id": 1,
         "category_id": category_id,
