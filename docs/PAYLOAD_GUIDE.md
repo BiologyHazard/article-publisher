@@ -1,6 +1,6 @@
 # Opus 专栏 Payload 详解
 
-> 本文档对照 [`example_payload.json`](example_payload.json) 逐层解析 B站 Opus 专栏的请求体结构。
+> 本文档对照 [`bilibili_保存到草稿箱_example_payload.json`](bilibili_保存到草稿箱_example_payload.json) 逐层解析 B站 Opus 专栏的请求体结构。
 > 该 payload 来自在 B站 编辑器中手动编辑文章后点"保存草稿"时抓取的真实请求。
 
 ---
@@ -454,4 +454,4 @@
 
 > 最后更新：2026-06-03 | 编辑器版本：eva3-3.0.0
 >
-> 对应示例文件：[`example_payload.json`](example_payload.json)
+> 对应示例文件：[`bilibili_保存到草稿箱_example_payload.json`](bilibili_保存到草稿箱_example_payload.json)

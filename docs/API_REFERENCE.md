@@ -152,7 +152,7 @@ def sign_wbi_params(params: dict, mixin_key: str) -> dict:
 文章正文由 `paragraphs`（段落数组）构成。
 
 > 📄 **完整指南见 [`PAYLOAD_GUIDE.md`](PAYLOAD_GUIDE.md)**
-> 对照 [`example_payload.json`](example_payload.json) 逐层详解所有段落类型和节点格式。
+> 对照 [`bilibili_保存到草稿箱_example_payload.json`](bilibili_保存到草稿箱_example_payload.json) 逐层详解所有段落类型和节点格式。
 
 ### 4.1 整体结构
 

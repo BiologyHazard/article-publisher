@@ -168,7 +168,7 @@ result = publish_article(client, article_dir, up_closed_reply=1)
 └── docs/ 相关文档
     ├── API_REFERENCE.md        # 完整 API 参考文档
     ├── PAYLOAD_GUIDE.md        # Payload 详解文档
-    └── example_payload.json    # 真实payload示例（供参考）
+    └── bilibili_保存到草稿箱_example_payload.json    # 真实 payload 示例（供参考）
 ```
 
 ---
@@ -181,7 +181,7 @@ result = publish_article(client, article_dir, up_closed_reply=1)
 | 2 | `POST /x/dynamic/feed/draw/upload_bfs` | 上传图片到 B站 CDN |
 | 3 | `POST /x/dynamic/feed/article/draft/add` | 保存草稿（WBI 签名） |
 
-详细 API 文档见 [`API_REFERENCE.md`](API_REFERENCE.md)，Payload 格式详解见 [`PAYLOAD_GUIDE.md`](PAYLOAD_GUIDE.md)。
+详细 API 文档见 [`API_REFERENCE.md`](docs/API_REFERENCE.md)，Payload 格式详解见 [`PAYLOAD_GUIDE.md`](docs/PAYLOAD_GUIDE.md)。
 
 ---
 
