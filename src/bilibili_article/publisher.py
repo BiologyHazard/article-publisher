@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import json
-import os
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -16,11 +15,11 @@ if TYPE_CHECKING:
     from bilibili_article.models import ArgPayload, InlineNode, Paragraph
 
 
-def build_summary(paragraphs: list[Paragraph]) -> str:  # type: ignore[misc]
+def build_summary(paragraphs: list[Paragraph]) -> str:
     """从段落列表中提取纯文本摘要（取前 200 字）。"""
     texts: list[str] = []
 
-    def extract(nodes: list[InlineNode]) -> None:  # type: ignore[misc]
+    def extract(nodes: list[InlineNode]) -> None:
         for node in nodes:
             if node.get("node_type") == 1:
                 texts.append(node.get("word", {}).get("words", ""))
@@ -45,6 +44,7 @@ def publish_article(
     converter: BaseConverter,
     title: str,
     *,
+    dry_run: bool = False,
     category_id: int = 15,
     article_id: int | None = None,
     private_pub: int = 2,
@@ -57,7 +57,6 @@ def publish_article(
     image_urls: list[str] | None = None,
     is_aigc: int = 0,
     hashtag_ids: list[int] | None = None,
-    payload_path: str | None = None,
 ) -> dict:
     """
     将转换后的内容发布到 B站 草稿箱。
@@ -66,6 +65,7 @@ def publish_article(
         client:           已认证的 BiliClient 实例
         converter:        内容转换器实例
         title:            文章标题
+        dry_run:          仅构建 payload 并输出到 stdout，不发送请求
         category_id:      分区 ID (15=生活, 4=游戏...)
         article_id:       已有草稿 ID（None 表示新建）
         private_pub:      可见性 (2=公开, 1=仅自己可见)
@@ -78,10 +78,9 @@ def publish_article(
         image_urls:       自定义封面 URL 列表（最多一张）
         is_aigc:          AI 辅助创作声明 (0=否, 1=是)
         hashtag_ids:      话题 ID 列表
-        payload_path:     payload 导出路径（None 表示不导出）
 
     返回:
-        API 响应 JSON
+        API 响应 JSON（dry_run 时返回空 dict）
     """
     print("  正在解析内容 ...")
     paragraphs = converter.convert()
@@ -90,7 +89,7 @@ def publish_article(
     summary = build_summary(paragraphs)
     print(f"  摘要: {summary[:60]}...")
 
-    arg: ArgPayload = {  # type: ignore[valid-type,misc]
+    arg: ArgPayload = {
         "type": 4,
         "template_id": 1,
         "category_id": category_id,
@@ -126,12 +125,13 @@ def publish_article(
     if hashtag_ids:
         arg["hashtag_ids"] = hashtag_ids
 
-    # 导出 payload（调试用）
-    if payload_path:
-        os.makedirs(os.path.dirname(payload_path) or ".", exist_ok=True)
-        with open(payload_path, "w", encoding="utf-8") as f:
-            json.dump({"arg": arg}, f, ensure_ascii=False, indent=2)
-        print(f"  payload 已导出: {payload_path}")
+    # 输出 payload 到 stdout
+    print("\n========== Payload ==========")
+    print(json.dumps({"arg": arg}, ensure_ascii=False, indent=2))
+    print("=============================")
+
+    if dry_run:
+        return {}
 
     print("  正在保存到草稿箱 ...")
     result = client.save_draft(arg)

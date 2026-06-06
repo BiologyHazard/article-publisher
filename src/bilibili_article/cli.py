@@ -119,7 +119,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "定时发布时间（UTC+8），格式：YYYY-MM-DD HH:MM，"
-            "最早为当前时间+2小时，最晚为7天内"
+            "最早为当前时间 +2 小时，最晚为 7 天内"
         ),
     )
     parser.add_argument(
@@ -133,6 +133,11 @@ def _build_parser() -> argparse.ArgumentParser:
         type=str,
         default=None,
         help="话题 ID，逗号分隔，如：123,456",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="仅转换并输出 payload，不保存到草稿箱",
     )
     parser.add_argument(
         "--update",
@@ -149,7 +154,7 @@ def _parse_publish_time(text: str) -> int:
     """将 'YYYY-MM-DD HH:MM' 格式的时间字符串转为 UTC 时间戳。"""
     import datetime
 
-    dt = datetime.datetime.strptime(text, "%Y-%m-%d %H:%M")
+    dt = datetime.datetime.strptime(text, "%Y-%m-%d %H:%M").astimezone()
     # 用户输入的是北京时间 (UTC+8)，转为 UTC 时间戳
     dt_utc = dt.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8)))
     return int(dt_utc.timestamp())
@@ -193,33 +198,35 @@ def main() -> None:
             _run_lark(
                 client,
                 args.doc_id,
-                category_id,
-                private_pub,
-                up_closed_reply,
-                comment_selected,
-                original,
-                timer_pub_time,
-                args.list_id,
-                image_urls,
-                is_aigc,
-                hashtag_ids,
-                article_id,
+                dry_run=args.dry_run,
+                category_id=category_id,
+                private_pub=private_pub,
+                up_closed_reply=up_closed_reply,
+                comment_selected=comment_selected,
+                original=original,
+                timer_pub_time=timer_pub_time,
+                list_id=args.list_id,
+                image_urls=image_urls,
+                is_aigc=is_aigc,
+                hashtag_ids=hashtag_ids,
+                article_id=article_id,
             )
         else:  # markdown / md
             _run_markdown(
                 client,
                 args.markdown_file,
-                category_id,
-                private_pub,
-                up_closed_reply,
-                comment_selected,
-                original,
-                timer_pub_time,
-                args.list_id,
-                image_urls,
-                is_aigc,
-                hashtag_ids,
-                article_id,
+                dry_run=args.dry_run,
+                category_id=category_id,
+                private_pub=private_pub,
+                up_closed_reply=up_closed_reply,
+                comment_selected=comment_selected,
+                original=original,
+                timer_pub_time=timer_pub_time,
+                list_id=args.list_id,
+                image_urls=image_urls,
+                is_aigc=is_aigc,
+                hashtag_ids=hashtag_ids,
+                article_id=article_id,
             )
     except BiliApiError as e:
         print(f"\n❌ API 错误 [{e.code}]: {e.message}")
@@ -232,8 +239,10 @@ def main() -> None:
 def _run_markdown(
     client: BiliClient,
     markdown_file: str,
-    category_id: int,
-    private_pub: int,
+    *,
+    dry_run: bool = False,
+    category_id: int = 15,
+    private_pub: int = 2,
     up_closed_reply: int = 0,
     comment_selected: int = 0,
     original: int = 0,
@@ -265,7 +274,6 @@ def _run_markdown(
     print("-" * 40)
 
     converter = MarkdownConverter(client, base_dir, md_content)
-    payload_path = os.path.join(base_dir, "payload.json")
 
     result = publish_article(
         client=client,
@@ -282,16 +290,19 @@ def _run_markdown(
         is_aigc=is_aigc,
         hashtag_ids=hashtag_ids,
         article_id=article_id,
-        payload_path=payload_path,
+        dry_run=dry_run,
     )
-    _print_success(result)
+    if not dry_run:
+        _print_success(result)
 
 
 def _run_lark(
     client: BiliClient,
     doc_id: str,
-    category_id: int,
-    private_pub: int,
+    *,
+    dry_run: bool = False,
+    category_id: int = 15,
+    private_pub: int = 2,
     up_closed_reply: int = 0,
     comment_selected: int = 0,
     original: int = 0,
@@ -326,8 +337,6 @@ def _run_lark(
     title = doc_info.get("title", "未命名文章")
     print(f"  标题: {title}")
 
-    payload_path = f"payload_lark_{doc_id}.json"
-
     result = publish_article(
         client=client,
         converter=converter,
@@ -343,9 +352,10 @@ def _run_lark(
         is_aigc=is_aigc,
         hashtag_ids=hashtag_ids,
         article_id=article_id,
-        payload_path=payload_path,
+        dry_run=dry_run,
     )
-    _print_success(result)
+    if not dry_run:
+        _print_success(result)
 
 
 def _print_success(result: dict) -> None:
