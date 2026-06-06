@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import re
+import time
 from typing import TYPE_CHECKING
 
 from bilibili_article.client import BiliApiError, BiliClient
@@ -17,12 +18,37 @@ from bilibili_article.opus import (
     make_divider_paragraph,
     make_heading_paragraph,
     make_image_paragraph,
+    make_ordered_list_paragraph,
     make_text_node,
     make_text_paragraph,
+    make_unordered_list_paragraph,
 )
 
 if TYPE_CHECKING:
     from bilibili_article.models import InlineNode, Paragraph
+
+
+# 列表检测正则：无序列表（- * +）和有序列表（1. 2. ...）
+_UNORDERED_LIST_RE = re.compile(r"^(\s*)([-*+])\s+(.*)")
+_ORDERED_LIST_RE = re.compile(r"^(\s*)(\d+)\.\s+(.*)")
+
+
+def _detect_list_item(line: str) -> tuple[str, int, str] | None:
+    """检测行是否为列表项。返回 (type, level, text) 或 None。"""
+    # 缩进决定层级：每 2 个空格升一级，最大 3 级
+    leading_spaces = len(line) - len(line.lstrip())
+    level = min(leading_spaces // 2 + 1, 3)
+
+    u_match = _UNORDERED_LIST_RE.match(line)
+    if u_match:
+        return ("unordered", level, u_match.group(3))
+
+    o_match = _ORDERED_LIST_RE.match(line)
+    if o_match:
+        return ("ordered", level, o_match.group(3))
+
+    return None
+
 
 # 内联 Markdown 解析：**粗体** *斜体* ~~删除线~~ `行内代码`
 _INLINE_PATTERN = re.compile(
@@ -75,44 +101,131 @@ class MarkdownConverter(BaseConverter):
         paragraphs: list[Paragraph] = []  # type: ignore[valid-type]
         buffer: list[InlineNode] = []  # type: ignore[valid-type]
 
+        # 列表分组状态
+        list_group: list[dict] = []  # type: ignore[valid-type]
+        list_type: str | None = None
+        list_hash: str = ""
+        list_group_active = False
+        consecutive_blank = False
+        _list_counter = 0
+
         def flush():
             nonlocal buffer
             if buffer:
                 paragraphs.append(make_text_paragraph(buffer))
                 buffer = []
 
+        def flush_list():
+            nonlocal list_group, list_type, list_hash, list_group_active, _list_counter
+            if not list_group_active:
+                return
+            for item in list_group:
+                nodes = _parse_inline(item["text"])
+                if list_type == "ordered":
+                    paragraphs.append(
+                        make_ordered_list_paragraph(
+                            nodes,
+                            level=item["level"],
+                            order=item["order"],
+                            combine_hash=list_hash,
+                        )
+                    )
+                else:
+                    paragraphs.append(
+                        make_unordered_list_paragraph(
+                            nodes,
+                            level=item["level"],
+                            order=item["order"],
+                            combine_hash=list_hash,
+                        )
+                    )
+            list_group = []
+            list_group_active = False
+            list_type = None
+            list_hash = ""
+
+        def start_list_group(item_type: str, level: int, text: str) -> None:
+            nonlocal list_group, list_type, list_hash, list_group_active, _list_counter
+            _list_counter += 1
+            list_type = item_type
+            list_hash = f"list_{int(time.time() * 1000000)}_{_list_counter}"
+            list_group = []
+            list_group_active = True
+
+        def get_list_order(stripped: str, item_type: str, level: int) -> int:
+            """计算列表项序号。"""
+            if item_type == "ordered":
+                m = re.match(r"^(?:\s*)(\d+)\.", stripped)
+                return int(m.group(1)) if m else 1
+            # 无序列表用 auto-increment 序号
+            return 1
+
         for line in lines:
             stripped = line.strip()
 
+            # 空行 — 中断当前列表组
             if not stripped:
                 flush()
+                flush_list()
+                consecutive_blank = True
                 continue
 
             # 标题
             h_match = re.match(r"^(#{1,3})\s+(.*)", stripped)
             if h_match:
                 flush()
+                flush_list()
                 level = len(h_match.group(1))
                 paragraphs.append(make_heading_paragraph(h_match.group(2), level))
+                consecutive_blank = False
                 continue
 
             # 图片 ![alt](path)
             img_match = re.match(r"!\[.*?\]\((.*?)\)", stripped)
             if img_match:
                 flush()
+                flush_list()
                 self._process_image(img_match, paragraphs)
+                consecutive_blank = False
                 continue
 
             # 分隔线
             if stripped in ("---", "***", "___"):
                 flush()
+                flush_list()
                 paragraphs.append(make_divider_paragraph())
+                consecutive_blank = False
                 continue
 
-            # 普通行
+            # 列表检测
+            list_info = _detect_list_item(line)
+            if list_info:
+                flush()  # 刷新之前的文本缓存
+                item_type, level, text = list_info
+
+                # 判断是否开始新列表组：类型变化、或空行后同类型
+                if not list_group_active or item_type != list_type or consecutive_blank:
+                    flush_list()
+                    start_list_group(item_type, level, text)
+
+                order = get_list_order(stripped, item_type, level)
+                list_group.append(
+                    {
+                        "level": level,
+                        "order": order,
+                        "text": text,
+                    }
+                )
+                consecutive_blank = False
+                continue
+
+            # 普通行 — 刷新列表组
+            flush_list()
             buffer.extend(_parse_inline(stripped))
+            consecutive_blank = False
 
         flush()
+        flush_list()
         return paragraphs  # type: ignore[return-type]
 
     def _process_image(self, match: re.Match, paragraphs: list[Paragraph]) -> None:  # type: ignore[misc]

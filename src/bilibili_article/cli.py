@@ -52,13 +52,13 @@ def _build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="mode", required=True, title="模式")
 
     # Markdown 子命令
-    md_parser = subparsers.add_parser(
+    markdown_parser = subparsers.add_parser(
         "markdown",
         aliases=["md"],
         help="从本地 Markdown 文件发布",
         description="从本地 Markdown 目录发布专栏文章",
     )
-    md_parser.add_argument(
+    markdown_parser.add_argument(
         "article_dir",
         help="文章目录（须包含 main.md 和 images/ 子目录）",
     )
