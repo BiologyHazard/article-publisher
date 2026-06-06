@@ -97,9 +97,10 @@ def _build_parser() -> argparse.ArgumentParser:
         help="开启精选评论",
     )
     parser.add_argument(
-        "--original",
-        action="store_true",
-        help="声明为原创",
+        "--no-original",
+        action="store_false",
+        dest="original",
+        help="不声明为原创",
     )
     parser.add_argument(
         "--aigc",
