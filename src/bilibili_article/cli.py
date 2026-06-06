@@ -56,11 +56,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "markdown",
         aliases=["md"],
         help="从本地 Markdown 文件发布",
-        description="从本地 Markdown 目录发布专栏文章",
+        description="从本地 Markdown 文件发布专栏文章",
     )
     markdown_parser.add_argument(
-        "article_dir",
-        help="文章目录（须包含 main.md 和 images/ 子目录）",
+        "markdown_file",
+        help="Markdown 文件路径（图片路径相对于该文件所在目录解析）",
     )
 
     # 飞书云文档子命令
@@ -207,7 +207,7 @@ def main() -> None:
         else:  # markdown / md
             _run_markdown(
                 client,
-                args.article_dir,
+                args.markdown_file,
                 category_id,
                 private_pub,
                 up_closed_reply,
@@ -230,7 +230,7 @@ def main() -> None:
 
 def _run_markdown(
     client: BiliClient,
-    article_dir: str,
+    markdown_file: str,
     category_id: int,
     private_pub: int,
     up_closed_reply: int = 0,
@@ -243,15 +243,11 @@ def _run_markdown(
     hashtag_ids: list[int] | None = None,
     article_id: int | None = None,
 ) -> None:
-    """Markdown 模式：处理本地文章目录。"""
-    article_dir = os.path.abspath(article_dir)
-    if not os.path.isdir(article_dir):
-        print(f"错误：目录不存在: {article_dir}")
-        sys.exit(1)
-
-    md_path = os.path.join(article_dir, "main.md")
+    """Markdown 模式：处理本地 Markdown 文件。"""
+    md_path = os.path.abspath(markdown_file)
     if not os.path.isfile(md_path):
-        raise FileNotFoundError(f"找不到 main.md: {md_path}")
+        print(f"错误：文件不存在: {md_path}")
+        sys.exit(1)
 
     with open(md_path, "r", encoding="utf-8") as f:
         md_content = f.read()
@@ -262,11 +258,13 @@ def _run_markdown(
     title_match = re.search(r"^#\s+(.*)", md_content, re.MULTILINE)
     title = title_match.group(1).strip() if title_match else "未命名文章"
 
-    print(f"\n📄 专栏: {article_dir}")
+    base_dir = os.path.dirname(md_path)
+
+    print(f"\n📄 文件: {md_path}")
     print("-" * 40)
 
-    converter = MarkdownConverter(client, article_dir, md_content)
-    payload_path = os.path.join(article_dir, "payload.json")
+    converter = MarkdownConverter(client, base_dir, md_content)
+    payload_path = os.path.join(base_dir, "payload.json")
 
     result = publish_article(
         client=client,
