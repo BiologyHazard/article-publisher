@@ -90,10 +90,13 @@ def _parse_inline(text: str) -> list[InlineNode]:
 class MarkdownConverter(BaseConverter):
     """将 Markdown 字符串转换为 Opus paragraphs 列表。"""
 
-    def __init__(self, client: BiliClient, base_dir: str, md: str = ""):
+    def __init__(
+        self, client: BiliClient, base_dir: str, md: str = "", *, dry_run: bool = False
+    ):
         self.client = client
         self.base_dir = base_dir
         self._md = md
+        self._dry_run = dry_run
 
     def convert(self) -> list[Paragraph]:  # type: ignore[misc,override]
         md = self._md
@@ -239,6 +242,11 @@ class MarkdownConverter(BaseConverter):
 
         if not os.path.isfile(img_path):
             print(f"  [警告] 图片文件不存在，跳过: {img_path}")
+            return
+
+        if self._dry_run:
+            paragraphs.append(make_image_paragraph(f"file://{img_path}", 800, 600, 0))
+            print(f"  [dry-run] 跳过上传: {img_path}")
             return
 
         print(f"  正在上传图片: {img_path}")

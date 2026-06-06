@@ -226,9 +226,12 @@ class LarkDocxConverter(BaseConverter):
         app_secret: str,
         document_id: str,
         bili_client: BiliClient,
+        *,
+        dry_run: bool = False,
     ):
         self.document_id = document_id
         self.bili_client = bili_client
+        self._dry_run = dry_run
         self._lark = _LarkHttpClient(app_id, app_secret)
 
         # block_id → block dict
@@ -457,6 +460,21 @@ class LarkDocxConverter(BaseConverter):
             return
 
         print(f"{prefix}正在处理图片: token={token}")
+
+        if self._dry_run:
+            caption = (image.get("caption") or {}).get("content", "")
+            paragraphs.append(
+                make_image_paragraph(
+                    f"lark://{token}",
+                    800,
+                    600,
+                    0,
+                    comment=caption,
+                )
+            )
+            print(f"{prefix}  [dry-run] 跳过下载和上传: token={token}")
+            return
+
         try:
             image_data = self._download_image(token)
             # 写入临时文件

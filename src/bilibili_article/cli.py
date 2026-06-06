@@ -187,7 +187,9 @@ def main() -> None:
 
     # 上传封面图
     image_urls: list[str] | None = None
-    if args.cover:
+    if args.dry_run and args.cover:
+        print(f"  [dry-run] 跳过封面上传: {args.cover}")
+    elif args.cover:
         print(f"  上传封面图: {args.cover}")
         image_info = client.upload_image(args.cover)
         image_urls = [image_info["url"]]
@@ -273,7 +275,7 @@ def _run_markdown(
     print(f"\n📄 文件: {md_path}")
     print("-" * 40)
 
-    converter = MarkdownConverter(client, base_dir, md_content)
+    converter = MarkdownConverter(client, base_dir, md_content, dry_run=dry_run)
 
     result = publish_article(
         client=client,
@@ -330,6 +332,7 @@ def _run_lark(
         app_secret=lark_cfg["LARK_APP_SECRET"],
         document_id=doc_id,
         bili_client=client,
+        dry_run=dry_run,
     )
 
     # 获取标题
