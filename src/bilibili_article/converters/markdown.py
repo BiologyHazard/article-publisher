@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeGuard
 
 from bilibili_article.client import BiliApiError, BiliClient
 from bilibili_article.converters.base import BaseConverter
@@ -26,7 +26,7 @@ from bilibili_article.opus import (
 )
 
 if TYPE_CHECKING:
-    from bilibili_article.models import InlineNode, Paragraph
+    from bilibili_article.models import InlineNode, Paragraph, TextNode
 
 
 # 列表检测正则：无序列表（- * +）和有序列表（1. 2. ...）
@@ -61,6 +61,11 @@ _INLINE_PATTERN = re.compile(
 )
 
 
+def _is_text_node(node: InlineNode) -> TypeGuard[TextNode]:
+    """判断 InlineNode 是否为 TextNode（node_type == 1）。"""
+    return node.get("node_type") == 1
+
+
 def _parse_inline(text: str) -> list[InlineNode]:
     """将一行纯文本解析为 Opus 文本节点列表。"""
     nodes: list[InlineNode] = []
@@ -76,13 +81,16 @@ def _parse_inline(text: str) -> list[InlineNode]:
             nodes.append(make_text_node(match.group(4), italic=True))
         elif match.group(5) is not None:  # 普通字符
             ch = match.group(5)
-            if (
-                nodes
-                and not nodes[-1]["word"]["style"]  # type: ignore[union-attr]
-                and nodes[-1]["word"]["font_level"] == "regular"  # type: ignore[union-attr]
-                and not nodes[-1]["word"]["color"]  # type: ignore[union-attr]
-            ):
-                nodes[-1]["word"]["words"] += ch  # type: ignore[union-attr]
+            if nodes and _is_text_node(nodes[-1]):
+                last = nodes[-1]
+                if (
+                    not last["word"]["style"]
+                    and last["word"]["font_level"] == "regular"
+                    and not last["word"]["color"]
+                ):
+                    last["word"]["words"] += ch
+                else:
+                    nodes.append(make_text_node(ch))
             else:
                 nodes.append(make_text_node(ch))
     return nodes

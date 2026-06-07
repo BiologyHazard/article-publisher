@@ -189,15 +189,15 @@ class TextParagraph(TypedDict):
     text: TextContent
 
 
-class ImagePic(TypedDict, total=False):
+class ImagePic(TypedDict):
     """图片段落中的单张图片信息。"""
 
     url: str
     width: int
     height: int
     size: float
-    comment: str
-    ai_gen_pic: int
+    comment: NotRequired[str]
+    ai_gen_pic: NotRequired[int]
 
 
 class PicGroup(TypedDict):

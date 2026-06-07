@@ -22,7 +22,7 @@ import tempfile
 import time
 import urllib.parse
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeGuard
 
 import requests
 
@@ -44,7 +44,7 @@ from bilibili_article.opus import (
 )
 
 if TYPE_CHECKING:
-    from bilibili_article.models import InlineNode, Paragraph
+    from bilibili_article.models import InlineNode, Paragraph, TextNode
 
 # =============================================================================
 # 常量
@@ -165,6 +165,11 @@ for bt in range(3, 12):  # heading1~9
 # 展平类容器（子块自动遍历）
 for bt in (24, 25, 30, 31, 32):
     _BLOCK_CONVERTERS[bt] = "_convert_skip"
+
+
+def _is_text_node(node: InlineNode) -> TypeGuard[TextNode]:
+    """判断 InlineNode 是否为 TextNode（node_type == 1）。"""
+    return node.get("node_type") == 1
 
 
 # =============================================================================
@@ -373,8 +378,8 @@ class LarkDocxConverter(BaseConverter):
             # H4~H9：B站不支持，用加粗正文代替
             nodes = self._elements_to_nodes(heading.get("elements", []))
             # 如果节点列表只有普通文本，改为加粗
-            if len(nodes) == 1 and nodes[0]["node_type"] == 1:
-                nodes[0]["word"]["style"]["bold"] = True  # type: ignore[union-attr]
+            if len(nodes) == 1 and _is_text_node(nodes[0]):
+                nodes[0]["word"]["style"]["bold"] = True
             paragraphs.append(make_text_paragraph(nodes))
 
     def _convert_bullet(
@@ -617,19 +622,20 @@ class LarkDocxConverter(BaseConverter):
         merged = [nodes[0]]
         for node in nodes[1:]:
             last = merged[-1]
-            if (
-                last["node_type"] == 1
-                and node["node_type"] == 1
-                and not last["word"]["style"]  # type: ignore[union-attr]
-                and not node["word"]["style"]  # type: ignore[union-attr]
-                and last["word"]["font_level"] == "regular"  # type: ignore[union-attr]
-                and node["word"]["font_level"] == "regular"  # type: ignore[union-attr]
-                and not last["word"]["color"]  # type: ignore[union-attr]
-                and not node["word"]["color"]  # type: ignore[union-attr]
-                and "bg_style" not in last["word"]  # type: ignore[union-attr]
-                and "bg_style" not in node["word"]  # type: ignore[union-attr]
-            ):
-                last["word"]["words"] += node["word"]["words"]  # type: ignore[union-attr]
+            if _is_text_node(last) and _is_text_node(node):
+                if (
+                    not last["word"]["style"]
+                    and not node["word"]["style"]
+                    and last["word"]["font_level"] == "regular"
+                    and node["word"]["font_level"] == "regular"
+                    and not last["word"]["color"]
+                    and not node["word"]["color"]
+                    and "bg_style" not in last["word"]
+                    and "bg_style" not in node["word"]
+                ):
+                    last["word"]["words"] += node["word"]["words"]
+                else:
+                    merged.append(node)
             else:
                 merged.append(node)
         return merged

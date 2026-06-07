@@ -24,6 +24,7 @@ if TYPE_CHECKING:
         OrderedListParagraph,
         TextNode,
         TextParagraph,
+        TextStyle,
         UnorderedListParagraph,
     )
 
@@ -55,7 +56,7 @@ def make_text_node(
     dark_color: str = "",
 ) -> TextNode:
     """构造一个 Opus 文本节点 (node_type=1)。"""
-    style: dict[str, bool] = {}
+    style: TextStyle = {}
     if bold:
         style["bold"] = True
     if italic:
@@ -72,7 +73,7 @@ def make_text_node(
             "font_size": font_size,
             "color": color,
             "dark_color": dark_color,
-            "style": style,  # type: ignore[typeddict-item]
+            "style": style,
             "font_level": font_level,
         },
     }
@@ -170,7 +171,7 @@ def make_text_paragraph(
         "text": {"nodes": nodes},
     }
     if align is not None and align != 0:
-        para["format"]["align"] = align  # type: ignore[typeddict-item]
+        para["format"]["align"] = align
     return para
 
 
@@ -196,7 +197,7 @@ def make_image_paragraph(
     comment: str = "",
 ) -> ImageParagraph:
     """构造图片段落 (para_type=2)。"""
-    pic: ImagePic = {  # type: ignore[misc]
+    pic: ImagePic = {
         "url": img_url,
         "width": width,
         "height": height,
@@ -237,7 +238,7 @@ def make_blockquote_paragraph(
         "text": {"nodes": nodes},
     }
     if align is not None and align != 0:
-        para["format"]["align"] = align  # type: ignore[typeddict-item]
+        para["format"]["align"] = align
     return para
 
 
