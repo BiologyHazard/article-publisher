@@ -41,7 +41,7 @@ _Token = dict[str, Any]
 # =============================================================================
 
 # mistune 启用插件列表
-_MISTUNE_PLUGINS = ["strikethrough", "table", "footnotes", "task_lists"]
+_MISTUNE_PLUGINS = ["strikethrough", "task_lists"]
 
 # 行内代码的前景色
 _INLINE_CODE_COLOR = "#c7254e"
