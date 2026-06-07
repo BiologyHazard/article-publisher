@@ -1,24 +1,28 @@
 """
 Markdown → Opus 转换器。
 
-将本地 Markdown 文件解析为 B站 Opus 格式的 paragraphs 列表。
+使用 mistune 将 Markdown 解析为 AST，再递归遍历 AST 转换为 B站 Opus 格式的 paragraphs 列表。
 支持图片自动上传到 B站 图床。
 """
 
 from __future__ import annotations
 
-import re
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, TypeGuard
+from typing import TYPE_CHECKING, Any, ClassVar, cast
+
+import mistune
 
 from bilibili_article.client import BiliApiError, BiliClient
 from bilibili_article.converters.base import BaseConverter
 from bilibili_article.log import logger
 from bilibili_article.opus import (
+    make_blockquote_paragraph,
+    make_code_paragraph,
     make_divider_paragraph,
     make_heading_paragraph,
     make_image_paragraph,
+    make_link_node,
     make_ordered_list_paragraph,
     make_text_node,
     make_text_paragraph,
@@ -26,247 +30,335 @@ from bilibili_article.opus import (
 )
 
 if TYPE_CHECKING:
-    from bilibili_article.models import InlineNode, Paragraph, TextNode
+    from bilibili_article.models import InlineNode, Paragraph
+
+# mistune AST token 类型
+_Token = dict[str, Any]
 
 
-# 列表检测正则：无序列表（- * +）和有序列表（1. 2. ...）
-_UNORDERED_LIST_RE = re.compile(r"^(\s*)([-*+])\s+(.*)")
-_ORDERED_LIST_RE = re.compile(r"^(\s*)(\d+)\.\s+(.*)")
+# =============================================================================
+# 常量
+# =============================================================================
+
+# mistune 启用插件列表
+_MISTUNE_PLUGINS = ["strikethrough", "table", "footnotes", "task_lists"]
+
+# 行内代码的前景色
+_INLINE_CODE_COLOR = "#c7254e"
 
 
-def _detect_list_item(line: str) -> tuple[str, int, str] | None:
-    """检测行是否为列表项。返回 (type, level, text) 或 None。"""
-    # 缩进决定层级：每 2 个空格升一级，最大 3 级
-    leading_spaces = len(line) - len(line.lstrip())
-    level = min(leading_spaces // 2 + 1, 3)
-
-    u_match = _UNORDERED_LIST_RE.match(line)
-    if u_match:
-        return ("unordered", level, u_match.group(3))
-
-    o_match = _ORDERED_LIST_RE.match(line)
-    if o_match:
-        return ("ordered", level, o_match.group(3))
-
-    return None
+# =============================================================================
+# 模块级辅助函数
+# =============================================================================
 
 
-# 内联 Markdown 解析：**粗体** *斜体* ~~删除线~~ `行内代码`
-_INLINE_PATTERN = re.compile(
-    r"~~(.*?)~~"  # ~~删除线~~
-    r"|`(.*?)`"  # `行内代码`
-    r"|\*\*(.*?)\*\*"  # **粗体**
-    r"|\*(.*?)\*"  # *斜体*
-    r"|(.)"  # 普通字符（fallback）
-)
+def _collect_list_item_content(item: _Token) -> tuple[list[_Token], _Token | None]:
+    """从 list_item token 中提取 mistune 内联 token 列表和嵌套列表。"""
+    inline_children: list[_Token] = []
+    nested_list: _Token | None = None
+
+    for child in item.get("children", []):
+        if child["type"] in ("block_text", "paragraph"):
+            inline_children.extend(child.get("children", []))
+        elif child["type"] == "list":
+            nested_list = child
+
+    return inline_children, nested_list
 
 
-def _is_text_node(node: InlineNode) -> TypeGuard[TextNode]:
-    """判断 InlineNode 是否为 TextNode（node_type == 1）。"""
-    return node.get("node_type") == 1
-
-
-def _parse_inline(text: str) -> list[InlineNode]:
-    """将一行纯文本解析为 Opus 文本节点列表。"""
-    nodes: list[InlineNode] = []
-
-    for match in _INLINE_PATTERN.finditer(text):
-        if match.group(1) is not None:  # ~~删除线~~
-            nodes.append(make_text_node(match.group(1), strikethrough=True))
-        elif match.group(2) is not None:  # `行内代码`
-            nodes.append(make_text_node(match.group(2), color="#c7254e"))
-        elif match.group(3) is not None:  # **粗体**
-            nodes.append(make_text_node(match.group(3), bold=True))
-        elif match.group(4) is not None:  # *斜体*
-            nodes.append(make_text_node(match.group(4), italic=True))
-        elif match.group(5) is not None:  # 普通字符
-            ch = match.group(5)
-            if nodes and _is_text_node(nodes[-1]):
-                last = nodes[-1]
-                if (
-                    not last["word"]["style"]
-                    and last["word"]["font_level"] == "regular"
-                    and not last["word"]["color"]
-                ):
-                    last["word"]["words"] += ch
+def _apply_style(nodes: list[InlineNode], **style: bool) -> list[InlineNode]:
+    """将样式应用到所有 TextNode 上（支持叠加，如 bold+italic）。"""
+    for node in nodes:
+        if node.get("node_type") == 1:
+            w = cast("dict[str, Any]", node)["word"]
+            for key, val in style.items():
+                if val:
+                    w["style"][key] = True
                 else:
-                    nodes.append(make_text_node(ch))
-            else:
-                nodes.append(make_text_node(ch))
+                    w["style"].pop(key, None)
     return nodes
 
 
-class _ListGroupBuilder:
-    """列表分组构建器，管理连续列表项的分组和输出。"""
-
-    def __init__(self) -> None:
-        self._items: list[dict] = []
-        self._type: str | None = None
-        self._hash: str = ""
-        self._active: bool = False
-        self._counter: int = 0
-
-    @property
-    def is_active(self) -> bool:
-        return self._active
-
-    def start(self, item_type: str) -> None:
-        """开始一个新的列表组。"""
-        self._counter += 1
-        self._type = item_type
-        self._hash = f"list_{int(time.time() * 1000000)}_{self._counter}"
-        self._items = []
-        self._active = True
-
-    def add_item(self, text: str, level: int, order: int) -> None:
-        """添加一个列表项。"""
-        self._items.append({"level": level, "order": order, "text": text})
-
-    def flush(self, paragraphs: list[Paragraph]) -> None:
-        """输出所有缓存的列表项并重置状态。"""
-        if not self._active:
-            return
-        for item in self._items:
-            nodes = _parse_inline(item["text"])
-            if self._type == "ordered":
-                paragraphs.append(
-                    make_ordered_list_paragraph(
-                        nodes,
-                        level=item["level"],
-                        order=item["order"],
-                        combine_hash=self._hash,
-                    )
-                )
-            else:
-                paragraphs.append(
-                    make_unordered_list_paragraph(
-                        nodes,
-                        level=item["level"],
-                        order=item["order"],
-                        combine_hash=self._hash,
-                    )
-                )
-        self._items = []
-        self._active = False
-        self._type = None
-        self._hash = ""
-
-    def should_start_new_group(self, item_type: str, consecutive_blank: bool) -> bool:
-        """判断是否需要开始新列表组。"""
-        return not self._active or item_type != self._type or consecutive_blank
+def _has_visible_text(nodes: list[InlineNode]) -> bool:
+    """判断 nodes 列表中是否有可见文本内容。"""
+    for n in nodes:
+        if n.get("node_type") == 1:
+            words = cast("dict[str, Any]", n)["word"]["words"]
+            if words.strip():
+                return True
+        elif n.get("node_type") == 4:
+            return True
+    return False
 
 
-def _get_list_order(stripped: str, item_type: str) -> int:
-    """计算列表项序号。"""
-    if item_type == "ordered":
-        m = re.match(r"^(?:\s*)(\d+)\.", stripped)
-        return int(m.group(1)) if m else 1
-    return 1
+# =============================================================================
+# 转换器
+# =============================================================================
 
 
 class MarkdownConverter(BaseConverter):
     """将本地 Markdown 文件转换为 Opus paragraphs 列表。"""
 
     def __init__(
-        self,
-        client: BiliClient,
-        markdown_file_path: Path,
-        *,
-        dry_run: bool = False,
+        self, client: BiliClient, markdown_file_path: Path, *, dry_run: bool = False
     ):
         self.client = client
         self.base_dir = markdown_file_path.resolve().parent
         with open(markdown_file_path, "r", encoding="utf-8") as f:
             self._md = f.read()
         self._dry_run = dry_run
+        self._counter = 0
+        self._parser = mistune.create_markdown(renderer=None, plugins=_MISTUNE_PLUGINS)
+
+    # ==================================================================
+    # 公开接口
+    # ==================================================================
 
     def get_title(self) -> str:
         """从 Markdown 内容中提取第一个 H1 标题。"""
-        title_match = re.search(r"^#\s+(.*)", self._md, re.MULTILINE)
-        return title_match.group(1).strip() if title_match else "未命名文章"
+        for token in self._parser(self._md):
+            t = cast("_Token", token)
+            if t["type"] == "heading" and t["attrs"]["level"] == 1:
+                return self._extract_text(t)
+        return "未命名文章"
 
-    def convert(self) -> list[Paragraph]:  # type: ignore[misc,override]
-        md = self._md
-        lines = md.split("\n")
-        paragraphs: list[Paragraph] = []  # type: ignore[valid-type]
-        buffer: list[InlineNode] = []  # type: ignore[valid-type]
-        list_builder = _ListGroupBuilder()
-        consecutive_blank = False
+    def convert(self) -> list[Paragraph]:
+        paragraphs: list[Paragraph] = []
+        for token in self._parser(self._md):
+            t = cast("_Token", token)
+            if t["type"] == "blank_line":
+                continue
+            self._convert_block(t, paragraphs)
+        return paragraphs
 
-        def flush():
-            nonlocal buffer
-            if buffer:
-                paragraphs.append(make_text_paragraph(buffer))
-                buffer = []
+    # ==================================================================
+    # Block-level conversion
+    # ==================================================================
 
-        for line in lines:
-            stripped = line.strip()
+    _BLOCK_HANDLERS: ClassVar[dict[str, str]] = {
+        "heading": "_handle_heading",
+        "paragraph": "_handle_paragraph",
+        "thematic_break": "_handle_thematic_break",
+        "block_code": "_handle_block_code",
+        "block_quote": "_handle_block_quote",
+        "list": "_handle_list",
+        "block_html": "_handle_block_html",
+    }
 
-            # 空行 — 中断当前列表组
-            if not stripped:
-                flush()
-                list_builder.flush(paragraphs)
-                consecutive_blank = True
+    def _convert_block(self, token: _Token, paragraphs: list[Paragraph]) -> None:
+        method_name = self._BLOCK_HANDLERS.get(token["type"])
+        if method_name:
+            getattr(self, method_name)(token, paragraphs)
+        else:
+            logger.warning(f"未支持的块类型，已跳过: {token['type']}")
+
+    def _handle_heading(self, token: _Token, paragraphs: list[Paragraph]) -> None:
+        """# ~ ### 标题"""
+        paragraphs.append(
+            make_heading_paragraph(self._extract_text(token), token["attrs"]["level"])
+        )
+
+    def _handle_paragraph(self, token: _Token, paragraphs: list[Paragraph]) -> None:
+        """普通段落。纯图片段落会被识别为图片段落。"""
+        children: list[_Token] = token.get("children", [])
+        if not children:
+            return
+
+        image_indices = [i for i, c in enumerate(children) if c["type"] == "image"]
+
+        if len(image_indices) == len(children):
+            for img in children:
+                self._process_image_token(img, paragraphs)
+            return
+
+        start = 0
+        for idx in image_indices:
+            if idx > start:
+                self._try_append_text_paragraph(children[start:idx], paragraphs)
+            self._process_image_token(children[idx], paragraphs)
+            start = idx + 1
+
+        if start < len(children):
+            self._try_append_text_paragraph(children[start:], paragraphs)
+
+    def _try_append_text_paragraph(
+        self, children: list[_Token], paragraphs: list[Paragraph]
+    ) -> None:
+        """尝试从 inline children 生成文本段落，跳过空白内容。"""
+        nodes = self._convert_inline(children)
+        if nodes and _has_visible_text(nodes):
+            paragraphs.append(make_text_paragraph(nodes))
+
+    def _handle_thematic_break(
+        self, token: _Token, paragraphs: list[Paragraph]
+    ) -> None:
+        """--- 分隔线"""
+        paragraphs.append(make_divider_paragraph())
+
+    def _handle_block_code(self, token: _Token, paragraphs: list[Paragraph]) -> None:
+        """```lang ... ``` 代码块"""
+        lang = (token.get("attrs") or {}).get("info", "") or ""
+        paragraphs.append(make_code_paragraph(token["raw"], lang))
+
+    def _handle_block_quote(self, token: _Token, paragraphs: list[Paragraph]) -> None:
+        """> 引用块（支持嵌套引用）"""
+        self._counter += 1
+        combine_hash = f"bq_{int(time.time() * 1000000)}_{self._counter}"
+
+        nodes: list[InlineNode] = []
+        parts: list[list[InlineNode]] = []
+
+        for child in token.get("children", []):
+            if child["type"] in ("paragraph", "block_text"):
+                parts.append(self._convert_inline(child.get("children", [])))
+            elif child["type"] == "block_quote":
+                parts.append(
+                    self._convert_inline(
+                        [{"type": "text", "raw": self._extract_text(child)}]
+                    )
+                )
+
+        for i, part in enumerate(parts):
+            if i > 0:
+                nodes.append(make_text_node("\n"))
+            nodes.extend(part)
+
+        if nodes:
+            paragraphs.append(make_blockquote_paragraph(nodes, combine_hash))
+
+    def _handle_list(self, token: _Token, paragraphs: list[Paragraph]) -> None:
+        """有序/无序列表（含嵌套和任务列表）"""
+        self._counter += 1
+        combine_hash = f"list_{int(time.time() * 1000000)}_{self._counter}"
+        self._convert_list_items(
+            items=token.get("children", []),
+            ordered=token["attrs"]["ordered"],
+            depth=token["attrs"].get("depth", 0),
+            combine_hash=combine_hash,
+            paragraphs=paragraphs,
+        )
+
+    def _handle_block_html(self, token: _Token, paragraphs: list[Paragraph]) -> None:
+        """HTML 块 — 跳过"""
+        logger.warning("HTML 块不被支持，已跳过")
+
+    # ==================================================================
+    # List helpers
+    # ==================================================================
+
+    def _convert_list_items(
+        self,
+        items: list[_Token],
+        ordered: bool,
+        depth: int,
+        combine_hash: str,
+        paragraphs: list[Paragraph],
+    ) -> None:
+        """递归转换 list_item 列表。"""
+        level = min(depth + 1, 3)
+        order = 1
+
+        for item in items:
+            if item["type"] not in ("list_item", "task_list_item"):
                 continue
 
-            # 标题
-            h_match = re.match(r"^(#{1,3})\s+(.*)", stripped)
-            if h_match:
-                flush()
-                list_builder.flush(paragraphs)
-                level = len(h_match.group(1))
-                paragraphs.append(make_heading_paragraph(h_match.group(2), level))
-                consecutive_blank = False
-                continue
+            inline_children, nested_list = _collect_list_item_content(item)
 
-            # 图片 ![alt](path)
-            img_match = re.match(r"!\[.*?\]\((.*?)\)", stripped)
-            if img_match:
-                flush()
-                list_builder.flush(paragraphs)
-                self._process_image(img_match, paragraphs)
-                consecutive_blank = False
-                continue
+            if item["type"] == "task_list_item":
+                checked = (item.get("attrs") or {}).get("checked", False)
+                prefix = "✅ " if checked else "☐ "
+                inline_children.insert(0, {"type": "text", "raw": prefix})
 
-            # 分隔线
-            if stripped in ("---", "***", "___"):
-                flush()
-                list_builder.flush(paragraphs)
-                paragraphs.append(make_divider_paragraph())
-                consecutive_blank = False
-                continue
+            nodes = self._convert_inline(inline_children)
 
-            # 列表检测
-            list_info = _detect_list_item(line)
-            if list_info:
-                flush()  # 刷新之前的文本缓存
-                item_type, level, text = list_info
+            if ordered:
+                paragraphs.append(
+                    make_ordered_list_paragraph(nodes, level, order, combine_hash)
+                )
+            else:
+                paragraphs.append(
+                    make_unordered_list_paragraph(nodes, level, order, combine_hash)
+                )
+            order += 1
 
-                if list_builder.should_start_new_group(item_type, consecutive_blank):
-                    list_builder.flush(paragraphs)
-                    list_builder.start(item_type)
+            if nested_list:
+                self._convert_list_items(
+                    items=nested_list.get("children", []),
+                    ordered=nested_list["attrs"]["ordered"],
+                    depth=nested_list["attrs"].get("depth", depth),
+                    combine_hash=combine_hash,
+                    paragraphs=paragraphs,
+                )
 
-                order = _get_list_order(stripped, item_type)
-                list_builder.add_item(text, level, order)
-                consecutive_blank = False
-                continue
+    # ==================================================================
+    # Inline conversion
+    # ==================================================================
 
-            # 普通行 — 刷新列表组
-            list_builder.flush(paragraphs)
-            buffer.extend(_parse_inline(stripped))
-            consecutive_blank = False
+    def _convert_inline(self, children: list[_Token]) -> list[InlineNode]:
+        """递归将 mistune inline tokens 转换为 Opus InlineNode 列表。
 
-        flush()
-        list_builder.flush(paragraphs)
-        return paragraphs  # type: ignore[return-type]
+        正确处理嵌套格式，如 ``**_粗斜体_**`` 会得到 ``bold + italic`` 的文本节点。
+        """
+        nodes: list[InlineNode] = []
+        for child in children:
+            nodes.extend(self._convert_one_inline(child))
+        return nodes
 
-    def _process_image(self, match: re.Match, paragraphs: list[Paragraph]) -> None:  # type: ignore[misc]
-        """处理图片：上传并追加图片段落。"""
-        raw_path = match.group(1)
+    def _convert_one_inline(self, token: _Token) -> list[InlineNode]:
+        """转换单个 mistune inline token 为一个或多个 Opus InlineNode。"""
+        t = token["type"]
+
+        if t == "text":
+            return [make_text_node(token["raw"])]
+
+        if t == "strong":
+            inner = self._convert_inline(token.get("children", []))
+            return _apply_style(inner, bold=True)
+
+        if t == "emphasis":
+            inner = self._convert_inline(token.get("children", []))
+            return _apply_style(inner, italic=True)
+
+        if t == "strikethrough":
+            inner = self._convert_inline(token.get("children", []))
+            return _apply_style(inner, strikethrough=True)
+
+        if t == "codespan":
+            return [make_text_node(token["raw"], color=_INLINE_CODE_COLOR)]
+
+        if t == "link":
+            text = self._extract_text(token)
+            return [make_link_node(text, token["attrs"]["url"])]
+
+        if t in ("linebreak", "softbreak"):
+            return [make_text_node(" ")]
+
+        return []
+
+    @staticmethod
+    def _extract_text(token: _Token) -> str:
+        """从 AST token 树中递归提取纯文本。"""
+        parts: list[str] = []
+
+        if "raw" in token:
+            parts.append(token["raw"])
+
+        for child in token.get("children", []):
+            parts.append(MarkdownConverter._extract_text(child))
+
+        return "".join(parts)
+
+    # ==================================================================
+    # Image handling
+    # ==================================================================
+
+    def _process_image_token(self, token: _Token, paragraphs: list[Paragraph]) -> None:
+        """处理图片并追加图片段落。"""
+        raw_url = token["attrs"]["url"]
         img_path = (
-            Path(raw_path)
-            if Path(raw_path).is_absolute()
-            else (self.base_dir / raw_path).resolve()
+            Path(raw_url)
+            if Path(raw_url).is_absolute()
+            else (self.base_dir / raw_url).resolve()
         )
 
         if not img_path.is_file():
@@ -283,10 +375,7 @@ class MarkdownConverter(BaseConverter):
             info = self.client.upload_image(img_path)
             paragraphs.append(
                 make_image_paragraph(
-                    info["url"],
-                    info["width"],
-                    info["height"],
-                    info.get("size", 0),
+                    info["url"], info["width"], info["height"], info.get("size", 0)
                 )
             )
             logger.info(f"→ 上传成功: {info['url']}")
