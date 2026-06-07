@@ -10,10 +10,11 @@ import sys
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, assert_never
 
 from bilibili_article._auth import REQUIRED_ENV, load_auth, load_lark_auth
 from bilibili_article.client import BiliApiError, BiliClient
+from bilibili_article.converters.base import BaseConverter
 from bilibili_article.converters.lark import LarkDocxConverter
 from bilibili_article.converters.markdown import MarkdownConverter
 from bilibili_article.log import logger
@@ -202,12 +203,24 @@ def main() -> None:
         logger.info(f"  → {image_info['url']}")
 
     try:
-        if args.mode in ("lark",):
-            _run_lark(client, args.doc_id, dry_run=args.dry_run, config=config)
-        else:  # markdown / md
-            _run_markdown(
-                client, Path(args.markdown_file), dry_run=args.dry_run, config=config
+        if args.mode in ("markdown", "md"):
+            converter = _get_markdown_converter(
+                client,
+                markdown_file_path=Path(args.markdown_file),
+                dry_run=args.dry_run,
             )
+        elif args.mode == "lark":
+            converter = _get_lark_converter(
+                client,
+                doc_id=args.doc_id,
+                dry_run=args.dry_run,
+            )
+        else:
+            assert_never(args.mode)
+
+        publish_article(
+            client=client, converter=converter, dry_run=args.dry_run, config=config
+        )
     except BiliApiError as e:
         logger.error(f"❌ API 错误 [{e.code}]: {e.message}")
         sys.exit(1)
@@ -216,58 +229,42 @@ def main() -> None:
         sys.exit(1)
 
 
-def _run_markdown(
+def _get_markdown_converter(
     client: BiliClient,
     markdown_file_path: Path,
     *,
-    dry_run: bool = False,
-    config: PublishConfig | None = None,
-) -> dict[str, Any]:
+    dry_run: bool,
+) -> MarkdownConverter:
     """Markdown 模式：处理本地 Markdown 文件。"""
-    if config is None:
-        config = PublishConfig()
 
     if not markdown_file_path.is_file():
         logger.error(f"错误：文件不存在: {markdown_file_path}")
         sys.exit(1)
 
-    logger.info(f"📄 文件: {markdown_file_path}")
+    logger.info(f"📄 Markdown 文件: {markdown_file_path}")
 
-    converter = MarkdownConverter(client, markdown_file_path, dry_run=dry_run)
-
-    result = publish_article(
-        client=client, converter=converter, dry_run=dry_run, config=config
-    )
-    return result
+    return MarkdownConverter(client, markdown_file_path, dry_run=dry_run)
 
 
-def _run_lark(
+def _get_lark_converter(
     client: BiliClient,
     doc_id: str,
     *,
-    dry_run: bool = False,
-    config: PublishConfig | None = None,
-) -> dict[str, Any]:
+    dry_run: bool,
+) -> LarkDocxConverter:
     """飞书云文档模式：从飞书文档 ID 导入。"""
-    if config is None:
-        config = PublishConfig()
 
     lark_cfg = load_lark_auth()
     if "LARK_APP_ID" not in lark_cfg or "LARK_APP_SECRET" not in lark_cfg:
         logger.error(LARK_AUTH_HELP)
         sys.exit(1)
 
-    logger.info(f"📄 飞书文档: {doc_id}")
+    logger.info(f"📄 飞书云文档: {doc_id}")
 
-    converter = LarkDocxConverter(
+    return LarkDocxConverter(
         app_id=lark_cfg["LARK_APP_ID"],
         app_secret=lark_cfg["LARK_APP_SECRET"],
         document_id=doc_id,
         bili_client=client,
         dry_run=dry_run,
     )
-
-    result = publish_article(
-        client=client, converter=converter, dry_run=dry_run, config=config
-    )
-    return result
