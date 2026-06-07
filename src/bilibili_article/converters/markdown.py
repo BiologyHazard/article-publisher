@@ -75,7 +75,14 @@ class MarkdownConverter(BaseConverter):
         self.base_dir = markdown_file_path.resolve().parent
         with open(markdown_file_path, "r", encoding="utf-8") as f:
             self._md = f.read()
-        self._parser = mistune.create_markdown(renderer=None, plugins=_MISTUNE_PLUGINS)
+        parser = mistune.create_markdown(renderer=None, plugins=_MISTUNE_PLUGINS)
+        self._parsed = cast("list[dict[str, Any]]", parser(self._md))
+        with open(
+            markdown_file_path.with_suffix(".ast.json"), "w", encoding="utf-8"
+        ) as f:
+            import json
+
+            json.dump(self._parsed, f, ensure_ascii=False, indent=2)
 
     # ==================================================================
     # 公开接口
@@ -83,19 +90,17 @@ class MarkdownConverter(BaseConverter):
 
     def get_title(self) -> str:
         """从 Markdown 内容中提取第一个 H1 标题。"""
-        for token in self._parser(self._md):
-            t = cast("_Token", token)
-            if t["type"] == "heading" and t["attrs"]["level"] == 1:
-                return self._extract_text(t)
+        for token in self._parsed:
+            if token["type"] == "heading" and token["attrs"]["level"] == 1:
+                return self._extract_text(token)
         return "未命名文章"
 
     def convert(self) -> Document:
         blocks: list[Block] = []
-        for token in self._parser(self._md):
-            t = cast("_Token", token)
-            if t["type"] == "blank_line":
+        for token in self._parsed:
+            if token["type"] == "blank_line":
                 continue
-            result = self._convert_block(t)
+            result = self._convert_block(token)
             if isinstance(result, list):
                 blocks.extend(result)
             elif result is not None:
@@ -337,6 +342,9 @@ class MarkdownConverter(BaseConverter):
             logger.warning(f"图片文件不存在，跳过: {img_path}")
             return None
 
-        alt_text = (token.get("attrs") or {}).get("alt", "")
+        attrs = token.get("attrs") or {}
+        alt_text = attrs.get("alt", "")
+        # Markdown 图片标题语法: ![alt](url "title") → 用作 caption/描述
+        caption = attrs.get("title") or attrs.get("alt", "")
         logger.info(f"  发现图片: {img_path}")
-        return ImageBlock(source=str(img_path), alt_text=alt_text, caption=alt_text)
+        return ImageBlock(source=str(img_path), alt_text=alt_text, caption=caption)

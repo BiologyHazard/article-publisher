@@ -3,7 +3,7 @@
 
 支持多平台发布，目前实现：
   - B站 (bilibili): 支持 markdown 和 lark 两种输入源
-  - 森空岛 (skland): 空代码（仅打印日志）
+  - 森空岛 (skland): 支持 markdown 和 lark 两种输入源
   - NGA (nga): 空代码（仅打印日志）
 
 用法示例:
@@ -19,7 +19,13 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import assert_never
 
-from bilibili_article._auth import REQUIRED_ENV, load_auth, load_lark_auth
+from bilibili_article._auth import (
+    REQUIRED_ENV,
+    SKLAND_REQUIRED_ENV,
+    load_auth,
+    load_lark_auth,
+    load_skland_auth,
+)
 from bilibili_article.converters.lark import LarkDocxConverter, cleanup_temp_images
 from bilibili_article.converters.markdown import MarkdownConverter
 from bilibili_article.document import Document
@@ -31,7 +37,11 @@ from bilibili_article.platforms.bilibili import (
     BiliPublisher,
 )
 from bilibili_article.platforms.nga import NgaPublisher
-from bilibili_article.platforms.skland import SklandPublisher
+from bilibili_article.platforms.skland.client import SklandClient
+from bilibili_article.platforms.skland.publisher import (
+    SklandPublishConfig,
+    SklandPublisher,
+)
 
 AUTH_HELP = """错误：缺少必要的环境变量
 
@@ -56,6 +66,15 @@ LARK_AUTH_HELP = """错误：缺少飞书应用认证配置
     LARK_APP_SECRET=你的 App Secret
 获取方式：在飞书开发者平台 https://open.feishu.cn/app 创建应用后获取。"""
 
+SKLAND_AUTH_HELP = """错误：缺少森空岛环境变量
+请在 .env 文件中添加：
+    HYPERGRYPH_TOKEN=你的鹰角网络认证 token
+    SKLAND_DID=你的设备 ID
+获取方式：浏览器登录森空岛后，
+  在控制台执行：
+    localStorage.getItem('SK_TOKEN_CACHE_KEY')  # 得到 token
+    localStorage.getItem('hg_sdk_device_id')    # 得到 did"""
+
 CST = timezone(timedelta(hours=8), name="中国标准时间")
 """中国标准时间（UTC+8）"""
 
@@ -69,7 +88,7 @@ def _build_parser() -> ArgumentParser:
         "--platform",
         type=str,
         default="bilibili",
-        choices=["bilibili", "sekai", "nga"],
+        choices=["bilibili", "skland", "nga"],
         help="目标平台（默认 bilibili）",
     )
 
@@ -175,9 +194,8 @@ def main() -> None:
     try:
         if platform == "bilibili":
             _run_bilibili(doc, args)
-        elif platform == "sekai":
-            publisher = SklandPublisher()
-            publisher.publish(doc, dry_run=args.dry_run)
+        elif platform == "skland":
+            _run_skland(doc, args)
         elif platform == "nga":
             publisher = NgaPublisher()
             publisher.publish(doc, dry_run=args.dry_run)
@@ -236,6 +254,30 @@ def _run_bilibili(doc: Document, args: Namespace) -> None:
     except BiliApiError as e:
         logger.error(f"❌ API 错误 [{e.code}]: {e.message}")
         sys.exit(1)
+    except Exception as e:
+        logger.error(f"❌ 运行时错误: {e}")
+        sys.exit(1)
+
+
+def _run_skland(doc: Document, args: Namespace) -> None:
+    """森空岛 发布流程：设置认证、封面、配置，然后发布。"""
+
+    cfg = load_skland_auth()
+    missing = [k for k in SKLAND_REQUIRED_ENV if k not in cfg]
+    if missing:
+        logger.error(SKLAND_AUTH_HELP)
+        sys.exit(1)
+
+    client = SklandClient(cfg["HYPERGRYPH_TOKEN"], cfg["SKLAND_DID"])
+
+    config = SklandPublishConfig(
+        cover_path=Path(args.cover).resolve() if args.cover else None,
+        publish_time=args.publish_time,
+    )
+
+    publisher = SklandPublisher(client, config=config)
+    try:
+        publisher.publish(doc, dry_run=args.dry_run)
     except Exception as e:
         logger.error(f"❌ 运行时错误: {e}")
         sys.exit(1)

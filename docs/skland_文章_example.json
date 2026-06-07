@@ -1,0 +1,866 @@
+{
+  "version": 2,
+  "model": {
+    "viewKind": 3,
+    "origin": 1,
+    "isAIGCStatementOn": false,
+    "downloadEnable": 1,
+    "title": "文章标题",
+    "tags": [
+      {
+        "id": 1452,
+        "name": "寻遗散记版本讨论",
+        "description": "参与活动赢奖励~",
+        "status": 1,
+        "cover": "https://bbs.hycdn.cn/image/2026/06/05/ea8e3ff371f1551b95c1a3770e421883.png",
+        "publishAtTs": 1780629774,
+        "createdAtTs": 1780630011,
+        "updatedAtTs": 1780630011,
+        "kind": 2,
+        "bulletinStatus": 0,
+        "isGameEvent": false,
+        "defaultViewKind": 3
+      },
+      {
+        "id": 474,
+        "name": "明日方舟",
+        "description": "重铸未来，方舟启航。",
+        "status": 1,
+        "cover": "https://bbs.hycdn.cn/image/2023/07/12/f41650d51010e057bc3c211f72a4eeb2.png",
+        "publishAtTs": 1688025829,
+        "createdAtTs": 1688025830,
+        "updatedAtTs": 1689245493,
+        "kind": 1,
+        "bulletinStatus": 0,
+        "isGameEvent": false,
+        "defaultViewKind": 3,
+        "systemAssigned": true
+      },
+      {
+        "id": 1431,
+        "name": "弭弗",
+        "description": "拳出无悔，但生死终究不可随流，为自己，也为武陵。",
+        "status": 1,
+        "cover": "https://bbs.hycdn.cn/image/2026/05/29/6bd7c0737543b51949ab394d2c3a4077.png",
+        "publishAtTs": 1780051414,
+        "createdAtTs": 1780051419,
+        "updatedAtTs": 1780631850,
+        "kind": 1,
+        "bulletinStatus": 0,
+        "isGameEvent": false,
+        "defaultViewKind": 3
+      },
+      {
+        "id": 1421,
+        "name": "泡影苍霆",
+        "description": "SideStory「泡影苍霆」现已开启，参与讨论赢周边奖励~",
+        "status": 1,
+        "cover": "https://bbs.hycdn.cn/image/2026/05/26/0f5dc651b6516171684641a7e4188afa.png",
+        "publishAtTs": 1779767060,
+        "createdAtTs": 1779767069,
+        "updatedAtTs": 1780287723,
+        "kind": 1,
+        "bulletinStatus": 0,
+        "isGameEvent": false,
+        "defaultViewKind": 3
+      }
+    ],
+    "imageList": [],
+    "prePublishOn": true,
+    "imageCoverIndex": "6a255f1f221daeeeff92eb2d",
+    "gameId": 1,
+    "cateId": 4,
+    "collection": {
+      "id": "2063593948840050688",
+      "title": "1"
+    },
+    "publishedAtTs": "1780841316"
+  },
+  "document": [
+    {
+      "elementId": "uIlCJq8UsXyO",
+      "type": "header",
+      "children": [
+        {
+          "text": "一级标题"
+        },
+        {
+          "text": "加粗",
+          "bold": true
+        },
+        {
+          "text": "斜体",
+          "italic": true
+        },
+        {
+          "text": "粗斜体",
+          "italic": true,
+          "bold": true
+        },
+        {
+          "text": "下划线",
+          "underline": true
+        },
+        {
+          "text": "删除线",
+          "del": true
+        }
+      ],
+      "level": 1
+    },
+    {
+      "children": [
+        {
+          "text": "二级标题"
+        }
+      ],
+      "elementId": "YsWa1VBbL92h",
+      "type": "header",
+      "level": 2
+    },
+    {
+      "children": [
+        {
+          "text": "三级标题"
+        }
+      ],
+      "elementId": "sBY4fKpN2hYT",
+      "type": "header",
+      "level": 3
+    },
+    {
+      "children": [
+        {
+          "text": "普通文本 "
+        },
+        {
+          "text": "粗体",
+          "bold": true
+        },
+        {
+          "text": " "
+        },
+        {
+          "text": "斜体",
+          "italic": true
+        },
+        {
+          "text": " "
+        },
+        {
+          "text": "下划线",
+          "underline": true
+        },
+        {
+          "text": " "
+        },
+        {
+          "text": "删除线",
+          "del": true
+        }
+      ],
+      "elementId": "bCvdfB3e5YY9",
+      "type": "paragraph"
+    },
+    {
+      "children": [
+        {
+          "text": "黑色"
+        },
+        {
+          "text": "绿色",
+          "color": "#90C208"
+        },
+        {
+          "text": "蓝色",
+          "color": "#46AAFA"
+        },
+        {
+          "text": "红色",
+          "color": "#FA6E5A"
+        },
+        {
+          "text": "橙色",
+          "color": "#FAB446"
+        },
+        {
+          "text": "紫色",
+          "color": "#826EFF"
+        }
+      ],
+      "elementId": "EiM88nFp7tJi",
+      "type": "paragraph"
+    },
+    {
+      "elementId": "yLYi5Qvp8Ual",
+      "type": "quote",
+      "children": [
+        {
+          "children": [
+            {
+              "text": "这是一行引用"
+            }
+          ],
+          "elementId": "aOlAIcuhD1cG",
+          "type": "paragraph"
+        },
+        {
+          "children": [
+            {
+              "text": "这个引用和上一行是同一个引用"
+            }
+          ],
+          "elementId": "vciOJ1yhHgyK",
+          "type": "paragraph"
+        }
+      ]
+    },
+    {
+      "elementId": "1hYJtw0lxt7y",
+      "type": "quote",
+      "children": [
+        {
+          "elementId": "Irwiq0E4IHpt",
+          "type": "paragraph",
+          "children": [
+            {
+              "text": "这个引用和上一行是不同的引用"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "elementId": "srpdJ9TwOceJ",
+      "type": "paragraph",
+      "children": [
+        {
+          "text": "左对齐"
+        }
+      ]
+    },
+    {
+      "children": [
+        {
+          "text": "居中对齐"
+        }
+      ],
+      "elementId": "hEUqcCuTHekV",
+      "type": "paragraph",
+      "alignment": 2
+    },
+    {
+      "children": [
+        {
+          "text": "右对齐"
+        }
+      ],
+      "elementId": "dkukGZGKcP19",
+      "type": "paragraph",
+      "alignment": 3
+    },
+    {
+      "elementId": "8vHjmvSfnebB",
+      "type": "ordered-list",
+      "children": [
+        {
+          "elementId": "6aAADnMKsXxV",
+          "type": "list-item",
+          "children": [
+            {
+              "children": [
+                {
+                  "text": "有序列表1"
+                }
+              ],
+              "elementId": "kXzIS0Z2hOx6",
+              "type": "list-item-text",
+              "alignment": 1
+            }
+          ]
+        },
+        {
+          "elementId": "uJbU1ynfU2DY",
+          "type": "list-item",
+          "children": [
+            {
+              "children": [
+                {
+                  "text": "有序列表2"
+                }
+              ],
+              "elementId": "WNcUPl7NtYge",
+              "type": "list-item-text",
+              "alignment": 1
+            },
+            {
+              "elementId": "X4WIXY9PpExa",
+              "type": "ordered-list",
+              "children": [
+                {
+                  "elementId": "Q2wWheS87oy9",
+                  "type": "list-item",
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "text": "有序列表2.1"
+                        }
+                      ],
+                      "elementId": "bFA9rNStKM4I",
+                      "type": "list-item-text",
+                      "alignment": 1
+                    },
+                    {
+                      "elementId": "9GPCXip2Sc8d",
+                      "type": "ordered-list",
+                      "children": [
+                        {
+                          "elementId": "46UuOJ0BmES0",
+                          "type": "list-item",
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "text": "有序列表2.1.1"
+                                }
+                              ],
+                              "elementId": "GTAl0l5vJ9XE",
+                              "type": "list-item-text",
+                              "alignment": 1
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "elementId": "kv8I634YPx0k",
+      "type": "unordered-list",
+      "children": [
+        {
+          "elementId": "9ov13HDPbAcF",
+          "type": "list-item",
+          "children": [
+            {
+              "children": [
+                {
+                  "text": "无序列表1"
+                }
+              ],
+              "elementId": "ja3u8NvYBCjm",
+              "type": "list-item-text",
+              "alignment": 1
+            },
+            {
+              "elementId": "d4TfMHkjR4Kh",
+              "type": "unordered-list",
+              "children": [
+                {
+                  "elementId": "jZHF7wUC0AuE",
+                  "type": "list-item",
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "text": "无序列表2.1"
+                        }
+                      ],
+                      "elementId": "5LwvzZl1DeVd",
+                      "type": "list-item-text",
+                      "alignment": 1
+                    },
+                    {
+                      "elementId": "gMdhD5szXgTD",
+                      "type": "unordered-list",
+                      "children": [
+                        {
+                          "elementId": "Ji9dICjPcZ8v",
+                          "type": "list-item",
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "text": "无序列表2.1.1"
+                                }
+                              ],
+                              "elementId": "rZSuzQoKY5w9",
+                              "type": "list-item-text",
+                              "alignment": 1
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "children": [
+        {
+          "text": "以下是5种分隔线"
+        }
+      ],
+      "elementId": "NI7tNwYn6L4D",
+      "type": "paragraph",
+      "alignment": 1
+    },
+    {
+      "kind": "0",
+      "elementId": "ZhVJlEoG2vwD",
+      "type": "dividing-line",
+      "children": [
+        {
+          "text": ""
+        }
+      ]
+    },
+    {
+      "kind": "1",
+      "elementId": "0WGRS4Pp1mve",
+      "type": "dividing-line",
+      "children": [
+        {
+          "text": ""
+        }
+      ]
+    },
+    {
+      "kind": "2",
+      "elementId": "qOaqrnORt01P",
+      "type": "dividing-line",
+      "children": [
+        {
+          "text": ""
+        }
+      ]
+    },
+    {
+      "kind": "3",
+      "elementId": "7g9jWMc77Eew",
+      "type": "dividing-line",
+      "children": [
+        {
+          "text": ""
+        }
+      ]
+    },
+    {
+      "kind": "4",
+      "elementId": "GfCKtb12P9fa",
+      "type": "dividing-line",
+      "children": [
+        {
+          "text": ""
+        }
+      ]
+    },
+    {
+      "elementId": "6PyjRb4GgY58",
+      "type": "paragraph",
+      "children": [
+        {
+          "text": "以下是一个内嵌B站视频"
+        }
+      ]
+    },
+    {
+      "externalVideo": {
+        "kind": "bilibili",
+        "id": "BV1xR6nBqELV"
+      },
+      "elementId": "Dvxvrj0RTkFD",
+      "type": "external-video",
+      "children": [
+        {
+          "text": ""
+        }
+      ]
+    },
+    {
+      "children": [
+        {
+          "text": ""
+        },
+        {
+          "children": [
+            {
+              "text": "@"
+            }
+          ],
+          "elementId": "2bNu9eQuYSYj",
+          "type": "mention",
+          "uid": "4020963466153",
+          "name": "森空岛小助手"
+        },
+        {
+          "text": ""
+        },
+        {
+          "children": [
+            {
+              "text": "@"
+            }
+          ],
+          "elementId": "qmlkWTEYI2NQ",
+          "type": "mention",
+          "uid": "3478139951540",
+          "name": "森空岛"
+        },
+        {
+          "text": ""
+        }
+      ],
+      "elementId": "OBHdMo9vQG6H",
+      "type": "paragraph"
+    },
+    {
+      "children": [
+        {
+          "text": ""
+        },
+        {
+          "content": "BV1xR6nBqELV",
+          "link": "https://www.bilibili.com/video/BV1xR6nBqELV",
+          "elementId": "28ohGZcX7hPV",
+          "type": "link",
+          "children": [
+            {
+              "text": ""
+            }
+          ]
+        },
+        {
+          "text": ""
+        }
+      ],
+      "elementId": "W746bpzRsxBg",
+      "type": "paragraph"
+    },
+    {
+      "children": [
+        {
+          "file": {},
+          "children": [
+            {
+              "text": ""
+            }
+          ],
+          "elementId": "2eqKNWVqCnce",
+          "type": "image",
+          "image": {
+            "width": 2160,
+            "height": 1080,
+            "url": "https://bbs.hycdn.cn/image/common/20260607/3934384/6a255f1f221daeeeff92eb2d_6ad0f152.webp",
+            "size": 276494,
+            "format": "",
+            "id": "6a255f1f221daeeeff92eb2d"
+          }
+        },
+        {
+          "elementId": "Nf6pYX7cT1vt",
+          "type": "image-brief",
+          "children": [
+            {
+              "text": "图片描述"
+            }
+          ]
+        }
+      ],
+      "elementId": "Ap2V7wG7TjkU",
+      "type": "image-wrapper"
+    },
+    {
+      "children": [
+        {
+          "file": {},
+          "children": [
+            {
+              "text": ""
+            }
+          ],
+          "elementId": "s5H526TRzqPm",
+          "type": "image",
+          "image": {
+            "width": 4320,
+            "height": 2160,
+            "url": "https://bbs.hycdn.cn/image/common/20260607/3934384/6a255f2f221daeeeff92eb2e_db193eac.webp",
+            "size": 795574,
+            "format": "",
+            "id": "6a255f2f221daeeeff92eb2e"
+          }
+        },
+        {
+          "elementId": "vMm84RSWuQoY",
+          "type": "image-brief",
+          "children": [
+            {
+              "text": ""
+            }
+          ]
+        }
+      ],
+      "elementId": "IpwTCircO0GX",
+      "type": "image-wrapper"
+    },
+    {
+      "children": [
+        {
+          "text": ""
+        },
+        {
+          "id": "skland_emoji__Wupa_plus1",
+          "title": "+1",
+          "elementId": "VJYpfCbJUAeL",
+          "type": "emoji",
+          "children": [
+            {
+              "text": ""
+            }
+          ]
+        },
+        {
+          "text": ""
+        },
+        {
+          "id": "skland_emoji__Wupa_kiss",
+          "title": "比心",
+          "elementId": "gpQ5ORHnHw8e",
+          "type": "emoji",
+          "children": [
+            {
+              "text": ""
+            }
+          ]
+        },
+        {
+          "text": ""
+        },
+        {
+          "id": "skland_emoji__Wow_love",
+          "title": "爱你",
+          "elementId": "40bsPz9TfZww",
+          "type": "emoji",
+          "children": [
+            {
+              "text": ""
+            }
+          ]
+        },
+        {
+          "text": ""
+        },
+        {
+          "id": "skland_emoji__Wow_ok",
+          "title": "OK",
+          "elementId": "Z7GtJbL9hnET",
+          "type": "emoji",
+          "children": [
+            {
+              "text": ""
+            }
+          ]
+        },
+        {
+          "text": ""
+        },
+        {
+          "id": "skland_emoji__Wupa_Awkward",
+          "title": "流汗",
+          "elementId": "qBhkcXbWzhEp",
+          "type": "emoji",
+          "children": [
+            {
+              "text": ""
+            }
+          ]
+        },
+        {
+          "text": ""
+        },
+        {
+          "id": "skland_emoji__Wow_question",
+          "title": "¿",
+          "elementId": "WXzmzyB4n2Fl",
+          "type": "emoji",
+          "children": [
+            {
+              "text": ""
+            }
+          ]
+        },
+        {
+          "text": ""
+        },
+        {
+          "id": "skland_emoji__Wupa_praise",
+          "title": "点赞",
+          "elementId": "lfgw0pvkoHS0",
+          "type": "emoji",
+          "children": [
+            {
+              "text": ""
+            }
+          ]
+        },
+        {
+          "text": ""
+        },
+        {
+          "id": "skland_emoji__Wow_cool",
+          "title": "酷",
+          "elementId": "XwTXGC6ZIgEj",
+          "type": "emoji",
+          "children": [
+            {
+              "text": ""
+            }
+          ]
+        },
+        {
+          "text": ""
+        },
+        {
+          "id": "skland_emoji__Wupa_faint",
+          "title": "晕",
+          "elementId": "KPkmkT9h9b7V",
+          "type": "emoji",
+          "children": [
+            {
+              "text": ""
+            }
+          ]
+        },
+        {
+          "text": ""
+        },
+        {
+          "id": "skland_emoji__Wow_anger",
+          "title": "红温",
+          "elementId": "cCQS2TnravDY",
+          "type": "emoji",
+          "children": [
+            {
+              "text": ""
+            }
+          ]
+        },
+        {
+          "text": ""
+        },
+        {
+          "id": "skland_emoji__Wupa_cry",
+          "title": "哭哭",
+          "elementId": "ZqdJdTWv3L3R",
+          "type": "emoji",
+          "children": [
+            {
+              "text": ""
+            }
+          ]
+        },
+        {
+          "text": ""
+        },
+        {
+          "id": "skland_emoji__Wupa_die",
+          "title": "寄",
+          "elementId": "OtyxWZeNXWMy",
+          "type": "emoji",
+          "children": [
+            {
+              "text": ""
+            }
+          ]
+        },
+        {
+          "text": ""
+        },
+        {
+          "id": "skland_emoji__Wow_pinch",
+          "title": "捏脸",
+          "elementId": "KWHsOefH1dSj",
+          "type": "emoji",
+          "children": [
+            {
+              "text": ""
+            }
+          ]
+        },
+        {
+          "text": ""
+        },
+        {
+          "id": "skland_emoji__Wupa_love",
+          "title": "LOVE",
+          "elementId": "Ngj0ecyQ57Wr",
+          "type": "emoji",
+          "children": [
+            {
+              "text": ""
+            }
+          ]
+        },
+        {
+          "text": ""
+        },
+        {
+          "id": "Uppa_Friends-1__生日快乐",
+          "title": "生日快乐",
+          "elementId": "gE3hhEOHpZRW",
+          "type": "sticker",
+          "children": [
+            {
+              "text": ""
+            }
+          ]
+        },
+        {
+          "text": ""
+        },
+        {
+          "id": "Uppa_Friends-1__拿来吧你",
+          "title": "拿来吧你",
+          "elementId": "iW2wWu9clBeN",
+          "type": "sticker",
+          "children": [
+            {
+              "text": ""
+            }
+          ]
+        },
+        {
+          "text": ""
+        },
+        {
+          "id": "Uppa_Friends-1__溜了溜了",
+          "title": "溜了溜了",
+          "elementId": "v3YnOaklH05m",
+          "type": "sticker",
+          "children": [
+            {
+              "text": ""
+            }
+          ]
+        },
+        {
+          "text": "左边有一堆表情"
+        }
+      ],
+      "elementId": "sVvflQG7wvGn",
+      "type": "paragraph"
+    }
+  ]
+}
