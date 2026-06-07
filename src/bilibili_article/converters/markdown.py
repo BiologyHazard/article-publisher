@@ -279,8 +279,8 @@ class MarkdownConverter(BaseConverter):
                     info.get("size", 0),
                 )
             )
-            logger.info(f"    → 上传成功: {info['url']}")
+            logger.info(f"→ 上传成功: {info['url']}")
         except BiliApiError as e:
-            logger.error(f"    [错误] 图片上传失败: {e}")
+            logger.error(f"[错误] 图片上传失败: {e}")
         except Exception as e:
-            logger.error(f"    [错误] 图片处理异常: {e}")
+            logger.error(f"[错误] 图片处理异常: {e}")

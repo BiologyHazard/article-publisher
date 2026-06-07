@@ -89,7 +89,7 @@ class BiliClient:
         try:
             return self._upload_image_bfs(file_path)
         except BiliApiError as e:
-            logger.info(f"    upload_bfs 上传失败 ({e.message})，尝试 upcover 接口...")
+            logger.info(f"upload_bfs 上传失败 ({e.message})，尝试 upcover 接口...")
             return self._upload_image_fallback(file_path)
 
     def _upload_image_bfs(self, file_path: Path) -> dict:
