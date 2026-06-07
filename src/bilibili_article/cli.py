@@ -288,7 +288,3 @@ def _run_lark(
         client=client, converter=converter, title=title, dry_run=dry_run, config=config
     )
     return result
-
-
-if __name__ == "__main__":
-    main()
