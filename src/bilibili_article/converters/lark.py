@@ -313,6 +313,11 @@ class LarkDocxConverter(BaseConverter):
         block_type = block["block_type"]
         prefix = "  " * depth
 
+        # 非列表块出现时重置列表组状态，确保不同列表组 hash 独立
+        if block_type not in (12, 13):
+            context.pop("list_group_type", None)
+            context.pop("list_group_hash", None)
+
         # 根据 block_type 分发处理
         method_name = _BLOCK_CONVERTERS.get(block_type)
         if method_name:
@@ -382,7 +387,7 @@ class LarkDocxConverter(BaseConverter):
         # 计算列表嵌套层级
         level = self._calc_list_level(block)
         nodes = self._elements_to_nodes(bullet.get("elements", []))
-        combine_hash = self._get_list_hash(block, level)
+        combine_hash = self._get_list_hash(block, level, context, "bullet")
         order = self._calc_list_order(block, level, context, "bullet")
         align = self._get_align(bullet.get("style"))
 
@@ -404,7 +409,7 @@ class LarkDocxConverter(BaseConverter):
             return
         level = self._calc_list_level(block)
         nodes = self._elements_to_nodes(ordered.get("elements", []))
-        combine_hash = self._get_list_hash(block, level)
+        combine_hash = self._get_list_hash(block, level, context, "ordered")
         order = self._calc_list_order(block, level, context, "ordered")
         align = self._get_align(ordered.get("style"))
 
@@ -692,11 +697,19 @@ class LarkDocxConverter(BaseConverter):
         return orders[key]
 
     @staticmethod
-    def _get_list_hash(block: dict, level: int) -> str:
-        """生成或获取列表组的 combine_hash。"""
-        # 对于嵌套列表，每层需要独立的 hash
-        # 使用 block_id 作为唯一标识的基础
-        return f"list_{int(time.time() * 1000)}_{block['block_id'][-8:]}"
+    def _get_list_hash(block: dict, level: int, context: dict, list_type: str) -> str:
+        """生成或获取列表组的 combine_hash。
+        连续的同类型列表项共享同一个 hash。
+        """
+        current_type = context.get("list_group_type")
+        current_hash = context.get("list_group_hash")
+        if current_type == list_type and current_hash:
+            return current_hash
+        # 新列表组：生成新 hash
+        new_hash = f"list_{int(time.time() * 1000)}_{block['block_id'][-8:]}"
+        context["list_group_type"] = list_type
+        context["list_group_hash"] = new_hash
+        return new_hash
 
     # ------------------------------------------------------------------
     # 文件下载
