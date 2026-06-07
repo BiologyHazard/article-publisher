@@ -21,6 +21,7 @@ from bilibili_article._wbi import (
     get_mixin_key,
     sign_wbi_params,
 )
+from bilibili_article.log import logger
 
 if TYPE_CHECKING:
     from bilibili_article.models import ArgPayload
@@ -86,7 +87,7 @@ class BiliClient:
         try:
             return self._upload_image_bfs(file_path)
         except BiliApiError as e:
-            print(f"    upload_bfs 上传失败 ({e.message})，尝试 upcover 接口...")
+            logger.info(f"    upload_bfs 上传失败 ({e.message})，尝试 upcover 接口...")
             return self._upload_image_fallback(file_path)
 
     def _upload_image_bfs(self, file_path: str) -> dict:

@@ -9,11 +9,13 @@
 import argparse
 import os
 import sys
+from typing import Any
 
 from bilibili_article._auth import load_auth, load_lark_auth
 from bilibili_article.client import BiliApiError, BiliClient
 from bilibili_article.converters.lark import LarkDocxConverter
 from bilibili_article.converters.markdown import MarkdownConverter
+from bilibili_article.log import logger
 from bilibili_article.publisher import publish_article
 
 REQUIRED_ENV = ("SESSDATA", "bili_jct", "buvid3")
@@ -180,7 +182,7 @@ def main() -> None:
     cfg = load_auth()
     missing = [k for k in REQUIRED_ENV if k not in cfg]
     if missing:
-        print(AUTH_HELP)
+        logger.error(AUTH_HELP)
         sys.exit(1)
 
     client = BiliClient(cfg["SESSDATA"], cfg["bili_jct"], cfg["buvid3"])
@@ -188,12 +190,12 @@ def main() -> None:
     # 上传封面图
     image_urls: list[str] | None = None
     if args.dry_run and args.cover:
-        print(f"  [dry-run] 跳过封面上传: {args.cover}")
+        logger.info(f"[dry-run] 跳过封面上传: {args.cover}")
     elif args.cover:
-        print(f"  上传封面图: {args.cover}")
+        logger.info(f"上传封面图: {args.cover}")
         image_info = client.upload_image(args.cover)
         image_urls = [image_info["url"]]
-        print(f"    → {image_info['url']}")
+        logger.info(f"  → {image_info['url']}")
 
     try:
         if args.mode in ("lark",):
@@ -231,10 +233,10 @@ def main() -> None:
                 article_id=article_id,
             )
     except BiliApiError as e:
-        print(f"\n❌ API 错误 [{e.code}]: {e.message}")
+        logger.error(f"❌ API 错误 [{e.code}]: {e.message}")
         sys.exit(1)
     except Exception as e:
-        print(f"\n❌ 运行时错误: {e}")
+        logger.error(f"❌ 运行时错误: {e}")
         sys.exit(1)
 
 
@@ -254,11 +256,11 @@ def _run_markdown(
     is_aigc: int = 0,
     hashtag_ids: list[int] | None = None,
     article_id: int | None = None,
-) -> None:
+) -> dict[str, Any]:
     """Markdown 模式：处理本地 Markdown 文件。"""
     md_path = os.path.abspath(markdown_file)
     if not os.path.isfile(md_path):
-        print(f"错误：文件不存在: {md_path}")
+        logger.error(f"错误：文件不存在: {md_path}")
         sys.exit(1)
 
     with open(md_path, "r", encoding="utf-8") as f:
@@ -272,8 +274,7 @@ def _run_markdown(
 
     base_dir = os.path.dirname(md_path)
 
-    print(f"\n📄 文件: {md_path}")
-    print("-" * 40)
+    logger.info(f"📄 文件: {md_path}")
 
     converter = MarkdownConverter(client, base_dir, md_content, dry_run=dry_run)
 
@@ -281,6 +282,7 @@ def _run_markdown(
         client=client,
         converter=converter,
         title=title,
+        dry_run=dry_run,
         category_id=category_id,
         private_pub=private_pub,
         up_closed_reply=up_closed_reply,
@@ -292,10 +294,8 @@ def _run_markdown(
         is_aigc=is_aigc,
         hashtag_ids=hashtag_ids,
         article_id=article_id,
-        dry_run=dry_run,
     )
-    if not dry_run:
-        _print_success(result)
+    return result
 
 
 def _run_lark(
@@ -314,18 +314,14 @@ def _run_lark(
     is_aigc: int = 0,
     hashtag_ids: list[int] | None = None,
     article_id: int | None = None,
-) -> None:
+) -> dict[str, Any]:
     """飞书云文档模式：从飞书文档 ID 导入。"""
     lark_cfg = load_lark_auth()
     if "LARK_APP_ID" not in lark_cfg or "LARK_APP_SECRET" not in lark_cfg:
-        print("错误：缺少飞书应用认证配置")
-        print("请在 .env 文件中添加：")
-        print("    LARK_APP_ID=你的App ID")
-        print("    LARK_APP_SECRET=你的App Secret")
+        logger.error(LARK_AUTH_HELP)
         sys.exit(1)
 
-    print(f"\n📄 飞书文档: {doc_id}")
-    print("-" * 40)
+    logger.info(f"📄 飞书文档: {doc_id}")
 
     converter = LarkDocxConverter(
         app_id=lark_cfg["LARK_APP_ID"],
@@ -338,12 +334,13 @@ def _run_lark(
     # 获取标题
     doc_info = converter.fetch_document_info()
     title = doc_info.get("title", "未命名文章")
-    print(f"  标题: {title}")
+    logger.info(f"标题: {title}")
 
     result = publish_article(
         client=client,
         converter=converter,
         title=title,
+        dry_run=dry_run,
         category_id=category_id,
         private_pub=private_pub,
         up_closed_reply=up_closed_reply,
@@ -355,20 +352,8 @@ def _run_lark(
         is_aigc=is_aigc,
         hashtag_ids=hashtag_ids,
         article_id=article_id,
-        dry_run=dry_run,
     )
-    if not dry_run:
-        _print_success(result)
-
-
-def _print_success(result: dict) -> None:
-    aid = result["data"]["article_id"]
-    print(f"\n✅ 完成！草稿 ID: {aid}")
-    print(
-        f"   可在创作中心查看: "
-        f"https://member.bilibili.com/platform/upload/text/new-edit"
-        f"?aid={aid}"
-    )
+    return result
 
 
 if __name__ == "__main__":

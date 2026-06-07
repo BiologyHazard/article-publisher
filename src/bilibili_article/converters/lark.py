@@ -28,6 +28,7 @@ import requests
 
 from bilibili_article.client import BiliApiError, BiliClient
 from bilibili_article.converters.base import BaseConverter
+from bilibili_article.log import logger
 from bilibili_article.opus import (
     make_blockquote_paragraph,
     make_code_paragraph,
@@ -291,7 +292,7 @@ class LarkDocxConverter(BaseConverter):
             # 如果没有 parent_id=="" 的块，第一个块就是根
             self._root_block_id = items[0]["block_id"]
 
-        print(f"  已加载 {len(self._blocks)} 个块")
+        logger.info(f"  已加载 {len(self._blocks)} 个块")
 
     # ------------------------------------------------------------------
     # 树遍历
@@ -459,7 +460,7 @@ class LarkDocxConverter(BaseConverter):
         if not token:
             return
 
-        print(f"{prefix}正在处理图片: token={token}")
+        logger.info(f"{prefix}正在处理图片: token={token}")
 
         if self._dry_run:
             caption = (image.get("caption") or {}).get("content", "")
@@ -472,7 +473,7 @@ class LarkDocxConverter(BaseConverter):
                     comment=caption,
                 )
             )
-            print(f"{prefix}  [dry-run] 跳过下载和上传: token={token}")
+            logger.info(f"{prefix}  [dry-run] 跳过下载和上传: token={token}")
             return
 
         try:
@@ -495,13 +496,13 @@ class LarkDocxConverter(BaseConverter):
                         comment=caption,
                     )
                 )
-                print(f"{prefix}  → 上传成功: {info['url']}")
+                logger.info(f"{prefix}  → 上传成功: {info['url']}")
             finally:
                 os.unlink(tmp_path)
         except BiliApiError as e:
-            print(f"{prefix}  [错误] 图片上传失败: {e}")
+            logger.error(f"{prefix}  [错误] 图片上传失败: {e}")
         except Exception as e:
-            print(f"{prefix}  [错误] 图片处理异常: {e}")
+            logger.error(f"{prefix}  [错误] 图片处理异常: {e}")
 
     def _convert_quote(
         self, block: dict, paragraphs: list[Paragraph], context: dict, prefix: str

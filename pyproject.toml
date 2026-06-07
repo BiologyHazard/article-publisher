@@ -5,6 +5,7 @@ description = "Make bilibili articles with ease."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "loguru>=0.7.3",
     "pillow>=12.2.0",
     "python-dotenv>=1.0.0",
     "requests>=2.34.2",

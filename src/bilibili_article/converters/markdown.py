@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 from bilibili_article.client import BiliApiError, BiliClient
 from bilibili_article.converters.base import BaseConverter
+from bilibili_article.log import logger
 from bilibili_article.opus import (
     make_divider_paragraph,
     make_heading_paragraph,
@@ -241,15 +242,15 @@ class MarkdownConverter(BaseConverter):
         )
 
         if not os.path.isfile(img_path):
-            print(f"  [警告] 图片文件不存在，跳过: {img_path}")
+            logger.warning(f"图片文件不存在，跳过: {img_path}")
             return
 
         if self._dry_run:
             paragraphs.append(make_image_paragraph(f"file://{img_path}", 800, 600, 0))
-            print(f"  [dry-run] 跳过上传: {img_path}")
+            logger.info(f"[dry-run] 跳过上传: {img_path}")
             return
 
-        print(f"  正在上传图片: {img_path}")
+        logger.info(f"正在上传图片: {img_path}")
         try:
             info = self.client.upload_image(img_path)
             paragraphs.append(
@@ -260,8 +261,8 @@ class MarkdownConverter(BaseConverter):
                     info.get("size", 0),
                 )
             )
-            print(f"    → 上传成功: {info['url']}")
+            logger.info(f"    → 上传成功: {info['url']}")
         except BiliApiError as e:
-            print(f"    [错误] 图片上传失败: {e}")
+            logger.error(f"    [错误] 图片上传失败: {e}")
         except Exception as e:
-            print(f"    [错误] 图片处理异常: {e}")
+            logger.error(f"    [错误] 图片处理异常: {e}")

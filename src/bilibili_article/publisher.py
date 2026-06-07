@@ -7,7 +7,9 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+from loguru import logger
 
 if TYPE_CHECKING:
     from bilibili_article.client import BiliClient
@@ -57,7 +59,7 @@ def publish_article(
     image_urls: list[str] | None = None,
     is_aigc: int = 0,
     hashtag_ids: list[int] | None = None,
-) -> dict:
+) -> dict[str, Any]:
     """
     将转换后的内容发布到 B站 草稿箱。
 
@@ -82,12 +84,12 @@ def publish_article(
     返回:
         API 响应 JSON（dry_run 时返回空 dict）
     """
-    print("  正在解析内容 ...")
+    logger.info("正在解析内容 ...")
     paragraphs = converter.convert()
-    print(f"  解析完成，共 {len(paragraphs)} 个段落")
+    logger.info(f"解析完成，共 {len(paragraphs)} 个段落")
 
     summary = build_summary(paragraphs)
-    print(f"  摘要: {summary[:60]}...")
+    logger.info(f"摘要: {summary}")
 
     arg: ArgPayload = {
         "type": 4,
@@ -126,15 +128,18 @@ def publish_article(
         arg["hashtag_ids"] = hashtag_ids
 
     # 输出 payload 到 stdout
-    print("\n========== Payload ==========")
+    logger.info("\n========== Payload ==========")
     print(json.dumps({"arg": arg}, ensure_ascii=False, indent=2))
-    print("=============================")
+    logger.info("=============================")
 
     if dry_run:
         return {}
 
-    print("  正在保存到草稿箱 ...")
+    logger.info("正在保存到草稿箱 ...")
     result = client.save_draft(arg)
     aid = result["data"]["article_id"]
-    print(f"  ✔ 成功！草稿 ID: {aid}")
+    logger.info(f"✅ 成功！草稿 ID: {aid}")
+    logger.info(
+        f"可在创作中心查看: https://member.bilibili.com/platform/upload/text/new-edit?aid={aid}"
+    )
     return result
