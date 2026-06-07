@@ -18,10 +18,10 @@
 
 from __future__ import annotations
 
-import os
 import tempfile
 import time
 import urllib.parse
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import requests
@@ -482,7 +482,7 @@ class LarkDocxConverter(BaseConverter):
             suffix = ".png"
             with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
                 tmp.write(image_data)
-                tmp_path = tmp.name
+                tmp_path = Path(tmp.name)
 
             try:
                 info = self.bili_client.upload_image(tmp_path)
@@ -498,7 +498,7 @@ class LarkDocxConverter(BaseConverter):
                 )
                 logger.info(f"{prefix}  → 上传成功: {info['url']}")
             finally:
-                os.unlink(tmp_path)
+                tmp_path.unlink()
         except BiliApiError as e:
             logger.error(f"{prefix}  [错误] 图片上传失败: {e}")
         except Exception as e:

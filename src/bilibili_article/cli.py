@@ -7,8 +7,8 @@
 """
 
 import argparse
-import os
 import sys
+from pathlib import Path
 from typing import Any
 
 from bilibili_article._auth import load_auth, load_lark_auth
@@ -175,7 +175,9 @@ def main() -> None:
         original=1 if args.original else 0,
         comment_selected=1 if args.select_comments else 0,
         up_closed_reply=1 if args.close_comments else 0,
-        timer_pub_time=_parse_publish_time(args.publish_time) if args.publish_time else 0,
+        timer_pub_time=_parse_publish_time(args.publish_time)
+        if args.publish_time
+        else 0,
         list_id=args.list_id,
         is_aigc=1 if args.aigc else 0,
         hashtag_ids=(
@@ -193,11 +195,12 @@ def main() -> None:
     client = BiliClient(cfg["SESSDATA"], cfg["bili_jct"], cfg["buvid3"])
 
     # 上传封面图
-    if args.dry_run and args.cover:
-        logger.info(f"[dry-run] 跳过封面上传: {args.cover}")
-    elif args.cover:
-        logger.info(f"上传封面图: {args.cover}")
-        image_info = client.upload_image(args.cover)
+    cover_path = Path(args.cover).resolve() if args.cover else None
+    if args.dry_run and cover_path:
+        logger.info(f"[dry-run] 跳过封面上传: {cover_path}")
+    elif cover_path:
+        logger.info(f"上传封面图: {cover_path}")
+        image_info = client.upload_image(cover_path)
         config.image_urls = [image_info["url"]]
         logger.info(f"  → {image_info['url']}")
 
@@ -205,7 +208,9 @@ def main() -> None:
         if args.mode in ("lark",):
             _run_lark(client, args.doc_id, dry_run=args.dry_run, config=config)
         else:  # markdown / md
-            _run_markdown(client, args.markdown_file, dry_run=args.dry_run, config=config)
+            _run_markdown(
+                client, args.markdown_file, dry_run=args.dry_run, config=config
+            )
     except BiliApiError as e:
         logger.error(f"❌ API 错误 [{e.code}]: {e.message}")
         sys.exit(1)
@@ -225,8 +230,8 @@ def _run_markdown(
     if config is None:
         config = PublishConfig()
 
-    md_path = os.path.abspath(markdown_file)
-    if not os.path.isfile(md_path):
+    md_path = Path(markdown_file).resolve()
+    if not md_path.is_file():
         logger.error(f"错误：文件不存在: {md_path}")
         sys.exit(1)
 
@@ -239,7 +244,7 @@ def _run_markdown(
     title_match = re.search(r"^#\s+(.*)", md_content, re.MULTILINE)
     title = title_match.group(1).strip() if title_match else "未命名文章"
 
-    base_dir = os.path.dirname(md_path)
+    base_dir = md_path.parent
 
     logger.info(f"📄 文件: {md_path}")
 

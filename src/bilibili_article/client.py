@@ -9,8 +9,10 @@ B站 API 客户端封装。
 
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 import requests
 from PIL import Image
@@ -79,7 +81,7 @@ class BiliClient:
     # 图片上传
     # ------------------------------------------------------------------
 
-    def upload_image(self, file_path: str) -> dict:
+    def upload_image(self, file_path: Path) -> dict:
         """
         将本地图片上传到 B站 图床，返回:
             {"url": str, "width": int, "height": int, "size": float}
@@ -90,7 +92,7 @@ class BiliClient:
             logger.info(f"    upload_bfs 上传失败 ({e.message})，尝试 upcover 接口...")
             return self._upload_image_fallback(file_path)
 
-    def _upload_image_bfs(self, file_path: str) -> dict:
+    def _upload_image_bfs(self, file_path: Path) -> dict:
         """使用 Opus 编辑器专用接口上传图片（需要 WBI 签名）。"""
         url = f"{BILI_API_BASE}/x/dynamic/feed/draw/upload_bfs"
         params = self.sign(
@@ -100,8 +102,8 @@ class BiliClient:
                 "category": "daily",
             }
         )
-        file_name = os.path.basename(file_path)
-        file_size_kb = round(os.path.getsize(file_path) / 1024, 2)
+        file_name = file_path.name
+        file_size_kb = round(file_path.stat().st_size / 1024, 2)
         with open(file_path, "rb") as f:
             files = {"file_up": (file_name, f, self._detect_mime(file_path))}
             data = {
@@ -121,11 +123,11 @@ class BiliClient:
             file_path, result["data"]["image_url"], file_size_kb
         )
 
-    def _upload_image_fallback(self, file_path: str) -> dict:
+    def _upload_image_fallback(self, file_path: Path) -> dict:
         """使用旧版 upcover 接口上传图片。"""
         url = f"{BILI_API_BASE}/x/article/creative/article/upcover"
-        file_name = os.path.basename(file_path)
-        file_size_kb = round(os.path.getsize(file_path) / 1024, 2)
+        file_name = file_path.name
+        file_size_kb = round(file_path.stat().st_size / 1024, 2)
         with open(file_path, "rb") as f:
             files = {"binary": (file_name, f, self._detect_mime(file_path))}
             data = {"csrf": self.csrf, "cover": ""}
@@ -140,7 +142,9 @@ class BiliClient:
         return self._format_image_result(file_path, result["data"]["url"], file_size_kb)
 
     @staticmethod
-    def _format_image_result(file_path: str, raw_url: str, file_size_kb: float) -> dict:
+    def _format_image_result(
+        file_path: Path, raw_url: str, file_size_kb: float
+    ) -> dict:
         """统一处理图片上传结果：获取尺寸、标准化 URL、构建返回字典。"""
         with Image.open(file_path) as img:
             w, h = img.size
@@ -149,8 +153,8 @@ class BiliClient:
         return {"url": raw_url, "width": w, "height": h, "size": file_size_kb}
 
     @staticmethod
-    def _detect_mime(path: str) -> str:
-        ext = os.path.splitext(path)[1].lower()
+    def _detect_mime(path: Path) -> str:
+        ext = path.suffix.lower()
         return {
             ".jpg": "image/jpeg",
             ".jpeg": "image/jpeg",

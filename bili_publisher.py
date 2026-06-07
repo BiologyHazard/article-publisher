@@ -37,6 +37,7 @@ import re
 import sys
 import time
 import urllib.parse
+from pathlib import Path
 
 import requests
 from dotenv import find_dotenv, load_dotenv
@@ -198,7 +199,7 @@ class BiliClient:
     # 图片上传
     # ------------------------------------------------------------------
 
-    def upload_image(self, file_path: str) -> dict:
+    def upload_image(self, file_path: Path) -> dict:
         """
         将本地图片上传到 B站 图床（优先使用 Opus 编辑器专用接口），返回:
             {"url": str, "width": int, "height": int}
@@ -209,12 +210,12 @@ class BiliClient:
             print(f"    upload_bfs 上传失败 ({e.message})，尝试 upcover 接口...")
             return self._upload_image_fallback(file_path)
 
-    def _upload_image_bfs(self, file_path: str) -> dict:
+    def _upload_image_bfs(self, file_path: Path) -> dict:
         """使用 Opus 编辑器专用接口上传图片（需要 WBI 签名）"""
         url = f"{BILI_API_BASE}/x/dynamic/feed/draw/upload_bfs"
         params = self.sign({"csrf": self.csrf, "biz": "new_dyn", "category": "daily"})
-        file_name = os.path.basename(file_path)
-        file_size_kb = round(os.path.getsize(file_path) / 1024, 2)
+        file_name = file_path.name
+        file_size_kb = round(file_path.stat().st_size / 1024, 2)
         with open(file_path, "rb") as f:
             files = {"file_up": (file_name, f, self._detect_mime(file_path))}
             data = {"biz": "new_dyn", "category": "daily", "csrf": self.csrf}
@@ -239,11 +240,11 @@ class BiliClient:
             "size": file_size_kb,
         }
 
-    def _upload_image_fallback(self, file_path: str) -> dict:
+    def _upload_image_fallback(self, file_path: Path) -> dict:
         """回退方案：使用旧版 upcover 接口上传图片"""
         url = f"{BILI_API_BASE}/x/article/creative/article/upcover"
-        file_name = os.path.basename(file_path)
-        file_size_kb = round(os.path.getsize(file_path) / 1024, 2)
+        file_name = file_path.name
+        file_size_kb = round(file_path.stat().st_size / 1024, 2)
         with open(file_path, "rb") as f:
             files = {"binary": (file_name, f, self._detect_mime(file_path))}
             data = {"csrf": self.csrf, "cover": ""}
@@ -264,8 +265,8 @@ class BiliClient:
         return {"url": raw_url, "width": w, "height": h, "size": file_size_kb}
 
     @staticmethod
-    def _detect_mime(path: str) -> str:
-        ext = os.path.splitext(path)[1].lower()
+    def _detect_mime(path: Path) -> str:
+        ext = path.suffix.lower()
         return {
             ".jpg": "image/jpeg",
             ".jpeg": "image/jpeg",
@@ -487,7 +488,7 @@ def parse_inline(text: str) -> list[dict]:
 class MarkdownParser:
     """将 Markdown 字符串转换为 Opus paragraphs 列表"""
 
-    def __init__(self, client: BiliClient, base_dir: str):
+    def __init__(self, client: BiliClient, base_dir: Path):
         self.client = client
         self.base_dir = base_dir
 
@@ -542,12 +543,12 @@ class MarkdownParser:
         raw_path = match.group(1)
         # 支持相对路径（相对于 base_dir）和绝对路径
         img_path = (
-            raw_path
-            if os.path.isabs(raw_path)
-            else os.path.normpath(os.path.join(self.base_dir, raw_path))
+            Path(raw_path)
+            if Path(raw_path).is_absolute()
+            else (self.base_dir / raw_path).resolve()
         )
 
-        if not os.path.isfile(img_path):
+        if not img_path.is_file():
             print(f"  [警告] 图片文件不存在，跳过: {img_path}")
             return
 
@@ -585,7 +586,7 @@ def build_summary(paragraphs: list[dict]) -> str:
 
 def publish_article(
     client: BiliClient,
-    article_dir: str,
+    article_dir: Path,
     *,
     category_id: int = 15,
     article_id: int | None = None,
@@ -612,8 +613,8 @@ def publish_article(
     返回:
         API 响应 JSON，包含 article_id
     """
-    md_path = os.path.join(article_dir, "main.md")
-    if not os.path.isfile(md_path):
+    md_path = article_dir / "main.md"
+    if not md_path.is_file():
         raise FileNotFoundError(f"找不到 main.md: {md_path}")
 
     with open(md_path, "r", encoding="utf-8") as f:
@@ -669,7 +670,7 @@ def publish_article(
         arg["article_id"] = article_id
 
     # ---- 导出 payload 到文件（调试用） ----
-    payload_path = os.path.join(article_dir, "payload.json")
+    payload_path = article_dir / "payload.json"
     with open(payload_path, "w", encoding="utf-8") as f:
         json.dump({"arg": arg}, f, ensure_ascii=False, indent=2)
     print(f"  payload 已导出: {payload_path}")
@@ -737,8 +738,8 @@ def main():
         print("示例: python bili_publisher.py articles/article1")
         sys.exit(1)
 
-    article_dir = os.path.abspath(args[0])
-    if not os.path.isdir(article_dir):
+    article_dir = Path(args[0]).resolve()
+    if not article_dir.is_dir():
         print(f"错误：目录不存在: {article_dir}")
         sys.exit(1)
 

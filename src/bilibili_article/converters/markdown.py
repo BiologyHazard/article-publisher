@@ -7,9 +7,9 @@ Markdown → Opus 转换器。
 
 from __future__ import annotations
 
-import os
 import re
 import time
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from bilibili_article.client import BiliApiError, BiliClient
@@ -92,7 +92,7 @@ class MarkdownConverter(BaseConverter):
     """将 Markdown 字符串转换为 Opus paragraphs 列表。"""
 
     def __init__(
-        self, client: BiliClient, base_dir: str, md: str = "", *, dry_run: bool = False
+        self, client: BiliClient, base_dir: Path, md: str = "", *, dry_run: bool = False
     ):
         self.client = client
         self.base_dir = base_dir
@@ -236,12 +236,12 @@ class MarkdownConverter(BaseConverter):
         """处理图片：上传并追加图片段落。"""
         raw_path = match.group(1)
         img_path = (
-            raw_path
-            if os.path.isabs(raw_path)
-            else os.path.normpath(os.path.join(self.base_dir, raw_path))
+            Path(raw_path)
+            if Path(raw_path).is_absolute()
+            else (self.base_dir / raw_path).resolve()
         )
 
-        if not os.path.isfile(img_path):
+        if not img_path.is_file():
             logger.warning(f"图片文件不存在，跳过: {img_path}")
             return
 
