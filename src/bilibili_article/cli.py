@@ -11,14 +11,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from bilibili_article._auth import load_auth, load_lark_auth
+from bilibili_article._auth import REQUIRED_ENV, load_auth, load_lark_auth
 from bilibili_article.client import BiliApiError, BiliClient
 from bilibili_article.converters.lark import LarkDocxConverter
 from bilibili_article.converters.markdown import MarkdownConverter
 from bilibili_article.log import logger
 from bilibili_article.publisher import PublishConfig, publish_article
-
-REQUIRED_ENV = ("SESSDATA", "bili_jct", "buvid3")
 
 AUTH_HELP = """错误：缺少必要的环境变量
 
