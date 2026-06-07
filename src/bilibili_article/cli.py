@@ -6,10 +6,10 @@
   2. 飞书云文档模式: python -m bilibili_article lark <document_id>
 """
 
-import argparse
-import datetime
 import re
 import sys
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -44,14 +44,14 @@ LARK_AUTH_HELP = """错误：缺少飞书应用认证配置
     LARK_APP_SECRET=你的 App Secret
 获取方式：在飞书开发者平台 https://open.feishu.cn/app 创建应用后获取。"""
 
-CST = datetime.timezone(datetime.timedelta(hours=8), name="中国标准时间")
+CST = timezone(timedelta(hours=8), name="中国标准时间")
 """中国标准时间（UTC+8）"""
 
 
-def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
+def _build_parser() -> ArgumentParser:
+    parser = ArgumentParser(
         description="B站专栏文章发布工具",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=RawDescriptionHelpFormatter,
     )
 
     subparsers = parser.add_subparsers(dest="mode", required=True, title="模式")
@@ -157,7 +157,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def _parse_publish_time(text: str) -> int:
     """将 'YYYY-MM-DD HH:MM' 格式的时间字符串转为 UTC 时间戳。"""
-    dt = datetime.datetime.strptime(text, "%Y-%m-%d %H:%M").astimezone(CST)
+    dt = datetime.strptime(text, "%Y-%m-%d %H:%M").astimezone(CST)
     return int(dt.timestamp())
 
 
