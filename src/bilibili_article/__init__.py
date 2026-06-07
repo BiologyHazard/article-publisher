@@ -6,13 +6,14 @@ from bilibili_article.client import BiliApiError, BiliClient
 from bilibili_article.converters.lark import LarkDocxConverter
 from bilibili_article.converters.markdown import MarkdownConverter
 from bilibili_article.log import logger
-from bilibili_article.publisher import publish_article
+from bilibili_article.publisher import PublishConfig, publish_article
 
 __all__ = [
     "BiliApiError",
     "BiliClient",
     "LarkDocxConverter",
     "MarkdownConverter",
+    "PublishConfig",
     "logger",
     "publish_article",
 ]

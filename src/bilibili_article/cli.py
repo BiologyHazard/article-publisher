@@ -16,7 +16,7 @@ from bilibili_article.client import BiliApiError, BiliClient
 from bilibili_article.converters.lark import LarkDocxConverter
 from bilibili_article.converters.markdown import MarkdownConverter
 from bilibili_article.log import logger
-from bilibili_article.publisher import publish_article
+from bilibili_article.publisher import PublishConfig, publish_article
 
 REQUIRED_ENV = ("SESSDATA", "bili_jct", "buvid3")
 
@@ -166,19 +166,24 @@ def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
 
-    category_id = args.category
-    private_pub = 1 if args.private else 2
-    up_closed_reply = 1 if args.close_comments else 0
-    comment_selected = 1 if args.select_comments else 0
-    original = 1 if args.original else 0
-    is_aigc = 1 if args.aigc else 0
-    timer_pub_time = _parse_publish_time(args.publish_time) if args.publish_time else 0
-    hashtag_ids = (
-        [int(x) for x in args.hashtags.split(",") if x] if args.hashtags else None
+    # 构建统一配置
+    config = PublishConfig(
+        category_id=args.category,
+        article_id=args.update,
+        private_pub=1 if args.private else 2,
+        reprint=1,
+        original=1 if args.original else 0,
+        comment_selected=1 if args.select_comments else 0,
+        up_closed_reply=1 if args.close_comments else 0,
+        timer_pub_time=_parse_publish_time(args.publish_time) if args.publish_time else 0,
+        list_id=args.list_id,
+        is_aigc=1 if args.aigc else 0,
+        hashtag_ids=(
+            [int(x) for x in args.hashtags.split(",") if x] if args.hashtags else None
+        ),
     )
-    article_id = args.update
 
-    #  加载 B站认证
+    # 加载 B站认证
     cfg = load_auth()
     missing = [k for k in REQUIRED_ENV if k not in cfg]
     if missing:
@@ -188,50 +193,19 @@ def main() -> None:
     client = BiliClient(cfg["SESSDATA"], cfg["bili_jct"], cfg["buvid3"])
 
     # 上传封面图
-    image_urls: list[str] | None = None
     if args.dry_run and args.cover:
         logger.info(f"[dry-run] 跳过封面上传: {args.cover}")
     elif args.cover:
         logger.info(f"上传封面图: {args.cover}")
         image_info = client.upload_image(args.cover)
-        image_urls = [image_info["url"]]
+        config.image_urls = [image_info["url"]]
         logger.info(f"  → {image_info['url']}")
 
     try:
         if args.mode in ("lark",):
-            _run_lark(
-                client,
-                args.doc_id,
-                dry_run=args.dry_run,
-                category_id=category_id,
-                private_pub=private_pub,
-                up_closed_reply=up_closed_reply,
-                comment_selected=comment_selected,
-                original=original,
-                timer_pub_time=timer_pub_time,
-                list_id=args.list_id,
-                image_urls=image_urls,
-                is_aigc=is_aigc,
-                hashtag_ids=hashtag_ids,
-                article_id=article_id,
-            )
+            _run_lark(client, args.doc_id, dry_run=args.dry_run, config=config)
         else:  # markdown / md
-            _run_markdown(
-                client,
-                args.markdown_file,
-                dry_run=args.dry_run,
-                category_id=category_id,
-                private_pub=private_pub,
-                up_closed_reply=up_closed_reply,
-                comment_selected=comment_selected,
-                original=original,
-                timer_pub_time=timer_pub_time,
-                list_id=args.list_id,
-                image_urls=image_urls,
-                is_aigc=is_aigc,
-                hashtag_ids=hashtag_ids,
-                article_id=article_id,
-            )
+            _run_markdown(client, args.markdown_file, dry_run=args.dry_run, config=config)
     except BiliApiError as e:
         logger.error(f"❌ API 错误 [{e.code}]: {e.message}")
         sys.exit(1)
@@ -245,19 +219,12 @@ def _run_markdown(
     markdown_file: str,
     *,
     dry_run: bool = False,
-    category_id: int = 15,
-    private_pub: int = 2,
-    up_closed_reply: int = 0,
-    comment_selected: int = 0,
-    original: int = 0,
-    timer_pub_time: int = 0,
-    list_id: int = 0,
-    image_urls: list[str] | None = None,
-    is_aigc: int = 0,
-    hashtag_ids: list[int] | None = None,
-    article_id: int | None = None,
+    config: PublishConfig | None = None,
 ) -> dict[str, Any]:
     """Markdown 模式：处理本地 Markdown 文件。"""
+    if config is None:
+        config = PublishConfig()
+
     md_path = os.path.abspath(markdown_file)
     if not os.path.isfile(md_path):
         logger.error(f"错误：文件不存在: {md_path}")
@@ -279,21 +246,7 @@ def _run_markdown(
     converter = MarkdownConverter(client, base_dir, md_content, dry_run=dry_run)
 
     result = publish_article(
-        client=client,
-        converter=converter,
-        title=title,
-        dry_run=dry_run,
-        category_id=category_id,
-        private_pub=private_pub,
-        up_closed_reply=up_closed_reply,
-        comment_selected=comment_selected,
-        original=original,
-        timer_pub_time=timer_pub_time,
-        list_id=list_id,
-        image_urls=image_urls,
-        is_aigc=is_aigc,
-        hashtag_ids=hashtag_ids,
-        article_id=article_id,
+        client=client, converter=converter, title=title, dry_run=dry_run, config=config
     )
     return result
 
@@ -303,19 +256,12 @@ def _run_lark(
     doc_id: str,
     *,
     dry_run: bool = False,
-    category_id: int = 15,
-    private_pub: int = 2,
-    up_closed_reply: int = 0,
-    comment_selected: int = 0,
-    original: int = 0,
-    timer_pub_time: int = 0,
-    list_id: int = 0,
-    image_urls: list[str] | None = None,
-    is_aigc: int = 0,
-    hashtag_ids: list[int] | None = None,
-    article_id: int | None = None,
+    config: PublishConfig | None = None,
 ) -> dict[str, Any]:
     """飞书云文档模式：从飞书文档 ID 导入。"""
+    if config is None:
+        config = PublishConfig()
+
     lark_cfg = load_lark_auth()
     if "LARK_APP_ID" not in lark_cfg or "LARK_APP_SECRET" not in lark_cfg:
         logger.error(LARK_AUTH_HELP)
@@ -337,21 +283,7 @@ def _run_lark(
     logger.info(f"标题: {title}")
 
     result = publish_article(
-        client=client,
-        converter=converter,
-        title=title,
-        dry_run=dry_run,
-        category_id=category_id,
-        private_pub=private_pub,
-        up_closed_reply=up_closed_reply,
-        comment_selected=comment_selected,
-        original=original,
-        timer_pub_time=timer_pub_time,
-        list_id=list_id,
-        image_urls=image_urls,
-        is_aigc=is_aigc,
-        hashtag_ids=hashtag_ids,
-        article_id=article_id,
+        client=client, converter=converter, title=title, dry_run=dry_run, config=config
     )
     return result
 

@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
@@ -15,6 +16,28 @@ if TYPE_CHECKING:
     from bilibili_article.client import BiliClient
     from bilibili_article.converters.base import BaseConverter
     from bilibili_article.models import ArgPayload, InlineNode, Paragraph, Payload
+
+
+@dataclass
+class PublishConfig:
+    """发布配置参数集合。
+
+    将 publish_article 的 10+ 个可选参数封装为单一数据类，
+    简化调用方签名，便于扩展。
+    """
+
+    category_id: int = 15
+    article_id: int | None = None
+    private_pub: int = 2
+    reprint: int = 1
+    original: int = 0
+    comment_selected: int = 0
+    up_closed_reply: int = 0
+    timer_pub_time: int = 0
+    list_id: int = 0
+    image_urls: list[str] | None = None
+    is_aigc: int = 0
+    hashtag_ids: list[int] | None = None
 
 
 def build_summary(paragraphs: list[Paragraph]) -> str:
@@ -47,43 +70,24 @@ def publish_article(
     title: str,
     *,
     dry_run: bool = False,
-    category_id: int = 15,
-    article_id: int | None = None,
-    private_pub: int = 2,
-    reprint: int = 1,
-    original: int = 0,
-    comment_selected: int = 0,
-    up_closed_reply: int = 0,
-    timer_pub_time: int = 0,
-    list_id: int = 0,
-    image_urls: list[str] | None = None,
-    is_aigc: int = 0,
-    hashtag_ids: list[int] | None = None,
+    config: PublishConfig | None = None,
 ) -> dict[str, Any]:
     """
     将转换后的内容发布到 B站 草稿箱。
 
     参数:
-        client:           已认证的 BiliClient 实例
-        converter:        内容转换器实例
-        title:            文章标题
-        dry_run:          仅构建 payload 并输出到 stdout，不发送请求
-        category_id:      分区 ID (15=生活, 4=游戏...)
-        article_id:       已有草稿 ID（None 表示新建）
-        private_pub:      可见性 (2=公开, 1=仅自己可见)
-        reprint:          转载设置 (1=禁止转载)
-        original:         原创声明 (0=不声明, 1=声明原创)
-        comment_selected: 精选评论 (0=关闭, 1=开启)
-        up_closed_reply:  关闭评论 (0=允许评论, 1=关闭评论)
-        timer_pub_time:   定时发布时间戳 (0=不定时, UTC+8)
-        list_id:          文集 ID (0=不加入文集)
-        image_urls:       自定义封面 URL 列表（最多一张）
-        is_aigc:          AI 辅助创作声明 (0=否, 1=是)
-        hashtag_ids:      话题 ID 列表
+        client:     已认证的 BiliClient 实例
+        converter:  内容转换器实例
+        title:      文章标题
+        dry_run:    仅构建 payload 并输出到 stdout，不发送请求
+        config:     发布配置参数集合（见 PublishConfig）
 
     返回:
         API 响应 JSON（dry_run 时返回空 dict）
     """
+    if config is None:
+        config = PublishConfig()
+
     logger.info("正在解析内容 ...")
     paragraphs = converter.convert()
     logger.info(f"解析完成，共 {len(paragraphs)} 个段落")
@@ -94,15 +98,15 @@ def publish_article(
     arg: ArgPayload = {
         "type": 4,
         "template_id": 1,
-        "category_id": category_id,
+        "category_id": config.category_id,
         "title": title,
-        "private_pub": private_pub,
-        "reprint": reprint,
-        "original": original,
-        "list_id": list_id,
-        "comment_selected": comment_selected,
-        "up_closed_reply": up_closed_reply,
-        "timer_pub_time": timer_pub_time,
+        "private_pub": config.private_pub,
+        "reprint": config.reprint,
+        "original": config.original,
+        "list_id": config.list_id,
+        "comment_selected": config.comment_selected,
+        "up_closed_reply": config.up_closed_reply,
+        "timer_pub_time": config.timer_pub_time,
         "only_fans_level": 0,
         "only_fans_dnd": 0,
         "summary": summary,
@@ -116,16 +120,16 @@ def publish_article(
                 "editor_version": "eva3-3.0.0",
             },
             "attachments": {
-                "is_aigc": is_aigc,
+                "is_aigc": config.is_aigc,
             },
         },
     }
-    if article_id is not None:
-        arg["article_id"] = article_id
-    if image_urls:
-        arg["image_urls"] = image_urls
-    if hashtag_ids:
-        arg["hashtag_ids"] = hashtag_ids
+    if config.article_id is not None:
+        arg["article_id"] = config.article_id
+    if config.image_urls:
+        arg["image_urls"] = config.image_urls
+    if config.hashtag_ids:
+        arg["hashtag_ids"] = config.hashtag_ids
 
     payload: Payload = {"arg": arg}
 
