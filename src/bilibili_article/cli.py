@@ -7,6 +7,8 @@
 """
 
 import argparse
+import datetime
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -152,8 +154,6 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def _parse_publish_time(text: str) -> int:
     """将 'YYYY-MM-DD HH:MM' 格式的时间字符串转为 UTC 时间戳。"""
-    import datetime
-
     dt = datetime.datetime.strptime(text, "%Y-%m-%d %H:%M").astimezone()
     # 用户输入的是北京时间 (UTC+8)，转为 UTC 时间戳
     dt_utc = dt.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=8)))
@@ -237,8 +237,6 @@ def _run_markdown(
         md_content = f.read()
 
     # 从 Markdown 提取标题
-    import re
-
     title_match = re.search(r"^#\s+(.*)", md_content, re.MULTILINE)
     title = title_match.group(1).strip() if title_match else "未命名文章"
 
