@@ -339,4 +339,4 @@ class MarkdownConverter(BaseConverter):
 
         alt_text = (token.get("attrs") or {}).get("alt", "")
         logger.info(f"  发现图片: {img_path}")
-        return ImageBlock(source=str(img_path), alt_text=alt_text)
+        return ImageBlock(source=str(img_path), alt_text=alt_text, caption=alt_text)
