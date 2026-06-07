@@ -207,7 +207,7 @@ def main() -> None:
             _run_lark(client, args.doc_id, dry_run=args.dry_run, config=config)
         else:  # markdown / md
             _run_markdown(
-                client, args.markdown_file, dry_run=args.dry_run, config=config
+                client, Path(args.markdown_file), dry_run=args.dry_run, config=config
             )
     except BiliApiError as e:
         logger.error(f"❌ API 错误 [{e.code}]: {e.message}")
@@ -219,7 +219,7 @@ def main() -> None:
 
 def _run_markdown(
     client: BiliClient,
-    markdown_file: str,
+    markdown_file_path: Path,
     *,
     dry_run: bool = False,
     config: PublishConfig | None = None,
@@ -228,23 +228,19 @@ def _run_markdown(
     if config is None:
         config = PublishConfig()
 
-    md_path = Path(markdown_file).resolve()
-    if not md_path.is_file():
-        logger.error(f"错误：文件不存在: {md_path}")
+    if not markdown_file_path.is_file():
+        logger.error(f"错误：文件不存在: {markdown_file_path}")
         sys.exit(1)
 
-    with open(md_path, "r", encoding="utf-8") as f:
-        md_content = f.read()
-
     # 从 Markdown 提取标题
+    with open(markdown_file_path, "r", encoding="utf-8") as f:
+        md_content = f.read()
     title_match = re.search(r"^#\s+(.*)", md_content, re.MULTILINE)
     title = title_match.group(1).strip() if title_match else "未命名文章"
 
-    base_dir = md_path.parent
+    logger.info(f"📄 文件: {markdown_file_path}")
 
-    logger.info(f"📄 文件: {md_path}")
-
-    converter = MarkdownConverter(client, base_dir, md_content, dry_run=dry_run)
+    converter = MarkdownConverter(client, markdown_file_path, dry_run=dry_run)
 
     result = publish_article(
         client=client, converter=converter, title=title, dry_run=dry_run, config=config

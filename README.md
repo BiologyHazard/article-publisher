@@ -183,7 +183,7 @@ uv run python main.py articles/article1 --private
 from bilibili_article import BiliClient, MarkdownConverter, PublishConfig, publish_article
 
 client = BiliClient(sessdata, bili_jct, buvid3)
-converter = MarkdownConverter(client, "articles/article1")
+converter = MarkdownConverter(client, "articles/article1/main.md")
 config = PublishConfig(article_id=350791)
 result = publish_article(client, converter, title="标题", config=config)
 ```

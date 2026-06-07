@@ -165,14 +165,19 @@ def _get_list_order(stripped: str, item_type: str) -> int:
 
 
 class MarkdownConverter(BaseConverter):
-    """将 Markdown 字符串转换为 Opus paragraphs 列表。"""
+    """将本地 Markdown 文件转换为 Opus paragraphs 列表。"""
 
     def __init__(
-        self, client: BiliClient, base_dir: Path, md: str = "", *, dry_run: bool = False
+        self,
+        client: BiliClient,
+        markdown_file_path: Path,
+        *,
+        dry_run: bool = False,
     ):
         self.client = client
-        self.base_dir = base_dir
-        self._md = md
+        self.base_dir = markdown_file_path.resolve().parent
+        with open(markdown_file_path, "r", encoding="utf-8") as f:
+            self._md = f.read()
         self._dry_run = dry_run
 
     def convert(self) -> list[Paragraph]:  # type: ignore[misc,override]
