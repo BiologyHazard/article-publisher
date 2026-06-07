@@ -190,11 +190,11 @@ class _LarkHttpClient:
     def _ensure_token(self) -> str:
         if self._tenant_token:
             return self._tenant_token
-        resp = self._session.post(
+        response = self._session.post(
             f"{LARK_API_BASE}/auth/v3/tenant_access_token/internal",
             json={"app_id": self.app_id, "app_secret": self.app_secret},
         )
-        data = resp.json()
+        data = response.json()
         self._tenant_token = data["tenant_access_token"]
         assert self._tenant_token is not None
         self._session.headers["Authorization"] = f"Bearer {self._tenant_token}"
@@ -203,8 +203,8 @@ class _LarkHttpClient:
     def get(self, path: str, **kwargs) -> dict:
         """发送 GET 请求并返回 JSON 响应。"""
         self._ensure_token()
-        resp = self._session.get(f"{LARK_API_BASE}{path}", **kwargs)
-        data = resp.json()
+        response = self._session.get(f"{LARK_API_BASE}{path}", **kwargs)
+        data = response.json()
         if data.get("code") != 0:
             raise RuntimeError(f"飞书 API 错误: [{data.get('code')}] {data.get('msg')}")
         return data
@@ -212,10 +212,10 @@ class _LarkHttpClient:
     def get_bytes(self, path: str, **kwargs) -> bytes:
         """发送 GET 请求并返回原始字节（用于下载文件）。"""
         self._ensure_token()
-        resp = self._session.get(f"{LARK_API_BASE}{path}", **kwargs)
-        if resp.status_code != 200:
-            raise RuntimeError(f"飞书文件下载失败: HTTP {resp.status_code}")
-        return resp.content
+        response = self._session.get(f"{LARK_API_BASE}{path}", **kwargs)
+        if response.status_code != 200:
+            raise RuntimeError(f"飞书文件下载失败: HTTP {response.status_code}")
+        return response.content
 
 
 # =============================================================================

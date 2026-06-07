@@ -189,13 +189,18 @@ class TextParagraph(TypedDict):
     text: TextContent
 
 
-class ImagePic(TypedDict):
-    """图片段落中的单张图片信息。"""
+class UploadedImage(TypedDict):
+    """upload_image 方法的返回值。"""
 
     url: str
     width: int
     height: int
     size: float
+
+
+class ImagePic(UploadedImage):
+    """图片段落中的单张图片信息。"""
+
     comment: NotRequired[str]
     ai_gen_pic: NotRequired[int]
 

@@ -23,7 +23,6 @@ from bilibili_article.publisher import PublishConfig, publish_article
 AUTH_HELP = """错误：缺少必要的环境变量
 
 请在项目根目录创建 .env 文件，内容如下：
-
     SESSDATA=你的 SESSDATA 值
     bili_jct=你的 bili_jct 值
     buvid3=你的 buvid3 值
@@ -33,7 +32,7 @@ AUTH_HELP = """错误：缺少必要的环境变量
     LARK_APP_SECRET=你的飞书应用 App Secret
 
 获取方式：浏览器登录 B站后
-  F12 → Application → Cookies → bilibili.com
+  按 F12 打开开发者工具 → Application（应用程序） → Cookie → https://*.bilibili.com
   复制 SESSDATA、bili_jct、buvid3 三个字段的值
 
 飞书应用需在 https://open.feishu.cn/app 创建并获取凭据。"""

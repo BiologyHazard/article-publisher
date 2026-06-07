@@ -282,7 +282,7 @@ GET https://api.bilibili.com/x/web-interface/nav
 
 **提取 WBI 密钥的 Python 代码：**
 ```python
-wbi_img = resp["data"]["wbi_img"]
+wbi_img = response["data"]["wbi_img"]
 img_key = wbi_img["img_url"].split("/")[-1].split(".")[0]
 sub_key = wbi_img["sub_url"].split("/")[-1].split(".")[0]
 ```
@@ -338,8 +338,8 @@ url = "https://api.bilibili.com/x/dynamic/feed/draw/upload_bfs"
 params = sign_wbi({"csrf": csrf, "biz": "new_dyn", "category": "daily"})
 files = {"file_up": ("image.png", open("image.png", "rb"), "image/png")}
 data = {"biz": "new_dyn", "category": "daily", "csrf": csrf}
-resp = session.post(url, params=params, files=files, data=data)
-result = resp.json()
+response = session.post(url, params=params, files=files, data=data)
+result = response.json()
 image_url = result["data"]["image_url"].replace("http://", "https://")
 ```
 

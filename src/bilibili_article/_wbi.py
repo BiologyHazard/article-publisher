@@ -9,7 +9,7 @@ from __future__ import annotations
 import hashlib
 import time
 import urllib.parse
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import requests
@@ -91,14 +91,14 @@ def get_mixin_key(raw: str) -> str:
 
 def fetch_wbi_keys(session: requests.Session) -> tuple[str, str]:
     """从 /x/web-interface/nav 获取 WBI 的 img_key 和 sub_key。"""
-    resp = session.get(f"{BILI_API_BASE}/x/web-interface/nav").json()
-    wbi_img = resp["data"]["wbi_img"]
+    response = session.get(f"{BILI_API_BASE}/x/web-interface/nav").json()
+    wbi_img = response["data"]["wbi_img"]
     img_key = wbi_img["img_url"].split("/")[-1].split(".")[0]
     sub_key = wbi_img["sub_url"].split("/")[-1].split(".")[0]
     return img_key, sub_key
 
 
-def sign_wbi_params(params: dict, mixin_key: str) -> dict:
+def sign_wbi_params(params: dict[str, Any], mixin_key: str) -> dict[str, Any]:
     """为参数字典添加 wts 和 w_rid 签名，返回新字典。"""
     out = dict(params)
     out["wts"] = int(time.time())
