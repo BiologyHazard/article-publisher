@@ -185,7 +185,7 @@ from bilibili_article import BiliClient, MarkdownConverter, PublishConfig, publi
 client = BiliClient(sessdata, bili_jct, buvid3)
 converter = MarkdownConverter(client, "articles/article1/main.md")
 config = PublishConfig(article_id=350791)
-result = publish_article(client, converter, title="标题", config=config)
+result = publish_article(client, converter, config=config)
 ```
 
 ---

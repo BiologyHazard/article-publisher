@@ -20,3 +20,8 @@ class BaseConverter(ABC):
     def convert(self) -> list[Paragraph]:
         """执行转换，返回 Opus paragraphs 列表。"""
         ...
+
+    @abstractmethod
+    def get_title(self) -> str:
+        """从原始内容中提取文档标题。"""
+        ...

@@ -67,7 +67,6 @@ def build_summary(paragraphs: list[Paragraph]) -> str:
 def publish_article(
     client: BiliClient,
     converter: BaseConverter,
-    title: str,
     *,
     dry_run: bool = False,
     config: PublishConfig | None = None,
@@ -77,8 +76,7 @@ def publish_article(
 
     参数:
         client:     已认证的 BiliClient 实例
-        converter:  内容转换器实例
-        title:      文章标题
+        converter:  内容转换器实例（负责提供内容和标题）
         dry_run:    仅构建 payload 并输出到 stdout，不发送请求
         config:     发布配置参数集合（见 PublishConfig）
 
@@ -91,6 +89,9 @@ def publish_article(
     logger.info("正在解析内容 ...")
     paragraphs = converter.convert()
     logger.info(f"解析完成，共 {len(paragraphs)} 个段落")
+
+    title = converter.get_title()
+    logger.info(f"标题: {title}")
 
     summary = build_summary(paragraphs)
     logger.info(f"摘要: {summary}")

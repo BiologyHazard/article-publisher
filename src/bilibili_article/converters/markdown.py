@@ -180,6 +180,11 @@ class MarkdownConverter(BaseConverter):
             self._md = f.read()
         self._dry_run = dry_run
 
+    def get_title(self) -> str:
+        """从 Markdown 内容中提取第一个 H1 标题。"""
+        title_match = re.search(r"^#\s+(.*)", self._md, re.MULTILINE)
+        return title_match.group(1).strip() if title_match else "未命名文章"
+
     def convert(self) -> list[Paragraph]:  # type: ignore[misc,override]
         md = self._md
         lines = md.split("\n")

@@ -245,18 +245,24 @@ class LarkDocxConverter(BaseConverter):
         self._root_block_id: str = ""
 
     # ------------------------------------------------------------------
-    # 公开方法
+    # 文档元信息
     # ------------------------------------------------------------------
 
-    def fetch_document_info(self) -> dict[str, Any]:
-        """获取文档基本信息。"""
-        data = self._lark.get(f"/docx/v1/documents/{self.document_id}")
-        doc = data["data"]["document"]
-        return {
-            "document_id": doc["document_id"],
-            "title": doc["title"],
-            "revision_id": doc["revision_id"],
-        }
+    def _fetch_document_info(self) -> dict[str, Any]:
+        """获取文档基本信息（结果缓存避免重复请求）。"""
+        if not hasattr(self, "_cached_doc_info"):
+            data = self._lark.get(f"/docx/v1/documents/{self.document_id}")
+            doc = data["data"]["document"]
+            self._cached_doc_info = {
+                "document_id": doc["document_id"],
+                "title": doc["title"],
+                "revision_id": doc["revision_id"],
+            }
+        return self._cached_doc_info
+
+    def get_title(self) -> str:
+        """从飞书文档基本信息中提取标题。"""
+        return self._fetch_document_info().get("title", "未命名文章")
 
     def convert(self) -> list[Paragraph]:  # type: ignore[misc]
         """执行转换，返回 Opus paragraphs 列表。"""

@@ -6,7 +6,6 @@
   2. 飞书云文档模式: python -m bilibili_article lark <document_id>
 """
 
-import re
 import sys
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from datetime import datetime, timedelta, timezone
@@ -232,18 +231,12 @@ def _run_markdown(
         logger.error(f"错误：文件不存在: {markdown_file_path}")
         sys.exit(1)
 
-    # 从 Markdown 提取标题
-    with open(markdown_file_path, "r", encoding="utf-8") as f:
-        md_content = f.read()
-    title_match = re.search(r"^#\s+(.*)", md_content, re.MULTILINE)
-    title = title_match.group(1).strip() if title_match else "未命名文章"
-
     logger.info(f"📄 文件: {markdown_file_path}")
 
     converter = MarkdownConverter(client, markdown_file_path, dry_run=dry_run)
 
     result = publish_article(
-        client=client, converter=converter, title=title, dry_run=dry_run, config=config
+        client=client, converter=converter, dry_run=dry_run, config=config
     )
     return result
 
@@ -274,12 +267,7 @@ def _run_lark(
         dry_run=dry_run,
     )
 
-    # 获取标题
-    doc_info = converter.fetch_document_info()
-    title = doc_info.get("title", "未命名文章")
-    logger.info(f"标题: {title}")
-
     result = publish_article(
-        client=client, converter=converter, title=title, dry_run=dry_run, config=config
+        client=client, converter=converter, dry_run=dry_run, config=config
     )
     return result
