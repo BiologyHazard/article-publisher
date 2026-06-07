@@ -117,12 +117,9 @@ class BiliClient:
                 result.get("message", "upload_bfs失败"),
                 result,
             )
-        with Image.open(file_path) as img:
-            w, h = img.size
-        raw_url = result["data"]["image_url"]
-        if raw_url.startswith("http://"):
-            raw_url = "https://" + raw_url[7:]
-        return {"url": raw_url, "width": w, "height": h, "size": file_size_kb}
+        return self._format_image_result(
+            file_path, result["data"]["image_url"], file_size_kb
+        )
 
     def _upload_image_fallback(self, file_path: str) -> dict:
         """使用旧版 upcover 接口上传图片。"""
@@ -140,9 +137,13 @@ class BiliClient:
                 result.get("message", "图片上传失败"),
                 result,
             )
+        return self._format_image_result(file_path, result["data"]["url"], file_size_kb)
+
+    @staticmethod
+    def _format_image_result(file_path: str, raw_url: str, file_size_kb: float) -> dict:
+        """统一处理图片上传结果：获取尺寸、标准化 URL、构建返回字典。"""
         with Image.open(file_path) as img:
             w, h = img.size
-        raw_url = result["data"]["url"]
         if raw_url.startswith("http://"):
             raw_url = "https://" + raw_url[7:]
         return {"url": raw_url, "width": w, "height": h, "size": file_size_kb}
