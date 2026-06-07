@@ -10,11 +10,10 @@ import sys
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, assert_never
+from typing import assert_never
 
 from bilibili_article._auth import REQUIRED_ENV, load_auth, load_lark_auth
 from bilibili_article.client import BiliApiError, BiliClient
-from bilibili_article.converters.base import BaseConverter
 from bilibili_article.converters.lark import LarkDocxConverter
 from bilibili_article.converters.markdown import MarkdownConverter
 from bilibili_article.log import logger
