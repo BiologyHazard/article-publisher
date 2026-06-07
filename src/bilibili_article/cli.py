@@ -48,8 +48,7 @@ CST = timezone(timedelta(hours=8), name="中国标准时间")
 
 def _build_parser() -> ArgumentParser:
     parser = ArgumentParser(
-        description="B站专栏文章发布工具",
-        formatter_class=RawDescriptionHelpFormatter,
+        description="B站专栏文章发布工具", formatter_class=RawDescriptionHelpFormatter
     )
 
     subparsers = parser.add_subparsers(dest="mode", required=True, title="模式")
@@ -62,60 +61,27 @@ def _build_parser() -> ArgumentParser:
         description="从本地 Markdown 文件发布专栏文章",
     )
     markdown_parser.add_argument(
-        "markdown_file",
-        help="Markdown 文件路径（图片路径相对于该文件所在目录解析）",
+        "markdown_file", help="Markdown 文件路径（图片路径相对于该文件所在目录解析）"
     )
 
     # 飞书云文档子命令
     lark_parser = subparsers.add_parser(
-        "lark",
-        help="从飞书云文档发布",
-        description="从飞书云文档导入并发布专栏文章",
+        "lark", help="从飞书云文档发布", description="从飞书云文档导入并发布专栏文章"
     )
-    lark_parser.add_argument(
-        "doc_id",
-        help="飞书云文档 ID",
-    )
+    lark_parser.add_argument("doc_id", help="飞书云文档 ID")
 
     # 文章元信息
     parser.add_argument(
-        "--category",
-        type=int,
-        default=15,
-        help="分区 ID（默认 15 = 生活）",
+        "--category", type=int, default=15, help="分区 ID（默认 15 = 生活）"
     )
+    parser.add_argument("--private", action="store_true", help="设为仅自己可见")
+    parser.add_argument("--close-comments", action="store_true", help="关闭评论")
+    parser.add_argument("--select-comments", action="store_true", help="开启精选评论")
     parser.add_argument(
-        "--private",
-        action="store_true",
-        help="设为仅自己可见",
+        "--no-original", action="store_false", dest="original", help="不声明为原创"
     )
-    parser.add_argument(
-        "--close-comments",
-        action="store_true",
-        help="关闭评论",
-    )
-    parser.add_argument(
-        "--select-comments",
-        action="store_true",
-        help="开启精选评论",
-    )
-    parser.add_argument(
-        "--no-original",
-        action="store_false",
-        dest="original",
-        help="不声明为原创",
-    )
-    parser.add_argument(
-        "--aigc",
-        action="store_true",
-        help="声明内容包含 AI 辅助创作",
-    )
-    parser.add_argument(
-        "--cover",
-        type=str,
-        default=None,
-        help="自定义封面图片路径",
-    )
+    parser.add_argument("--aigc", action="store_true", help="声明内容包含 AI 辅助创作")
+    parser.add_argument("--cover", type=str, default=None, help="自定义封面图片路径")
     parser.add_argument(
         "--publish-time",
         type=str,
@@ -126,21 +92,13 @@ def _build_parser() -> ArgumentParser:
         ),
     )
     parser.add_argument(
-        "--list-id",
-        type=int,
-        default=0,
-        help="文集 ID（0=不加入文集）",
+        "--list-id", type=int, default=0, help="文集 ID（0=不加入文集）"
     )
     parser.add_argument(
-        "--hashtags",
-        type=str,
-        default=None,
-        help="话题 ID，逗号分隔，如：123,456",
+        "--hashtags", type=str, default=None, help="话题 ID，逗号分隔，如：123,456"
     )
     parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="仅转换并输出 payload，不保存到草稿箱",
+        "--dry-run", action="store_true", help="仅转换并输出 payload，不保存到草稿箱"
     )
     parser.add_argument(
         "--update",
@@ -210,9 +168,7 @@ def main() -> None:
             )
         elif args.mode == "lark":
             converter = _get_lark_converter(
-                client,
-                doc_id=args.doc_id,
-                dry_run=args.dry_run,
+                client, doc_id=args.doc_id, dry_run=args.dry_run
             )
         else:
             assert_never(args.mode)
@@ -229,10 +185,7 @@ def main() -> None:
 
 
 def _get_markdown_converter(
-    client: BiliClient,
-    markdown_file_path: Path,
-    *,
-    dry_run: bool,
+    client: BiliClient, markdown_file_path: Path, *, dry_run: bool
 ) -> MarkdownConverter:
     """Markdown 模式：处理本地 Markdown 文件。"""
 
@@ -246,10 +199,7 @@ def _get_markdown_converter(
 
 
 def _get_lark_converter(
-    client: BiliClient,
-    doc_id: str,
-    *,
-    dry_run: bool,
+    client: BiliClient, doc_id: str, *, dry_run: bool
 ) -> LarkDocxConverter:
     """飞书云文档模式：从飞书文档 ID 导入。"""
 

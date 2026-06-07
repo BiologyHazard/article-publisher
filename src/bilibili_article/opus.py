@@ -128,23 +128,13 @@ def make_link_node(show_text: str, url: str) -> LinkNode:
 
 def make_formula_node(latex_content: str) -> FormulaNode:
     """构造 Latex 公式节点 (node_type=5)。"""
-    node: FormulaNode = {
-        "node_type": 5,
-        "formula": {
-            "latex_content": latex_content,
-        },
-    }
+    node: FormulaNode = {"node_type": 5, "formula": {"latex_content": latex_content}}
     return node
 
 
 def make_emote_node(raw_text: str) -> EmoteNode:
     """构造表情节点 (node_type=2)。"""
-    node: EmoteNode = {
-        "node_type": 2,
-        "emote": {
-            "raw_text": raw_text,
-        },
-    }
+    node: EmoteNode = {"node_type": 2, "emote": {"raw_text": raw_text}}
     return node
 
 
@@ -154,20 +144,12 @@ def make_emote_node(raw_text: str) -> EmoteNode:
 
 
 def make_text_paragraph(
-    nodes: list[InlineNode],
-    *,
-    align: int | None = None,
-    indent_level: int = 0,
+    nodes: list[InlineNode], *, align: int | None = None, indent_level: int = 0
 ) -> TextParagraph:
     """构造普通文本段落 (para_type=1)。"""
     para: TextParagraph = {
         "para_type": 1,
-        "format": {
-            "indent": {
-                "first_line_indent": 0,
-                "indent": indent_level,
-            },
-        },
+        "format": {"indent": {"first_line_indent": 0, "indent": indent_level}},
         "text": {"nodes": nodes},
     }
     if align is not None and align != 0:
@@ -190,11 +172,7 @@ def make_heading_paragraph(words: str, level: int) -> HeadingParagraph:
 
 
 def make_image_paragraph(
-    img_url: str,
-    width: int,
-    height: int,
-    size: float = 0,
-    comment: str = "",
+    img_url: str, width: int, height: int, size: float = 0, comment: str = ""
 ) -> ImageParagraph:
     """构造图片段落 (para_type=2)。"""
     pic: ImagePic = {
@@ -206,13 +184,7 @@ def make_image_paragraph(
     }
     if comment:
         pic["comment"] = comment
-    para: ImageParagraph = {
-        "para_type": 2,
-        "pic": {
-            "pics": [pic],
-            "style": 0,
-        },
-    }
+    para: ImageParagraph = {"para_type": 2, "pic": {"pics": [pic], "style": 0}}
     return para
 
 
@@ -223,10 +195,7 @@ def make_divider_paragraph() -> DividerParagraph:
 
 
 def make_blockquote_paragraph(
-    nodes: list[InlineNode],
-    combine_hash: str,
-    *,
-    align: int | None = None,
+    nodes: list[InlineNode], combine_hash: str, *, align: int | None = None
 ) -> BlockquoteParagraph:
     """构造引用段落 (para_type=4)。"""
     para: BlockquoteParagraph = {
@@ -258,11 +227,7 @@ def make_ordered_list_paragraph(
         "para_type": 5,
         "format": {
             "align": align if align is not None else 0,
-            "list_format": {
-                "level": level,
-                "order": order,
-                "theme": theme,
-            },
+            "list_format": {"level": level, "order": order, "theme": theme},
             "combine_hash": combine_hash,
         },
         "text": {"nodes": nodes},
@@ -284,11 +249,7 @@ def make_unordered_list_paragraph(
         "para_type": 6,
         "format": {
             "align": align if align is not None else 0,
-            "list_format": {
-                "level": level,
-                "order": order,
-                "theme": theme,
-            },
+            "list_format": {"level": level, "order": order, "theme": theme},
             "combine_hash": combine_hash,
         },
         "text": {"nodes": nodes},
@@ -298,11 +259,5 @@ def make_unordered_list_paragraph(
 
 def make_code_paragraph(content: str, lang: str = "") -> CodeParagraph:
     """构造代码块段落 (para_type=8)。"""
-    para: CodeParagraph = {
-        "para_type": 8,
-        "code": {
-            "lang": lang,
-            "content": content,
-        },
-    }
+    para: CodeParagraph = {"para_type": 8, "code": {"lang": lang, "content": content}}
     return para

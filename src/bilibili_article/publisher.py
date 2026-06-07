@@ -114,15 +114,9 @@ def publish_article(
         "opus": {
             "opus_source": 2,
             "title": title,
-            "content": {
-                "paragraphs": paragraphs,
-            },
-            "pub_info": {
-                "editor_version": "eva3-3.0.0",
-            },
-            "attachments": {
-                "is_aigc": config.is_aigc,
-            },
+            "content": {"paragraphs": paragraphs},
+            "pub_info": {"editor_version": "eva3-3.0.0"},
+            "attachments": {"is_aigc": config.is_aigc},
         },
     }
     if config.article_id is not None:

@@ -90,29 +90,17 @@ class BiliClient:
     def _upload_image_bfs(self, file_path: Path) -> UploadedImage:
         """使用 Opus 编辑器专用接口上传图片（需要 WBI 签名）。"""
         url = f"{BILI_API_BASE}/x/dynamic/feed/draw/upload_bfs"
-        params = self.sign(
-            {
-                "csrf": self.csrf,
-                "biz": "new_dyn",
-                "category": "daily",
-            }
-        )
+        params = self.sign({"csrf": self.csrf, "biz": "new_dyn", "category": "daily"})
         file_name = file_path.name
         file_size_kb = round(file_path.stat().st_size / 1024, 2)
         with open(file_path, "rb") as f:
             files = {"file_up": (file_name, f, self._detect_mime(file_path))}
-            data = {
-                "biz": "new_dyn",
-                "category": "daily",
-                "csrf": self.csrf,
-            }
+            data = {"biz": "new_dyn", "category": "daily", "csrf": self.csrf}
             response = self.session.post(url, params=params, files=files, data=data)
         result = response.json()
         if result.get("code") != 0:
             raise BiliApiError(
-                result.get("code", -1),
-                result.get("message", "upload_bfs失败"),
-                result,
+                result.get("code", -1), result.get("message", "upload_bfs失败"), result
             )
         return self._format_image_result(
             file_path, result["data"]["image_url"], file_size_kb
@@ -130,9 +118,7 @@ class BiliClient:
         result = response.json()
         if result.get("code") != 0:
             raise BiliApiError(
-                result.get("code", -1),
-                result.get("message", "图片上传失败"),
-                result,
+                result.get("code", -1), result.get("message", "图片上传失败"), result
             )
         return self._format_image_result(file_path, result["data"]["url"], file_size_kb)
 
@@ -175,8 +161,6 @@ class BiliClient:
         result = response.json()
         if result.get("code") != 0:
             raise BiliApiError(
-                result.get("code", -1),
-                result.get("message", "保存草稿失败"),
-                result,
+                result.get("code", -1), result.get("message", "保存草稿失败"), result
             )
         return result

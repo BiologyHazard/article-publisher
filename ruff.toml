@@ -44,3 +44,6 @@ skip-magic-trailing-comma = true
 line-ending = "auto"
 docstring-code-format = true
 docstring-code-line-length = "dynamic"
+
+[lint.isort]
+split-on-trailing-comma = false

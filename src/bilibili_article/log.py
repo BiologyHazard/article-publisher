@@ -65,12 +65,7 @@ logger.remove()
 
 # 添加控制台 logger，输出到 stderr
 if sys.stderr:  # 打包后可能没有 stderr
-    logger.add(
-        sys.stderr,
-        level=0,
-        format=CONSOLE_LOG_FORMAT,
-        diagnose=True,
-    )
+    logger.add(sys.stderr, level=0, format=CONSOLE_LOG_FORMAT, diagnose=True)
 
 # 添加文件 logger
 LOG_DIR = _ROOT_DIR / "logs"

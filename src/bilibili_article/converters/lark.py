@@ -284,8 +284,7 @@ class LarkDocxConverter(BaseConverter):
             if page_token:
                 params["page_token"] = page_token
             data = self._lark.get(
-                f"/docx/v1/documents/{self.document_id}/blocks",
-                params=params,
+                f"/docx/v1/documents/{self.document_id}/blocks", params=params
             )
             items.extend(data["data"]["items"])
             if not data["data"].get("has_more"):
@@ -310,11 +309,7 @@ class LarkDocxConverter(BaseConverter):
     # ------------------------------------------------------------------
 
     def _walk_block(
-        self,
-        block_id: str,
-        paragraphs: list[Paragraph],
-        context: dict,
-        depth: int = 0,
+        self, block_id: str, paragraphs: list[Paragraph], context: dict, depth: int = 0
     ) -> None:
         """深度优先遍历块树，将块转换为 Opus 段落。"""
         block = self._blocks.get(block_id)
@@ -404,11 +399,7 @@ class LarkDocxConverter(BaseConverter):
 
         paragraphs.append(
             make_unordered_list_paragraph(
-                nodes,
-                level=level,
-                order=order,
-                combine_hash=combine_hash,
-                align=align,
+                nodes, level=level, order=order, combine_hash=combine_hash, align=align
             )
         )
 
@@ -426,11 +417,7 @@ class LarkDocxConverter(BaseConverter):
 
         paragraphs.append(
             make_ordered_list_paragraph(
-                nodes,
-                level=level,
-                order=order,
-                combine_hash=combine_hash,
-                align=align,
+                nodes, level=level, order=order, combine_hash=combine_hash, align=align
             )
         )
 
@@ -481,13 +468,7 @@ class LarkDocxConverter(BaseConverter):
         if self._dry_run:
             caption = (image.get("caption") or {}).get("content", "")
             paragraphs.append(
-                make_image_paragraph(
-                    f"lark://{token}",
-                    800,
-                    600,
-                    0,
-                    comment=caption,
-                )
+                make_image_paragraph(f"lark://{token}", 800, 600, 0, comment=caption)
             )
             logger.info(f"{prefix}  [dry-run] 跳过下载和上传: token={token}")
             return
@@ -539,11 +520,7 @@ class LarkDocxConverter(BaseConverter):
             nodes = self._elements_to_nodes(text.get("elements", []))
             align = self._get_align(text.get("style"))
             paragraphs.append(
-                make_blockquote_paragraph(
-                    nodes,
-                    combine_hash=combine_hash,
-                    align=align,
-                )
+                make_blockquote_paragraph(nodes, combine_hash=combine_hash, align=align)
             )
 
     def _convert_callout(
