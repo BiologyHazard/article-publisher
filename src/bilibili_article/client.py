@@ -10,7 +10,7 @@ B站 API 客户端封装。
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import requests
 from PIL import Image
@@ -24,7 +24,7 @@ from bilibili_article._wbi import (
 from bilibili_article.log import logger
 
 if TYPE_CHECKING:
-    from bilibili_article.models import ArgPayload
+    from bilibili_article.models import Payload
 
 
 class BiliApiError(Exception):
@@ -163,7 +163,7 @@ class BiliClient:
     # 专栏草稿箱
     # ------------------------------------------------------------------
 
-    def save_draft(self, arg_payload: ArgPayload) -> dict:  # type: ignore[misc]
+    def save_draft(self, payload: Payload) -> dict[str, Any]:
         """
         将专栏保存到草稿箱。
         arg_payload 即请求体中 arg 字段的内容。
@@ -171,8 +171,7 @@ class BiliClient:
         """
         url = f"{BILI_API_BASE}/x/dynamic/feed/article/draft/add"
         params = self.sign({"csrf": self.csrf})
-        body = {"arg": arg_payload}
-        resp = self.session.post(url, params=params, json=body)  # type: ignore[arg-type]
+        resp = self.session.post(url, params=params, json=payload)  # type: ignore
         result = resp.json()
         if result.get("code") != 0:
             raise BiliApiError(

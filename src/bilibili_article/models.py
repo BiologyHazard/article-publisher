@@ -345,3 +345,9 @@ class ArgPayload(TypedDict, total=False):
     hashtag_ids: list[int]  # NotRequired（话题 ID 列表，可选）
     summary: str
     opus: OpusBody
+
+
+class Payload(TypedDict):
+    """保存草稿请求的完整 Payload 结构。"""
+
+    arg: ArgPayload

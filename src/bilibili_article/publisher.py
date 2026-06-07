@@ -14,7 +14,7 @@ from loguru import logger
 if TYPE_CHECKING:
     from bilibili_article.client import BiliClient
     from bilibili_article.converters.base import BaseConverter
-    from bilibili_article.models import ArgPayload, InlineNode, Paragraph
+    from bilibili_article.models import ArgPayload, InlineNode, Paragraph, Payload
 
 
 def build_summary(paragraphs: list[Paragraph]) -> str:
@@ -127,16 +127,17 @@ def publish_article(
     if hashtag_ids:
         arg["hashtag_ids"] = hashtag_ids
 
+    payload: Payload = {"arg": arg}
+
     # 输出 payload 到 stdout
-    logger.info("\n========== Payload ==========")
-    print(json.dumps({"arg": arg}, ensure_ascii=False, indent=2))
-    logger.info("=============================")
+    logger.info("Payload: ")
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
 
     if dry_run:
         return {}
 
     logger.info("正在保存到草稿箱 ...")
-    result = client.save_draft(arg)
+    result = client.save_draft(payload)
     aid = result["data"]["article_id"]
     logger.info(f"✅ 成功！草稿 ID: {aid}")
     logger.info(
