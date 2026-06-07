@@ -44,8 +44,15 @@ from bilibili_article.platforms.bilibili.opus import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from bilibili_article.platforms.bilibili.client import BiliClient
-    from bilibili_article.platforms.bilibili.models import InlineNode, Paragraph
+    from bilibili_article.platforms.bilibili.models import (
+        ArgPayload,
+        InlineNode,
+        Paragraph,
+        Payload,
+    )
 
 
 # =============================================================================
@@ -136,7 +143,7 @@ class BiliPublisher:
         logger.info(f"标题: {title}")
         logger.info(f"摘要: {summary}")
 
-        arg: dict[str, Any] = {
+        arg: ArgPayload = {
             "type": 4,
             "template_id": 1,
             "category_id": config.category_id,
@@ -166,7 +173,7 @@ class BiliPublisher:
         if config.hashtag_ids:
             arg["hashtag_ids"] = config.hashtag_ids
 
-        payload: dict[str, Any] = {"arg": arg}
+        payload: Payload = {"arg": arg}
 
         logger.info("Payload: ")
         payload_json = json.dumps(payload, ensure_ascii=False, indent=2)
@@ -286,7 +293,7 @@ class BiliPublisher:
                     info["width"],
                     info["height"],
                     info.get("size", 0),
-                    comment=block.caption,
+                    comment=block.caption or "",
                 )
             )
             logger.info(f"  → 上传成功: {info['url']}")
@@ -316,7 +323,7 @@ class BiliPublisher:
                 nodes = self._convert_inline(list(child.children))
                 paragraphs.append(make_blockquote_paragraph(nodes, combine_hash))
             elif isinstance(child, IRParagraph):
-                nodes = self._convert_inline(child.children)
+                nodes = self._convert_inline(list(child.children))
                 if nodes:
                     paragraphs.append(make_blockquote_paragraph(nodes, combine_hash))
             elif isinstance(child, ImageBlock):
@@ -384,7 +391,7 @@ class BiliPublisher:
             if isinstance(child, Heading):
                 nodes.extend(self._convert_inline(list(child.children)))
             elif isinstance(child, IRParagraph):
-                nodes.extend(self._convert_inline(child.children))
+                nodes.extend(self._convert_inline(list(child.children)))
             elif isinstance(child, (OrderedList, UnorderedList)):
                 continue  # 嵌套列表由 _handle_list 内部处理
         return nodes
@@ -393,7 +400,7 @@ class BiliPublisher:
     # 内联元素转换
     # ==================================================================
 
-    def _convert_inline(self, children: list[InlineElement]) -> list[InlineNode]:
+    def _convert_inline(self, children: Sequence[InlineElement]) -> list[InlineNode]:
         """将 IR InlineElement 列表转换为 B站 InlineNode 列表。"""
         nodes: list[InlineNode] = []
         for child in children:

@@ -176,7 +176,7 @@ class _LarkHttpClient:
         self._session.headers["Authorization"] = f"Bearer {self._tenant_token}"
         return self._tenant_token
 
-    def get(self, path: str, **kwargs) -> dict:
+    def get(self, path: str, **kwargs) -> dict[str, Any]:
         """发送 GET 请求并返回 JSON 响应。"""
         self._ensure_token()
         response = self._session.get(f"{LARK_API_BASE}{path}", **kwargs)
@@ -207,7 +207,7 @@ class LarkDocxConverter(BaseConverter):
         self._lark = _LarkHttpClient(app_id, app_secret)
 
         # block_id → block dict
-        self._blocks: dict[str, dict] = {}
+        self._blocks: dict[str, dict[str, Any]] = {}
         self._root_block_id: str = ""
 
     # ------------------------------------------------------------------
@@ -244,7 +244,7 @@ class LarkDocxConverter(BaseConverter):
 
     def _load_blocks(self) -> None:
         """分页加载所有块，构建 block_id → block_dict 映射。"""
-        items: list[dict] = []
+        items: list[dict[str, Any]] = []
         page_token = ""
         while True:
             params = {"page_size": 500}
@@ -372,7 +372,7 @@ class LarkDocxConverter(BaseConverter):
     # ------------------------------------------------------------------
 
     def _convert_single(
-        self, block_type: int, block: dict, prefix: str, indent_level: int = 0
+        self, block_type: int, block: dict[str, Any], prefix: str, indent_level: int = 0
     ) -> Block | None:
         """将单个 Lark 块转换为 IR Block。"""
         if block_type == 1:  # page
@@ -397,7 +397,9 @@ class LarkDocxConverter(BaseConverter):
         logger.warning(f"{prefix}未支持的块类型 (block_type={block_type})，已跳过")
         return None
 
-    def _convert_text(self, block: dict, indent_level: int = 0) -> Paragraph | None:
+    def _convert_text(
+        self, block: dict[str, Any], indent_level: int = 0
+    ) -> Paragraph | None:
         """处理文本块 (block_type=2)。"""
         text = block.get("text")
         if not text:
@@ -409,7 +411,7 @@ class LarkDocxConverter(BaseConverter):
         return Paragraph(children=children, align=align, indent_level=indent_level)
 
     def _convert_heading(
-        self, block: dict, block_type: int, indent_level: int = 0
+        self, block: dict[str, Any], block_type: int, indent_level: int = 0
     ) -> Heading:
         """处理标题块 (block_type=3~11 → heading1~heading9)。
         H4~H9 在 IR 中保留为 Heading，由 Publisher 回退为粗体文本。
@@ -429,7 +431,7 @@ class LarkDocxConverter(BaseConverter):
             indent_level=indent_level,
         )
 
-    def _convert_code(self, block: dict) -> CodeBlock | None:
+    def _convert_code(self, block: dict[str, Any]) -> CodeBlock | None:
         """处理代码块 (block_type=14)。"""
         code = block.get("code")
         if not code:
@@ -451,7 +453,7 @@ class LarkDocxConverter(BaseConverter):
             return None
         return CodeBlock(language=lang, content=content)
 
-    def _convert_image(self, block: dict, prefix: str) -> ImageBlock | None:
+    def _convert_image(self, block: dict[str, Any], prefix: str) -> ImageBlock | None:
         """处理图片 (block_type=27)：下载到项目内临时目录。"""
         image = block.get("image")
         if not image:
@@ -487,7 +489,7 @@ class LarkDocxConverter(BaseConverter):
     # 内联元素转换
     # ------------------------------------------------------------------
 
-    def _elements_to_inline(self, elements: list) -> list[InlineElement]:
+    def _elements_to_inline(self, elements: list[Any]) -> list[InlineElement]:
         """将飞书元素列表转换为 IR InlineElement 列表（TextRun / Formula）。"""
         result: list[InlineElement] = []
         for elem in elements:
@@ -499,7 +501,7 @@ class LarkDocxConverter(BaseConverter):
                 result.append(Formula(latex=equation["content"]))
         return result
 
-    def _text_run_to_run(self, text_run: dict) -> TextRun:
+    def _text_run_to_run(self, text_run: dict[str, Any]) -> TextRun:
         """将单个飞书 text_run 转换为 IR TextRun。"""
         content = text_run["content"]
         style = text_run.get("text_element_style") or {}
@@ -533,7 +535,7 @@ class LarkDocxConverter(BaseConverter):
         )
 
     @staticmethod
-    def _extract_align(block: dict) -> int:
+    def _extract_align(block: dict[str, Any]) -> int:
         """从 Lark block 的 style 中提取对齐方式。
         Lark: 1=左对齐, 2=居中, 3=右对齐
         IR:  0=左对齐, 1=居中, 2=右对齐
@@ -550,7 +552,7 @@ class LarkDocxConverter(BaseConverter):
         return 0
 
     @staticmethod
-    def _elements_to_plain_text(elements: list) -> str:
+    def _elements_to_plain_text(elements: list[Any]) -> str:
         """将 Lark TextElement 列表拼接为纯文本。"""
         if not elements:
             return ""

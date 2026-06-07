@@ -7,7 +7,7 @@ B站 Opus 格式数据构建器。
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
     from bilibili_article.platforms.bilibili.models import (
@@ -97,7 +97,14 @@ def make_heading_node(words: str, level: int) -> TextNode:
     return node
 
 
-_HEADING_FONT_CFG: dict[int, dict[str, str | int]] = {
+class _HeadingFontCfg(TypedDict):
+    """标题级别字体配置。"""
+
+    font_size: int
+    font_level: str
+
+
+_HEADING_FONT_CFG: dict[int, _HeadingFontCfg] = {
     1: {"font_size": 24, "font_level": "xxLarge"},
     2: {"font_size": 22, "font_level": "xLarge"},
     3: {"font_size": 20, "font_level": "large"},
@@ -181,7 +188,7 @@ def make_heading_paragraph(
     return para
 
 
-def _apply_heading_style(node: InlineNode, cfg: dict) -> InlineNode:
+def _apply_heading_style(node: InlineNode, cfg: _HeadingFontCfg) -> InlineNode:
     """对文本节点应用标题级别字体样式。"""
     if isinstance(node, dict) and node.get("node_type") == 1:
         word = node.get("word", {})
