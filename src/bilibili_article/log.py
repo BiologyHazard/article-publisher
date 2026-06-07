@@ -30,13 +30,11 @@ FILE_LOG_FORMAT = LOG_FORMAT_VERY_VERBOSE
 
 
 if getattr(sys, "frozen", False) and (_MEIPASS := getattr(sys, "_MEIPASS", None)):
-    _ROOT_DIR = Path(
+    ROOT_DIR = Path(
         _MEIPASS
     ).parent.resolve()  # frozen executable root, contains the executable file
 else:
-    _ROOT_DIR = Path(
-        __file__
-    ).parent.parent.parent.parent.resolve()  # development project root
+    ROOT_DIR = Path(__file__).parent.parent.parent.resolve()  # development project root
 
 
 # https://loguru.readthedocs.io/en/stable/overview.html#entirely-compatible-with-standard-logging
@@ -68,7 +66,7 @@ if sys.stderr:  # 打包后可能没有 stderr
     logger.add(sys.stderr, level=0, format=CONSOLE_LOG_FORMAT, diagnose=True)
 
 # 添加文件 logger
-LOG_DIR = _ROOT_DIR / "logs"
+LOG_DIR = ROOT_DIR / "logs"
 logger.add(
     LOG_DIR / "log_{time:YYYY-MM-DD}.log",
     level=0,

@@ -17,16 +17,16 @@ if TYPE_CHECKING:
 import requests
 from PIL import Image
 
-from bilibili_article._wbi import (
+from bilibili_article.log import logger
+from bilibili_article.platforms.bilibili._wbi import (
     BILI_API_BASE,
     fetch_wbi_keys,
     get_mixin_key,
     sign_wbi_params,
 )
-from bilibili_article.log import logger
 
 if TYPE_CHECKING:
-    from bilibili_article.models import Payload, UploadedImage
+    from bilibili_article.platforms.bilibili.models import Payload, UploadedImage
 
 
 class BiliApiError(Exception):

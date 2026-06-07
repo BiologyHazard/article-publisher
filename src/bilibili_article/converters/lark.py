@@ -1,50 +1,33 @@
-"""
-飞书云文档 (Lark Docx) → Opus 转换器。
-
-直接调用飞书 REST API（不使用 lark_oapi SDK），
-获取文档块数据后递归遍历块树，转换为 B站 Opus 格式段落。
-
-支持的飞书块类型：
-  - text             → 普通段落
-  - heading1~3       → 标题段落
-  - heading4~9       → 加粗正文
-  - bullet/ordered   → 列表段落
-  - code             → 代码块段落
-  - quote_container  → 引用段落
-  - divider          → 分割线段落
-  - image            → 图片段落（自动下载并上传到 B站）
-  - callout/grid/table → 展平子块
-"""
-
 from __future__ import annotations
 
-import tempfile
-import time
+import shutil
 import urllib.parse
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypeGuard
+from typing import Any
 
 import requests
 
-from bilibili_article.client import BiliApiError, BiliClient
 from bilibili_article.converters.base import BaseConverter
-from bilibili_article.log import logger
-from bilibili_article.opus import (
-    make_blockquote_paragraph,
-    make_code_paragraph,
-    make_divider_paragraph,
-    make_formula_node,
-    make_heading_paragraph,
-    make_image_paragraph,
-    make_link_node,
-    make_ordered_list_paragraph,
-    make_text_node,
-    make_text_paragraph,
-    make_unordered_list_paragraph,
+from bilibili_article.document import (
+    Block,
+    Blockquote,
+    CodeBlock,
+    Divider,
+    Document,
+    Formula,
+    Heading,
+    ImageBlock,
+    InlineElement,
+    ListItem,
+    OrderedList,
+    Paragraph,
+    TextRun,
+    UnorderedList,
 )
+from bilibili_article.log import ROOT_DIR as _PROJECT_ROOT
+from bilibili_article.log import logger
 
-if TYPE_CHECKING:
-    from bilibili_article.models import InlineNode, Paragraph, TextNode
+# 临时图片目录（项目根目录内，用完清除）
+_TEMP_IMAGES_DIR = _PROJECT_ROOT / "temp" / "lark_images"
 
 # =============================================================================
 # 常量
@@ -148,28 +131,21 @@ _CODE_LANG_MAP: dict[int, str] = {
     65: "CSharp",
 }
 
-# Block type → 转换方法名
-_BLOCK_CONVERTERS: dict[int, str] = {
-    1: "_convert_page",
-    2: "_convert_text",
-    12: "_convert_bullet",
-    13: "_convert_ordered",
-    14: "_convert_code",
-    19: "_convert_callout",
-    22: "_convert_divider",
-    27: "_convert_image",
-    34: "_convert_quote",
+# block_type → 对齐方式所在字段名的映射
+_ALIGN_KEY_MAP: dict[int, str] = {
+    2: "text",
+    3: "heading1",
+    4: "heading2",
+    5: "heading3",
+    6: "heading4",
+    7: "heading5",
+    8: "heading6",
+    9: "heading7",
+    10: "heading8",
+    11: "heading9",
+    12: "bullet",
+    13: "ordered",
 }
-for bt in range(3, 12):  # heading1~9
-    _BLOCK_CONVERTERS[bt] = "_convert_heading"
-# 展平类容器（子块自动遍历）
-for bt in (24, 25, 30, 31, 32):
-    _BLOCK_CONVERTERS[bt] = "_convert_skip"
-
-
-def _is_text_node(node: InlineNode) -> TypeGuard[TextNode]:
-    """判断 InlineNode 是否为 TextNode（node_type == 1）。"""
-    return node.get("node_type") == 1
 
 
 # =============================================================================
@@ -224,20 +200,10 @@ class _LarkHttpClient:
 
 
 class LarkDocxConverter(BaseConverter):
-    """将飞书云文档转换为 B站 Opus 格式段落列表。"""
+    """将飞书云文档转换为 IR Document。"""
 
-    def __init__(
-        self,
-        app_id: str,
-        app_secret: str,
-        document_id: str,
-        bili_client: BiliClient,
-        *,
-        dry_run: bool = False,
-    ):
+    def __init__(self, app_id: str, app_secret: str, document_id: str):
         self.document_id = document_id
-        self.bili_client = bili_client
-        self._dry_run = dry_run
         self._lark = _LarkHttpClient(app_id, app_secret)
 
         # block_id → block dict
@@ -264,12 +230,13 @@ class LarkDocxConverter(BaseConverter):
         """从飞书文档基本信息中提取标题。"""
         return self._fetch_document_info().get("title", "未命名文章")
 
-    def convert(self) -> list[Paragraph]:  # type: ignore[misc]
-        """执行转换，返回 Opus paragraphs 列表。"""
+    def convert(self) -> Document:
+        """执行转换，返回 IR Document。"""
         self._load_blocks()
-        paragraphs: list[Paragraph] = []
-        self._walk_block(self._root_block_id, paragraphs, context={})
-        return paragraphs
+        blocks: list[Block] = []
+        self._walk_block(self._root_block_id, blocks, depth=0)
+        title = self.get_title()
+        return Document(title=title, blocks=blocks)
 
     # ------------------------------------------------------------------
     # 块数据加载
@@ -277,7 +244,7 @@ class LarkDocxConverter(BaseConverter):
 
     def _load_blocks(self) -> None:
         """分页加载所有块，构建 block_id → block_dict 映射。"""
-        items: list[dict] = []  # raw API response items
+        items: list[dict] = []
         page_token = ""
         while True:
             params = {"page_size": 500}
@@ -291,15 +258,12 @@ class LarkDocxConverter(BaseConverter):
                 break
             page_token = data["data"]["page_token"]
 
-        # 构建映射并找到根节点
         for block in items:
             bid = block["block_id"]
             self._blocks[bid] = block
             if block.get("parent_id") == "":
                 self._root_block_id = bid
-
         if not self._root_block_id and items:
-            # 如果没有 parent_id=="" 的块，第一个块就是根
             self._root_block_id = items[0]["block_id"]
 
         logger.info(f"  已加载 {len(self._blocks)} 个块")
@@ -309,126 +273,167 @@ class LarkDocxConverter(BaseConverter):
     # ------------------------------------------------------------------
 
     def _walk_block(
-        self, block_id: str, paragraphs: list[Paragraph], context: dict, depth: int = 0
+        self, block_id: str, blocks: list[Block], depth: int = 0, indent_level: int = 0
     ) -> None:
-        """深度优先遍历块树，将块转换为 Opus 段落。"""
+        """深度优先遍历单个块，然后处理其子块（含列表分组）。"""
         block = self._blocks.get(block_id)
         if block is None:
             return
 
         block_type = block["block_type"]
         prefix = "  " * depth
+        children = block.get("children") or []
 
-        # 非列表块出现时重置列表组状态，确保不同列表组 hash 独立
-        if block_type not in (12, 13):
-            context.pop("list_group_type", None)
-            context.pop("list_group_hash", None)
+        # quote_container：子块需要被包裹为 Blockquote
+        if block_type == 34:
+            quote_children: list[Block] = []
+            self._walk_children(children, quote_children, depth + 1, indent_level)
+            if quote_children:
+                blocks.append(Blockquote(children=quote_children))
+            return
 
-        # 根据 block_type 分发处理
-        method_name = _BLOCK_CONVERTERS.get(block_type)
-        if method_name:
-            method = getattr(self, method_name, None)
-            if method:
-                method(block, paragraphs, context, prefix)
+        # 普通块：转换当前块
+        ir_block = self._convert_single(block_type, block, prefix, indent_level)
+        if ir_block is not None:
+            blocks.append(ir_block)
 
-        # 递归处理子块
-        for child_id in block.get("children") or []:
-            self._walk_block(child_id, paragraphs, context, depth)
+        # 计算子块的缩进级别：
+        # 仅文本/标题/列表块（block_type 2~13）下嵌套的子块才递增缩进
+        # 容器块（grid、callout 等）的子块保持相同的缩进级别
+        if 2 <= block_type <= 13:
+            child_indent = indent_level + 1
+        else:
+            child_indent = indent_level
 
-    # ------------------------------------------------------------------
-    # 块转换器
-    # ------------------------------------------------------------------
+        # 递归处理子块（自动分组连续列表项）
+        self._walk_children(children, blocks, depth + 1, child_indent)
 
-    def _convert_text(
-        self, block: dict, paragraphs: list[Paragraph], context: dict, prefix: str
+    def _walk_children(
+        self,
+        child_ids: list[str],
+        blocks: list[Block],
+        depth: int,
+        indent_level: int = 0,
     ) -> None:
+        """处理子块列表，连续的同类型列表项自动分组为 OrderedList / UnorderedList。"""
+        i = 0
+        while i < len(child_ids):
+            child_id = child_ids[i]
+            child = self._blocks.get(child_id)
+            if child is None:
+                i += 1
+                continue
+
+            bt = child["block_type"]
+
+            if bt in (12, 13):
+                group_ids = [child_id]
+                i += 1
+                while i < len(child_ids):
+                    nc = self._blocks.get(child_ids[i])
+                    # 只合并同类型列表项（bullet 和 ordered 各自独立）
+                    if nc is None or nc["block_type"] != bt:
+                        break
+                    group_ids.append(child_ids[i])
+                    i += 1
+
+                is_ordered = bt == 13
+                items: list[ListItem] = []
+                for gid in group_ids:
+                    item_blocks: list[Block] = []
+                    gblock = self._blocks[gid]
+
+                    # 提取列表项文本内容（bullet/ordered 字段中的 elements）
+                    if is_ordered:
+                        content = gblock.get("ordered", {})
+                    else:
+                        content = gblock.get("bullet", {})
+                    elements = content.get("elements", [])
+                    inline_elements = self._elements_to_inline(elements)
+                    if inline_elements:
+                        item_blocks.append(Paragraph(children=inline_elements))
+
+                    # 递归处理子块（嵌套列表等）
+                    self._walk_children(
+                        gblock.get("children", []), item_blocks, depth + 1, indent_level
+                    )
+                    items.append(ListItem(blocks=item_blocks))
+
+                if is_ordered:
+                    blocks.append(OrderedList(items=items))
+                else:
+                    blocks.append(UnorderedList(items=items))
+            else:
+                self._walk_block(child_id, blocks, depth + 1, indent_level)
+                i += 1
+
+    # ------------------------------------------------------------------
+    # 单块转换（block_type → IR Block | None）
+    # ------------------------------------------------------------------
+
+    def _convert_single(
+        self, block_type: int, block: dict, prefix: str, indent_level: int = 0
+    ) -> Block | None:
+        """将单个 Lark 块转换为 IR Block。"""
+        if block_type == 1:  # page
+            return None
+        if block_type == 2:  # text
+            return self._convert_text(block, indent_level)
+        if 3 <= block_type <= 11:  # heading1~9
+            return self._convert_heading(block, block_type, indent_level)
+        if block_type == 14:  # code
+            return self._convert_code(block)
+        if block_type == 22:  # divider
+            return Divider()
+        if block_type == 27:  # image
+            return self._convert_image(block, prefix)
+        if block_type in (19, 24, 25, 30, 31, 32):  # containers — flatten
+            return None
+        if block_type in (12, 13):  # lists — handled by _walk_children
+            return None
+        if block_type == 34:  # quote — handled by _walk_block
+            return None
+
+        logger.warning(f"{prefix}未支持的块类型 (block_type={block_type})，已跳过")
+        return None
+
+    def _convert_text(self, block: dict, indent_level: int = 0) -> Paragraph | None:
         """处理文本块 (block_type=2)。"""
         text = block.get("text")
         if not text:
-            return
-        nodes = self._elements_to_nodes(text.get("elements", []))
-        align = self._get_align(text.get("style"))
-        paragraphs.append(make_text_paragraph(nodes, align=align))
-
-    def _convert_page(
-        self, block: dict, paragraphs: list[Paragraph], context: dict, prefix: str
-    ) -> None:
-        """处理页面块 (block_type=1) — 根节点，子块会自动遍历。"""
-        pass
-
-    def _convert_skip(
-        self, block: dict, paragraphs: list[Paragraph], context: dict, prefix: str
-    ) -> None:
-        pass
+            return None
+        children = self._elements_to_inline(text.get("elements", []))
+        if not children:
+            return None
+        align = self._extract_align(block)
+        return Paragraph(children=children, align=align, indent_level=indent_level)
 
     def _convert_heading(
-        self, block: dict, paragraphs: list[Paragraph], context: dict, prefix: str
-    ) -> None:
-        """处理标题块 (block_type=3~11 → heading1~heading9)。"""
-        # 从 block_type 推断标题级别
-        heading_level = block["block_type"] - 2  # 3→1, ..., 11→9
+        self, block: dict, block_type: int, indent_level: int = 0
+    ) -> Heading:
+        """处理标题块 (block_type=3~11 → heading1~heading9)。
+        H4~H9 在 IR 中保留为 Heading，由 Publisher 回退为粗体文本。
+        """
+        heading_level = block_type - 2  # 3→1, ..., 11→9
         heading_key = f"heading{heading_level}"
         heading = block.get(heading_key)
         if not heading:
-            return
-        text = self._elements_to_plain_text(heading.get("elements", []))
+            return Heading(level=heading_level, children=[])
 
-        if heading_level <= 3:
-            paragraphs.append(make_heading_paragraph(text, heading_level))
-        else:
-            # H4~H9：B站不支持，用加粗正文代替
-            nodes = self._elements_to_nodes(heading.get("elements", []))
-            # 如果节点列表只有普通文本，改为加粗
-            if len(nodes) == 1 and _is_text_node(nodes[0]):
-                nodes[0]["word"]["style"]["bold"] = True
-            paragraphs.append(make_text_paragraph(nodes))
-
-    def _convert_bullet(
-        self, block: dict, paragraphs: list[Paragraph], context: dict, prefix: str
-    ) -> None:
-        """处理无序列表块 (block_type=12)。"""
-        bullet = block.get("bullet")
-        if not bullet:
-            return
-        # 计算列表嵌套层级
-        level = self._calc_list_level(block)
-        nodes = self._elements_to_nodes(bullet.get("elements", []))
-        combine_hash = self._get_list_hash(block, level, context, "bullet")
-        order = self._calc_list_order(block, level, context, "bullet")
-        align = self._get_align(bullet.get("style"))
-
-        paragraphs.append(
-            make_unordered_list_paragraph(
-                nodes, level=level, order=order, combine_hash=combine_hash, align=align
-            )
+        children = self._elements_to_inline(heading.get("elements", []))
+        align = self._extract_align(block)
+        return Heading(
+            level=heading_level,
+            children=children,
+            align=align,
+            indent_level=indent_level,
         )
 
-    def _convert_ordered(
-        self, block: dict, paragraphs: list[Paragraph], context: dict, prefix: str
-    ) -> None:
-        ordered = block.get("ordered")
-        if not ordered:
-            return
-        level = self._calc_list_level(block)
-        nodes = self._elements_to_nodes(ordered.get("elements", []))
-        combine_hash = self._get_list_hash(block, level, context, "ordered")
-        order = self._calc_list_order(block, level, context, "ordered")
-        align = self._get_align(ordered.get("style"))
-
-        paragraphs.append(
-            make_ordered_list_paragraph(
-                nodes, level=level, order=order, combine_hash=combine_hash, align=align
-            )
-        )
-
-    def _convert_code(
-        self, block: dict, paragraphs: list[Paragraph], context: dict, prefix: str
-    ) -> None:
+    def _convert_code(self, block: dict) -> CodeBlock | None:
         """处理代码块 (block_type=14)。"""
         code = block.get("code")
         if not code:
-            return
-        # 收集代码内容（所有 text_run 的 content 拼接）
+            return None
         content_parts: list[str] = []
         lang = ""
         for elem in code.get("elements", []):
@@ -437,119 +442,65 @@ class LarkDocxConverter(BaseConverter):
                 content_parts.append(text_run["content"])
         content = "".join(content_parts)
 
-        # 获取语言
         code_style = code.get("style") or {}
         lang_id = code_style.get("language")
         if lang_id is not None:
             lang = _CODE_LANG_MAP.get(lang_id, "")
 
-        if content:
-            paragraphs.append(make_code_paragraph(content, lang))
+        if not content:
+            return None
+        return CodeBlock(language=lang, content=content)
 
-    def _convert_divider(
-        self, block: dict, paragraphs: list[Paragraph], context: dict, prefix: str
-    ) -> None:
-        """处理分割线 (block_type=22)。"""
-        paragraphs.append(make_divider_paragraph())
-
-    def _convert_image(
-        self, block: dict, paragraphs: list[Paragraph], context: dict, prefix: str
-    ) -> None:
-        """处理图片 (block_type=27)：下载 → 上传 B站 → 追加段落。"""
+    def _convert_image(self, block: dict, prefix: str) -> ImageBlock | None:
+        """处理图片 (block_type=27)：下载到项目内临时目录。"""
         image = block.get("image")
         if not image:
-            return
+            return None
         token = image.get("token")
         if not token:
-            return
+            return None
 
-        logger.info(f"{prefix}正在处理图片: token={token}")
-
-        if self._dry_run:
-            caption = (image.get("caption") or {}).get("content", "")
-            paragraphs.append(
-                make_image_paragraph(f"lark://{token}", 800, 600, 0, comment=caption)
-            )
-            logger.info(f"{prefix}  [dry-run] 跳过下载和上传: token={token}")
-            return
+        caption = (image.get("caption") or {}).get("content", "")
 
         try:
+            logger.info(f"{prefix}正在下载图片: token={token}")
             image_data = self._download_image(token)
-            # 写入临时文件
-            suffix = ".png"
-            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-                tmp.write(image_data)
-                tmp_path = Path(tmp.name)
-
-            try:
-                info = self.bili_client.upload_image(tmp_path)
-                caption = (image.get("caption") or {}).get("content", "")
-                paragraphs.append(
-                    make_image_paragraph(
-                        info["url"],
-                        info["width"],
-                        info["height"],
-                        info.get("size", 0),
-                        comment=caption,
-                    )
-                )
-                logger.info(f"{prefix}  → 上传成功: {info['url']}")
-            finally:
-                tmp_path.unlink()
-        except BiliApiError as e:
-            logger.error(f"{prefix}  [错误] 图片上传失败: {e}")
+            # 存到项目内临时目录
+            _TEMP_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+            tmp_path = _TEMP_IMAGES_DIR / f"{token}.png"
+            tmp_path.write_bytes(image_data)
+            logger.info(f"{prefix}  → 下载完成: {tmp_path}")
+            return ImageBlock(source=str(tmp_path), alt_text=None, caption=caption)
         except Exception as e:
-            logger.error(f"{prefix}  [错误] 图片处理异常: {e}")
+            logger.error(f"{prefix}  [错误] 图片下载失败: {e}")
+            return None
 
-    def _convert_quote(
-        self, block: dict, paragraphs: list[Paragraph], context: dict, prefix: str
-    ) -> None:
-        """处理引用容器 (block_type=34) — 遍历子块并包装为引用段落。"""
-        # quote_container 的子块都是 text 类型，需要将它们组合为引用段落。
-        # B站 Opus 引用块的 combine_hash 需要共享同一个值。
-        if not block.get("children"):
-            return
-        combine_hash = f"blockquote_{int(time.time() * 1000000)}_{block['block_id']}"
-        for child_id in block["children"]:
-            child = self._blocks.get(child_id)
-            if child is None:
-                continue
-            text = child.get("text")
-            if not text:
-                continue
-            nodes = self._elements_to_nodes(text.get("elements", []))
-            align = self._get_align(text.get("style"))
-            paragraphs.append(
-                make_blockquote_paragraph(nodes, combine_hash=combine_hash, align=align)
-            )
+    # ------------------------------------------------------------------
+    # 飞书 API 调用
+    # ------------------------------------------------------------------
 
-    def _convert_callout(
-        self, block: dict, paragraphs: list[Paragraph], context: dict, prefix: str
-    ) -> None:
-        """处理高亮块 (block_type=19) — 以普通正文输出子块。"""
-        # callout 子块会通过递归遍历自动处理
-        pass
+    def _download_image(self, token: str) -> bytes:
+        """调用飞书图片下载 API。"""
+        return self._lark.get_bytes(f"/drive/v1/medias/{token}/download")
 
     # ------------------------------------------------------------------
     # 内联元素转换
     # ------------------------------------------------------------------
 
-    def _elements_to_nodes(self, elements: list) -> list[InlineNode]:  # type: ignore[return,misc]
-        """将飞书元素列表转换为 Opus 文本节点列表。"""
-        nodes: list[InlineNode] = []  # type: ignore[valid-type]
+    def _elements_to_inline(self, elements: list) -> list[InlineElement]:
+        """将飞书元素列表转换为 IR InlineElement 列表（TextRun / Formula）。"""
+        result: list[InlineElement] = []
         for elem in elements:
             text_run = elem.get("text_run")
             equation = elem.get("equation")
             if text_run and text_run.get("content"):
-                nodes.append(self._text_run_to_node(text_run))
+                result.append(self._text_run_to_run(text_run))
             elif equation and equation.get("content"):
-                nodes.append(make_formula_node(equation["content"]))
+                result.append(Formula(latex=equation["content"]))
+        return result
 
-        # 合并相邻的普通文本节点
-        return self._merge_text_nodes(nodes)  # type: ignore[return-type]
-
-    def _text_run_to_node(self, text_run: dict) -> InlineNode:  # type: ignore[misc]
-        """将单个 text_run 转换为 Opus 文本节点。"""
+    def _text_run_to_run(self, text_run: dict) -> TextRun:
+        """将单个飞书 text_run 转换为 IR TextRun。"""
         content = text_run["content"]
         style = text_run.get("text_element_style") or {}
 
@@ -559,69 +510,44 @@ class LarkDocxConverter(BaseConverter):
         strikethrough = style.get("strikethrough", False) is True
         inline_code = style.get("inline_code", False) is True
 
-        # 颜色
         color = ""
-        dark_color = ""
         if inline_code:
             color = "#c7254e"
         elif style.get("text_color") is not None:
             color = _TEXT_COLOR_MAP.get(style["text_color"], "")
 
-        # 背景色
-        bg_color = ""
-        if style.get("background_color") is not None:
-            bg_color = _BG_COLOR_MAP.get(style["background_color"], "")
-
-        # 超链接
+        link_url = ""
         link = style.get("link")
         if link and link.get("url"):
-            # 需要 URL 解码
-            url = urllib.parse.unquote(link["url"])
-            return make_link_node(show_text=content, url=url)
+            link_url = urllib.parse.unquote(link["url"])
 
-        node = make_text_node(
-            content,
+        return TextRun(
+            text=content,
             bold=bold,
             italic=italic,
             underline=underline,
             strikethrough=strikethrough,
+            inline_code=inline_code,
             color=color,
-            dark_color=dark_color,
+            link_url=link_url,
         )
 
-        # 添加背景色（特殊处理 bg_style）
-        if bg_color:
-            node["word"]["bg_style"] = {
-                "style": 1,
-                "color": {"color": bg_color, "dark_color": "", "bili_theme": ""},
-            }
-        return node
-
     @staticmethod
-    def _merge_text_nodes(nodes: list[InlineNode]) -> list[InlineNode]:
-        """合并相邻的普通文本节点（无样式、无颜色、同字号）。"""
-        if not nodes:
-            return nodes
-        merged = [nodes[0]]
-        for node in nodes[1:]:
-            last = merged[-1]
-            if _is_text_node(last) and _is_text_node(node):
-                if (
-                    not last["word"]["style"]
-                    and not node["word"]["style"]
-                    and last["word"]["font_level"] == "regular"
-                    and node["word"]["font_level"] == "regular"
-                    and not last["word"]["color"]
-                    and not node["word"]["color"]
-                    and "bg_style" not in last["word"]
-                    and "bg_style" not in node["word"]
-                ):
-                    last["word"]["words"] += node["word"]["words"]
-                else:
-                    merged.append(node)
-            else:
-                merged.append(node)
-        return merged
+    def _extract_align(block: dict) -> int:
+        """从 Lark block 的 style 中提取对齐方式。
+        Lark: 1=左对齐, 2=居中, 3=右对齐
+        IR:  0=左对齐, 1=居中, 2=右对齐
+        """
+        key = _ALIGN_KEY_MAP.get(block.get("block_type", 0))
+        if key is None:
+            return 0
+        sub = block.get(key)
+        if isinstance(sub, dict):
+            s = sub.get("style") or {}
+            lark_align = s.get("align", 1)
+            if lark_align != 1:
+                return lark_align - 1
+        return 0
 
     @staticmethod
     def _elements_to_plain_text(elements: list) -> str:
@@ -638,72 +564,14 @@ class LarkDocxConverter(BaseConverter):
                 parts.append(equation["content"])
         return "".join(parts)
 
-    @staticmethod
-    def _get_align(style: dict | None) -> int | None:
-        """从 block style 中提取对齐方式。"""
-        if not style:
-            return None
-        align = style.get("align")
-        if align is None:
-            return None
-        # Lark: 1=左, 2=居中, 3=右 → B站: 0=左, 1=居中, 2=右
-        return {1: 0, 2: 1, 3: 2}.get(align)
 
-    # ------------------------------------------------------------------
-    # 列表辅助
-    # ------------------------------------------------------------------
+# =============================================================================
+# 临时文件清理
+# =============================================================================
 
-    def _calc_list_level(self, block: dict) -> int:
-        """计算列表项的嵌套层级（从 1 开始）。"""
-        level = 1
-        current_id = block["block_id"]
-        visited = {current_id}
-        while True:
-            parent_block = self._blocks.get(current_id)
-            if not parent_block:
-                break
-            parent_id = parent_block.get("parent_id", "")
-            if not parent_id or parent_id in visited:
-                break
-            visited.add(parent_id)
-            parent = self._blocks.get(parent_id)
-            if not parent:
-                break
-            if parent["block_type"] in (12, 13):
-                level += 1
-                current_id = parent_id
-            else:
-                break
-        return min(level, 3)
 
-    @staticmethod
-    def _calc_list_order(block: dict, level: int, context: dict, list_type: str) -> int:
-        """计算同一层级中的序号。"""
-        key = f"{list_type}_l{level}"
-        context.setdefault("list_orders", {})
-        orders = context["list_orders"]
-        orders[key] = orders.get(key, 0) + 1
-        return orders[key]
-
-    @staticmethod
-    def _get_list_hash(block: dict, level: int, context: dict, list_type: str) -> str:
-        """生成或获取列表组的 combine_hash。
-        连续的同类型列表项共享同一个 hash。
-        """
-        current_type = context.get("list_group_type")
-        current_hash = context.get("list_group_hash")
-        if current_type == list_type and current_hash:
-            return current_hash
-        # 新列表组：生成新 hash
-        new_hash = f"list_{int(time.time() * 1000)}_{block['block_id'][-8:]}"
-        context["list_group_type"] = list_type
-        context["list_group_hash"] = new_hash
-        return new_hash
-
-    # ------------------------------------------------------------------
-    # 文件下载
-    # ------------------------------------------------------------------
-
-    def _download_image(self, file_token: str) -> bytes:
-        """从飞书下载图片文件。"""
-        return self._lark.get_bytes(f"/drive/v1/medias/{file_token}/download")
+def cleanup_temp_images() -> None:
+    """清理飞书转换器产生的临时图片目录。"""
+    if _TEMP_IMAGES_DIR.exists():
+        shutil.rmtree(_TEMP_IMAGES_DIR)
+        logger.info(f"已清理临时图片: {_TEMP_IMAGES_DIR}")

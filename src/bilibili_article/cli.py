@@ -1,23 +1,37 @@
 """
 命令行入口。
 
-支持两种模式:
-  1. Markdown 模式: python -m bilibili_article markdown <article_dir>
-  2. 飞书云文档模式: python -m bilibili_article lark <document_id>
+支持多平台发布，目前实现：
+  - B站 (bilibili): 支持 markdown 和 lark 两种输入源
+  - 森空岛 (skland): 空代码（仅打印日志）
+  - NGA (nga): 空代码（仅打印日志）
+
+用法示例:
+  uv run -m bilibili_article markdown articles/article1/main.md
+  uv run -m bilibili_article --platform bilibili lark <doc_id>
+  uv run -m bilibili_article --platform skland markdown articles/article1/main.md
+  uv run -m bilibili_article --platform nga markdown articles/article1/main.md
 """
 
 import sys
-from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from argparse import ArgumentParser, Namespace, RawDescriptionHelpFormatter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import assert_never
 
 from bilibili_article._auth import REQUIRED_ENV, load_auth, load_lark_auth
-from bilibili_article.client import BiliApiError, BiliClient
-from bilibili_article.converters.lark import LarkDocxConverter
+from bilibili_article.converters.lark import LarkDocxConverter, cleanup_temp_images
 from bilibili_article.converters.markdown import MarkdownConverter
+from bilibili_article.document import Document
 from bilibili_article.log import logger
-from bilibili_article.publisher import PublishConfig, publish_article
+from bilibili_article.platforms.bilibili import (
+    BiliApiError,
+    BiliClient,
+    BiliPublishConfig,
+    BiliPublisher,
+)
+from bilibili_article.platforms.nga import NgaPublisher
+from bilibili_article.platforms.skland import SklandPublisher
 
 AUTH_HELP = """错误：缺少必要的环境变量
 
@@ -48,7 +62,15 @@ CST = timezone(timedelta(hours=8), name="中国标准时间")
 
 def _build_parser() -> ArgumentParser:
     parser = ArgumentParser(
-        description="B站专栏文章发布工具", formatter_class=RawDescriptionHelpFormatter
+        description="多平台文章发布工具", formatter_class=RawDescriptionHelpFormatter
+    )
+
+    parser.add_argument(
+        "--platform",
+        type=str,
+        default="bilibili",
+        choices=["bilibili", "sekai", "nga"],
+        help="目标平台（默认 bilibili）",
     )
 
     subparsers = parser.add_subparsers(dest="mode", required=True, title="模式")
@@ -58,7 +80,7 @@ def _build_parser() -> ArgumentParser:
         "markdown",
         aliases=["md"],
         help="从本地 Markdown 文件发布",
-        description="从本地 Markdown 文件发布专栏文章",
+        description="从本地 Markdown 文件发布文章",
     )
     markdown_parser.add_argument(
         "markdown_file", help="Markdown 文件路径（图片路径相对于该文件所在目录解析）"
@@ -66,13 +88,13 @@ def _build_parser() -> ArgumentParser:
 
     # 飞书云文档子命令
     lark_parser = subparsers.add_parser(
-        "lark", help="从飞书云文档发布", description="从飞书云文档导入并发布专栏文章"
+        "lark", help="从飞书云文档发布", description="从飞书云文档导入并发布文章"
     )
     lark_parser.add_argument("doc_id", help="飞书云文档 ID")
 
-    # 文章元信息
+    # 文章元信息（B站特定选项）
     parser.add_argument(
-        "--category", type=int, default=15, help="分区 ID（默认 15 = 生活）"
+        "--category", type=int, default=15, help="B站分区 ID（默认 15 = 生活）"
     )
     parser.add_argument("--private", action="store_true", help="设为仅自己可见")
     parser.add_argument("--close-comments", action="store_true", help="关闭评论")
@@ -92,7 +114,7 @@ def _build_parser() -> ArgumentParser:
         ),
     )
     parser.add_argument(
-        "--list-id", type=int, default=0, help="文集 ID（0=不加入文集）"
+        "--list-id", type=int, default=0, help="B站文集 ID（0=不加入文集）"
     )
     parser.add_argument(
         "--hashtags", type=str, default=None, help="话题 ID，逗号分隔，如：123,456"
@@ -105,7 +127,7 @@ def _build_parser() -> ArgumentParser:
         type=int,
         default=None,
         metavar="ARTICLE_ID",
-        help="更新已有草稿（传入草稿 ID）",
+        help="更新已有草稿（传入草稿 ID，仅 B站）",
     )
 
     return parser
@@ -121,8 +143,72 @@ def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
 
-    # 构建统一配置
-    config = PublishConfig(
+    # ------------------------------------------------------------------
+    # 1. 创建 Converter
+    # ------------------------------------------------------------------
+    try:
+        if args.mode in ("markdown", "md"):
+            converter = _get_markdown_converter(
+                markdown_file_path=Path(args.markdown_file)
+            )
+        elif args.mode == "lark":
+            converter = _get_lark_converter(doc_id=args.doc_id)
+        else:
+            assert_never(args.mode)
+    except Exception as e:
+        logger.error(f"❌ 转换器初始化失败: {e}")
+        sys.exit(1)
+
+    # ------------------------------------------------------------------
+    # 2. 转换内容为 IR Document
+    # ------------------------------------------------------------------
+    logger.info("正在转换内容 ...")
+    doc = converter.convert()
+    logger.info(f"转换完成，共 {len(doc.blocks)} 个段落")
+    logger.info(f"标题: {doc.title}")
+
+    # ------------------------------------------------------------------
+    # 3. 根据目标平台创建 Publisher 并发布
+    # ------------------------------------------------------------------
+    platform = args.platform
+
+    try:
+        if platform == "bilibili":
+            _run_bilibili(doc, args)
+        elif platform == "sekai":
+            publisher = SklandPublisher()
+            publisher.publish(doc, dry_run=args.dry_run)
+        elif platform == "nga":
+            publisher = NgaPublisher()
+            publisher.publish(doc, dry_run=args.dry_run)
+        else:
+            assert_never(platform)
+    finally:
+        # 清理临时图片文件（仅飞书模式会产生）
+        _cleanup_lark_temp_images(args.mode)
+
+
+def _cleanup_lark_temp_images(mode: str) -> None:
+    """清理飞书转换器产生的临时图片目录。"""
+    if mode != "lark":
+        return
+    cleanup_temp_images()
+
+
+def _run_bilibili(doc: Document, args: Namespace) -> None:
+    """B站 发布流程：设置认证、封面、配置，然后发布。"""
+
+    # 加载认证
+    cfg = load_auth()
+    missing = [k for k in REQUIRED_ENV if k not in cfg]
+    if missing:
+        logger.error(AUTH_HELP)
+        sys.exit(1)
+
+    client = BiliClient(cfg["SESSDATA"], cfg["bili_jct"], cfg["buvid3"])
+
+    # 构建配置
+    config = BiliPublishConfig(
         category_id=args.category,
         article_id=args.update,
         private_pub=1 if args.private else 2,
@@ -140,16 +226,25 @@ def main() -> None:
         ),
     )
 
-    # 加载 B站认证
-    cfg = load_auth()
-    missing = [k for k in REQUIRED_ENV if k not in cfg]
-    if missing:
-        logger.error(AUTH_HELP)
+    # 上传封面图
+    _handle_cover(client, config, args)
+
+    # 发布
+    publisher = BiliPublisher(client, config=config)
+    try:
+        publisher.publish(doc, dry_run=args.dry_run)
+    except BiliApiError as e:
+        logger.error(f"❌ API 错误 [{e.code}]: {e.message}")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"❌ 运行时错误: {e}")
         sys.exit(1)
 
-    client = BiliClient(cfg["SESSDATA"], cfg["bili_jct"], cfg["buvid3"])
 
-    # 上传封面图
+def _handle_cover(
+    client: BiliClient, config: BiliPublishConfig, args: Namespace
+) -> None:
+    """上传封面图到 B站 图床并更新配置。"""
     cover_path = Path(args.cover).resolve() if args.cover else None
     if args.dry_run and cover_path:
         logger.info(f"[dry-run] 跳过封面上传: {cover_path}")
@@ -159,61 +254,27 @@ def main() -> None:
         config.image_urls = [image_info["url"]]
         logger.info(f"  → {image_info['url']}")
 
-    try:
-        if args.mode in ("markdown", "md"):
-            converter = _get_markdown_converter(
-                client,
-                markdown_file_path=Path(args.markdown_file),
-                dry_run=args.dry_run,
-            )
-        elif args.mode == "lark":
-            converter = _get_lark_converter(
-                client, doc_id=args.doc_id, dry_run=args.dry_run
-            )
-        else:
-            assert_never(args.mode)
 
-        publish_article(
-            client=client, converter=converter, dry_run=args.dry_run, config=config
-        )
-    except BiliApiError as e:
-        logger.error(f"❌ API 错误 [{e.code}]: {e.message}")
-        sys.exit(1)
-    except Exception as e:
-        logger.error(f"❌ 运行时错误: {e}")
-        sys.exit(1)
-
-
-def _get_markdown_converter(
-    client: BiliClient, markdown_file_path: Path, *, dry_run: bool
-) -> MarkdownConverter:
-    """Markdown 模式：处理本地 Markdown 文件。"""
-
+def _get_markdown_converter(markdown_file_path: Path) -> MarkdownConverter:
+    """创建 Markdown 转换器。"""
     if not markdown_file_path.is_file():
         logger.error(f"错误：文件不存在: {markdown_file_path}")
         sys.exit(1)
 
     logger.info(f"📄 Markdown 文件: {markdown_file_path}")
+    return MarkdownConverter(markdown_file_path)
 
-    return MarkdownConverter(client, markdown_file_path, dry_run=dry_run)
 
-
-def _get_lark_converter(
-    client: BiliClient, doc_id: str, *, dry_run: bool
-) -> LarkDocxConverter:
-    """飞书云文档模式：从飞书文档 ID 导入。"""
-
+def _get_lark_converter(doc_id: str) -> LarkDocxConverter:
+    """创建飞书云文档转换器。"""
     lark_cfg = load_lark_auth()
     if "LARK_APP_ID" not in lark_cfg or "LARK_APP_SECRET" not in lark_cfg:
         logger.error(LARK_AUTH_HELP)
         sys.exit(1)
 
     logger.info(f"📄 飞书云文档: {doc_id}")
-
     return LarkDocxConverter(
         app_id=lark_cfg["LARK_APP_ID"],
         app_secret=lark_cfg["LARK_APP_SECRET"],
         document_id=doc_id,
-        bili_client=client,
-        dry_run=dry_run,
     )

@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from bilibili_article.models import (
+    from bilibili_article.platforms.bilibili.models import (
         BlockquoteParagraph,
         CodeParagraph,
         DividerParagraph,
@@ -82,11 +82,7 @@ def make_text_node(
 
 def make_heading_node(words: str, level: int) -> TextNode:
     """构造标题节点。"""
-    cfg = {
-        1: {"font_size": 24, "font_level": "xxLarge"},
-        2: {"font_size": 22, "font_level": "xLarge"},
-        3: {"font_size": 20, "font_level": "large"},
-    }.get(level, {"font_size": 20, "font_level": "large"})
+    cfg = _HEADING_FONT_CFG.get(level, _HEADING_FONT_CFG[3])
     node: TextNode = {
         "node_type": 1,
         "word": {
@@ -99,6 +95,14 @@ def make_heading_node(words: str, level: int) -> TextNode:
         },
     }
     return node
+
+
+_HEADING_FONT_CFG: dict[int, dict[str, str | int]] = {
+    1: {"font_size": 24, "font_level": "xxLarge"},
+    2: {"font_size": 22, "font_level": "xLarge"},
+    3: {"font_size": 20, "font_level": "large"},
+}
+"""标题级别对应的字体配置。"""
 
 
 def make_link_node(show_text: str, url: str) -> LinkNode:
@@ -157,18 +161,34 @@ def make_text_paragraph(
     return para
 
 
-def make_heading_paragraph(words: str, level: int) -> HeadingParagraph:
-    """构造标题段落 (para_type=9)。"""
+def make_heading_paragraph(
+    nodes: list[InlineNode], level: int, *, align: int | None = None
+) -> HeadingParagraph:
+    """构造标题段落 (para_type=9)，支持富文本内联节点。"""
     heading_type = {1: 1, 2: 2, 3: 3}.get(level, 3)
+    cfg = _HEADING_FONT_CFG.get(level, _HEADING_FONT_CFG[3])
+    styled_nodes = [_apply_heading_style(n, cfg) for n in nodes]
     para: HeadingParagraph = {
         "para_type": 9,
         "format": {
             "indent": {"first_line_indent": 0, "indent": 0},
             "heading_type": heading_type,
         },
-        "text": {"nodes": [make_heading_node(words, level)]},
+        "text": {"nodes": styled_nodes},
     }
+    if align is not None and align != 0:
+        para["format"]["align"] = align
     return para
+
+
+def _apply_heading_style(node: InlineNode, cfg: dict) -> InlineNode:
+    """对文本节点应用标题级别字体样式。"""
+    if isinstance(node, dict) and node.get("node_type") == 1:
+        word = node.get("word", {})
+        if isinstance(word, dict):
+            word["font_size"] = cfg["font_size"]
+            word["font_level"] = cfg["font_level"]
+    return node
 
 
 def make_image_paragraph(

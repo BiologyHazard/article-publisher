@@ -180,12 +180,15 @@ uv run python main.py articles/article1 --private
 ### 更新已有草稿（通过 Python API）
 
 ```python
-from bilibili_article import BiliClient, MarkdownConverter, PublishConfig, publish_article
+from pathlib import Path
+from bilibili_article import BiliClient, MarkdownConverter, BiliPublisher, BiliPublishConfig
 
 client = BiliClient(sessdata, bili_jct, buvid3)
-converter = MarkdownConverter(client, "articles/article1/main.md")
-config = PublishConfig(article_id=350791)
-result = publish_article(client, converter, config=config)
+converter = MarkdownConverter(Path("articles/article1/main.md"))
+doc = converter.convert()
+config = BiliPublishConfig(article_id=350791)
+publisher = BiliPublisher(client, config=config)
+result = publisher.publish(doc)
 ```
 
 ---
