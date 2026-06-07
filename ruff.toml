@@ -1,0 +1,40 @@
+line-length = 88
+indent-width = 4
+
+target-version = "py312"
+
+[lint]
+select = [
+    "E4",  # pycodestyle errors
+    "E7",
+    "E9",
+    "F",  # pyflakes
+    "A",  # flake8-builtins
+    "ASYNC",  # flake8-async
+    "B",  # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "DTZ",  # flake8-datetimez
+    "I",  # isort
+    "PLC",  # Pylint convention
+    "PLE",  # Pylint error
+    "RET501",  # unnecessary-return-none
+    "RET502",  # implicit-return-value
+    "RET503",  # implicit-return
+    "RUF",  # Ruff-specific rules
+    "TC",  # flake8-type-checking
+    "TID",  # flake8-tidy-imports
+    "UP",  # pyupgrade
+]
+
+fixable = ["ALL"]
+unfixable = []
+
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = true
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
