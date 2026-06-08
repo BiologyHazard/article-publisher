@@ -4,13 +4,14 @@
 支持多平台发布，目前实现：
   - B站 (bilibili): 支持 markdown 和 lark 两种输入源
   - 森空岛 (skland): 支持 markdown 和 lark 两种输入源
-  - NGA (nga): 空代码（仅打印日志）
+  - NGA (nga): 支持 markdown 和 lark 两种输入源，生成 BBCode 供用户自行发布
 
 用法示例:
   uv run -m bilibili_article markdown articles/article1/main.md
   uv run -m bilibili_article --platform bilibili lark <doc_id>
   uv run -m bilibili_article --platform skland markdown articles/article1/main.md
   uv run -m bilibili_article --platform nga markdown articles/article1/main.md
+  uv run -m bilibili_article --platform nga markdown articles/article1/main.md --fid 516
 """
 
 import sys
@@ -20,10 +21,12 @@ from pathlib import Path
 from typing import assert_never
 
 from bilibili_article._auth import (
+    NGA_REQUIRED_ENV,
     REQUIRED_ENV,
     SKLAND_REQUIRED_ENV,
     load_auth,
     load_lark_auth,
+    load_nga_auth,
     load_skland_auth,
 )
 from bilibili_article.converters.lark import LarkDocxConverter, cleanup_temp_images
@@ -36,7 +39,7 @@ from bilibili_article.platforms.bilibili import (
     BiliPublishConfig,
     BiliPublisher,
 )
-from bilibili_article.platforms.nga import NgaPublisher
+from bilibili_article.platforms.nga import NgaClient, NgaPublishConfig, NgaPublisher
 from bilibili_article.platforms.skland.client import SklandClient
 from bilibili_article.platforms.skland.publisher import (
     SklandPublishConfig,
@@ -74,6 +77,19 @@ SKLAND_AUTH_HELP = """错误：缺少森空岛环境变量
   在控制台执行：
     localStorage.getItem('SK_TOKEN_CACHE_KEY')  # 得到 token
     localStorage.getItem('hg_sdk_device_id')    # 得到 did"""
+
+NGA_AUTH_HELP = """错误：缺少 NGA Cookie
+请在 .env 文件中添加：
+    NGA_COOKIE=你的完整 Cookie 字符串
+
+获取方式：浏览器登录 NGA 后，
+  按 F12 打开开发者工具 → Application（应用程序） → Cookies → https://ngabbs.com
+  全选所有 Cookie 的 "Name=Value" 格式，复制粘贴到 .env 文件中。
+
+  示例：NGA_COOKIE=ngaPassportUid=12345; ngacn0comUserInfo=...; ...
+
+此外，还需要通过 --fid 参数指定目标版块 ID。
+版块 ID 可以在版块 URL 中找到，如 https://ngabbs.com/thread.php?fid=516 中的 516。"""
 
 CST = timezone(timedelta(hours=8), name="中国标准时间")
 """中国标准时间（UTC+8）"""
@@ -149,6 +165,21 @@ def _build_parser() -> ArgumentParser:
         help="更新已有草稿（传入草稿 ID，仅 B站）",
     )
 
+    # NGA 特定参数
+    parser.add_argument(
+        "--fid",
+        type=int,
+        default=None,
+        help="NGA 版块 ID（如 516=王者荣耀），从版块 URL 中获取",
+    )
+    parser.add_argument(
+        "--tid",
+        type=int,
+        default=None,
+        metavar="TOPIC_ID",
+        help="NGA 主题 ID（编辑已有帖子时传入，如 46944820）",
+    )
+
     return parser
 
 
@@ -197,8 +228,7 @@ def main() -> None:
         elif platform == "skland":
             _run_skland(doc, args)
         elif platform == "nga":
-            publisher = NgaPublisher()
-            publisher.publish(doc, dry_run=args.dry_run)
+            _run_nga(doc, args)
         else:
             assert_never(platform)
     finally:
@@ -276,6 +306,35 @@ def _run_skland(doc: Document, args: Namespace) -> None:
     )
 
     publisher = SklandPublisher(client, config=config)
+    try:
+        publisher.publish(doc, dry_run=args.dry_run)
+    except Exception as e:
+        logger.error(f"❌ 运行时错误: {e}")
+        sys.exit(1)
+
+
+def _run_nga(doc: Document, args: Namespace) -> None:
+    """NGA 发布流程：加载 Cookie、上传图片、生成 BBCode。"""
+
+    fid = args.fid
+    if not fid:
+        logger.error("NGA 模式需要指定 --fid 参数（版块 ID）")
+        logger.info("版块 ID 可在版块 URL 中找到，如 thread.php?fid=516 中的 516")
+        sys.exit(1)
+
+    cfg = load_nga_auth()
+    missing = [k for k in NGA_REQUIRED_ENV if k not in cfg]
+    if missing:
+        logger.error(NGA_AUTH_HELP)
+        sys.exit(1)
+
+    client = NgaClient(cookie_str=cfg["NGA_COOKIE"], fid=fid)
+    config = NgaPublishConfig(fid=fid, tid=args.tid)
+    publisher = NgaPublisher(client, config=config)
+
+    mode = "编辑" if args.tid else "发布"
+    logger.info(f"NGA {mode}模式 (tid={args.tid if args.tid else '新帖'})")
+
     try:
         publisher.publish(doc, dry_run=args.dry_run)
     except Exception as e:
