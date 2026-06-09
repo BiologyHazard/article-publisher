@@ -537,43 +537,120 @@ result = client.submit_post(
 编辑已有帖子时：
 - `action` 从 `new` 改为 **`modify`**
 - 需要传入 **`tid`**（主题 ID）
-- 新上传的图片**追加**到已有附件列表末尾（tab 分隔）
-- 已有附件不需要重新提交，NGA 服务器会保留
+- 已有附件**不会**自动保留，编辑时必须显式处理旧附件
 
-### 6.2 编辑请求示例
+> ⚠️ **关于旧附件的重要说明**
+>
+> 早期文档认为"已有附件不需要重新提交，NGA 服务器会保留"，但实际测试发现：
+> 提交 `action=modify` 时，`attachments` 和 `attachments_check` 字段只包含当前请求中
+> 附带的附件数据。如果不包含旧附件的信息，这些旧附件将变为"未被引用"的状态
+> （帖子正文中可能还有 `[img]` BBCode 指向它们，但附件绑定关系已被新的附件数据替换）。
+>
+> 因此，编辑帖子时**必须**：
+> 1. 先获取帖子当前的旧附件列表
+> 2. **全量删除**所有旧附件（`del_attach` API）
+> 3. 重新上传所有新图片
+> 4. 提交 `action=modify`，仅携带新上传的附件数据
+
+### 6.2 获取旧附件列表
+
+**Endpoint:** `POST https://ngabbs.com/nuke.php?__lib=attachment&__act=get_recent_attach&__output=3`
+
+**请求格式:** `application/x-www-form-urlencoded`
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `tid` | int | 主题 ID |
+
+**完整请求示例：**
 
 ```
-POST https://bbs.nga.cn/post.php
+POST https://ngabbs.com/nuke.php?__lib=attachment&__act=get_recent_attach&__output=3
 Content-Type: application/x-www-form-urlencoded
 
-action=modify&                                        ← 改为 modify
-fid=-34587507&
-tid=46944336&                                         ← 需要编辑的主题 ID
-post_subject=%A1%B0%C5%DD...%BD%E2%CE%F6&             ← 新标题 (GBK 编码)
-post_content=%5Bimg%5D.%2Fmon_202...%5B%2Fimg%5D&     ← 新正文
-attachments=fid~...aid_new1~...%09fid~...aid_new2~...%09&  ← 仅新图片！
-attachments_check=hash1%09hash2%09&                    ← 仅新图片的校验和
-hidden=1&                                              ← 原有隐藏状态
-nojump=1&lite=htmljs&step=2
+tid=46944336
 ```
 
-### 6.3 关键差异
+**响应格式（GBK 编码 HTML，内含 JSON）：**
 
-| 参数 | 新帖 | 编辑 |
+返回 `window.script_muti_get_var_store = { ... }` 格式的 JavaScript 赋值语句。
+响应内容包含当前帖子的所有附件列表，每个附件条目包含 `url`、`name`、`size`、
+`attachment_str`（即完整的 `fid~...aid~...~thumb~120` 字符串）、`attachments_check`
+（MD5 校验和）等信息。
+
+> 该响应体体积较大（约 6.5KB 未压缩），因为包含完整的附件元数据。
+> 示例响应文件：`docs/nga_编辑帖子.har` 中第 10309 行附近的 `get_recent_attach` 条目。
+
+### 6.3 删除附件
+
+**Endpoint:** `POST https://ngabbs.com/nuke.php?__lib=del_attach&__act=del_attach&__output=3`
+
+**请求格式:** `application/x-www-form-urlencoded`
+
+| 参数 | 类型 | 说明 |
 |------|------|------|
-| `action` | `new` | `modify` |
-| `tid` | 不传 | 必传，已有主题 ID |
-| `attachments` | 全部图片 | **仅新上传的图片**（已有附件自动保留） |
-| `attachments_check` | 全部校验和 | **仅新图片的校验和** |
-| `hidden` | 默认 `2` | 沿用帖子原有设置 |
+| `tid` | int | 主题 ID |
+| `pid` | int | 楼层 ID（主楼为 `0`） |
+| `aid` | string | 附件标识符，值为附件数据中的 `name` 字段（即 NGA 存储的文件名） |
 
-### 6.4 实现要点
+**完整请求示例：**
 
-当用户传入 `--tid` 参数时：
-1. `NgaPublishConfig.tid` 设为该值
-2. `NgaPublisher.publish()` 将其透传给 `submit_post(tid=tid)`
-3. `submit_post()` 设置 `action=modify` 并添加 `tid` 参数
-4. 已有附件自动保留，只需提交新上传图片的附件数据
+```
+POST https://ngabbs.com/nuke.php?__lib=del_attach&__act=del_attach&__output=3
+Content-Type: application/x-www-form-urlencoded
+
+tid=46944336&pid=0&aid=-klbw3Q6-e4r9K1kT3cS1hc-u0.webp
+```
+
+> ⚠️ **`aid` 参数的值**：传入的是附件数据中 `name` 字段的值（即 NGA 存储端使用的文件名），
+> 而非 `attachments` 字段中 `aid~` 后面的短 ID（如 `-klbw3Q6-3gsh`）。完整的 `name`
+> 可在上传响应或 `get_recent_attach` 返回的附件数据中找到。
+
+**响应：** 返回 HTML 页面，状态码 200 表示删除成功。
+示例响应文件：`docs/nga_删除附件.har`
+
+### 6.4 编辑流程（全量删除 + 全量重新上传）
+
+整体流程如下：
+
+```
+                  ┌─────────────────────────┐
+                  │  用户提供 --tid 进入编辑模式 │
+                  └──────────┬──────────────┘
+                             │
+                             ▼
+                  ┌─────────────────────────┐
+                  │  get_recent_attach(tid)   │  ← 获取帖子当前的旧附件列表
+                  └──────────┬──────────────┘
+                             │
+                             ▼
+                  ┌─────────────────────────┐
+                  │  逐个 delete_attachment()  │  ← 删除所有旧附件
+                  └──────────┬──────────────┘
+                             │
+                             ▼
+                  ┌─────────────────────────┐
+                  │  上传所有新图片（现有逻辑）   │
+                  └──────────┬──────────────┘
+                             │
+                             ▼
+                  ┌─────────────────────────┐
+                  │  submit_post(action=modify │  ← 仅携带新上传的附件数据
+                  │   + tid, 仅新 attachments) │
+                  └─────────────────────────┘
+```
+
+1. **获取旧附件列表：** 调用 `get_recent_attach(tid)` 获取所有旧附件数据
+2. **全量删除：** 遍历旧附件列表，逐个调用 `delete_attachment(tid, aid)` 删除
+3. **上传新图片：** 沿用现有上传逻辑，将所有图片上传到 NGA 图床
+4. **提交编辑：** 调用 `submit_post()`，`action=modify`，`attachments` 只包含新上传的附件
+5. **清理旧图片（可选）：** 如有需要，可以额外删除本地已无引用但服务器仍残留的附件
+
+> ℹ️ **关于 `subject_not_modify` 和 `content_not_modify`**
+>
+> 在浏览器编辑帖子时，NGA 前端会发送 `subject_not_modify=1`（标题未修改时）和
+> `content_not_modify=1`（正文未修改时）来控制"最后编辑时间"的显示。
+> 本项目编辑时始终会提交新的标题和正文，因此不发送这两个参数。
 
 ```python
 # CLI 调用方式
@@ -582,8 +659,15 @@ uv run -m bilibili_article --platform nga --fid -34587507 --tid 46944336 markdow
 # 内部流程
 config = NgaPublishConfig(fid=fid, tid=46944336)  # ← tid 非 None 时为编辑模式
 publisher = NgaPublisher(client, config=config)
-publisher.publish(doc)  # → submit_post(tid=46944336)
+publisher.publish(doc)  # → 先删旧附件，再上传新图，最后 submit_post(tid=46944336)
 ```
+
+### 6.5 HAR 参考文件
+
+| 文件 | 包含的 API |
+|------|-----------|
+| `docs/nga_编辑帖子.har` | `get_recent_attach`（获取旧附件列表）、编辑页面加载 |
+| `docs/nga_删除附件.har` | `del_attach`（删除单个附件） |
 
 ---
 

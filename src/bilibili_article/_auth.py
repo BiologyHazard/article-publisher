@@ -46,8 +46,8 @@ def load_skland_auth() -> dict[str, str]:
     """从 .env 文件或系统环境变量加载森空岛认证配置。"""
     cfg: dict[str, str] = {}
     for key in SKLAND_REQUIRED_ENV:
-        val = os.environ.get(key, "").strip()
-        if val:
+        val = os.environ.get(key)
+        if val is not None:
             cfg[key] = val
     return cfg
 

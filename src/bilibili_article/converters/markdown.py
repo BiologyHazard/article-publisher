@@ -7,6 +7,7 @@ Markdown → IR Document 转换器。
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any, ClassVar, cast
 
@@ -80,8 +81,6 @@ class MarkdownConverter(BaseConverter):
         with open(
             markdown_file_path.with_suffix(".ast.json"), "w", encoding="utf-8"
         ) as f:
-            import json
-
             json.dump(self._parsed, f, ensure_ascii=False, indent=2)
 
     # ==================================================================

@@ -39,36 +39,28 @@ if TYPE_CHECKING:
     from bilibili_article.platforms.nga.client import NgaClient, UploadedImage
 
 
-# =============================================================================
-# 常量
-# =============================================================================
-
-_DEFAULT_OUTPUT = "nga_bbcode.txt"
-
-# NGA 标题字号映射
 _HEADING_SIZE: dict[int, str] = {1: "150%", 2: "130%", 3: "120%"}
+"""NGA 标题字号映射，H1~H3 使用不同字号，H4+ 回退为纯粗体。"""
 
-# 行内代码颜色
 _INLINE_CODE_COLOR = "#c7254e"
-
-
-# =============================================================================
-# 发布配置
-# =============================================================================
+"""NGA 行内代码颜色"""
 
 
 @dataclass
 class NgaPublishConfig:
     """NGA 发布配置参数。"""
 
-    fid: int
-    """目标版块 ID"""
+    fid: str
+    """目标版面 ID"""
 
-    tid: int | None = None
+    tid: str | None = None
     """已有帖子 ID（编辑模式时传入）"""
 
-    bbcode_path: Path = Path(_DEFAULT_OUTPUT)
-    """BBCode 输出文件路径"""
+    pid: str | None = None
+    """已有帖子内的回复 ID（编辑模式时传入）"""
+
+    article: str | None = None
+    """暂不清楚"""
 
 
 # =============================================================================
@@ -79,11 +71,10 @@ class NgaPublishConfig:
 class NgaPublisher(Publisher):
     """将 IR Document 发布到 NGA 论坛。"""
 
-    def __init__(
-        self, client: NgaClient, config: NgaPublishConfig | None = None
-    ) -> None:
+    def __init__(self, client: NgaClient, config: NgaPublishConfig) -> None:
         self._client = client
-        self._config = config or NgaPublishConfig(fid=client.fid)
+        self._config = config
+        self._is_modify = config.tid is not None
         # 上传后的图片缓存 (source_path → UploadedImage)
         self._uploaded_images: dict[str, UploadedImage] = {}
 
@@ -94,6 +85,16 @@ class NgaPublisher(Publisher):
         # 收集所有附件数据
         attachment_strings: list[str] = []
         attachment_checks: list[str] = []
+
+        # GET /post.php 以获取 auth
+        if not dry_run:
+            self._client.get_post_php(
+                action="modify" if self._is_modify else "new",
+                fid=self._config.fid,
+                tid=self._config.tid,
+                pid=self._config.pid,
+                article=self._config.article,
+            )
 
         bbcode = self._convert_document(
             doc,
@@ -106,18 +107,11 @@ class NgaPublisher(Publisher):
         title = doc.title
         logger.info(f"标题: {title}")
 
-        # 保存 BBCode 到文件（供检查）
-        bbcode_path = self._config.bbcode_path
-        bbcode_path.write_text(bbcode, encoding="utf-8")
-        logger.info(f"BBCode 已保存到: {bbcode_path.resolve()}")
-
         if dry_run:
             logger.info("=" * 60)
             logger.info("  [dry-run] NGA BBS 代码预览：")
             logger.info("=" * 60)
-            print()
             print(bbcode)
-            print()
             logger.info("=" * 60)
             logger.info("  运行时不带 --dry-run 将会上传图片并发布帖子。")
             logger.info("=" * 60)
@@ -125,7 +119,6 @@ class NgaPublisher(Publisher):
                 "platform": "nga",
                 "status": "dry_run",
                 "title": title,
-                "bbcode_file": str(bbcode_path.resolve()),
                 "bbcode_length": len(bbcode),
                 "uploaded_images": len(self._uploaded_images),
             }
@@ -133,9 +126,12 @@ class NgaPublisher(Publisher):
         if not attachment_strings:
             logger.warning("没有图片需要上传，直接提交文本内容。")
 
+        # 编辑模式：先删除帖子中的旧附件（全量删除）
+        if self._is_modify:
+            self._delete_old_attachments()
+
         # 提交帖子（与上传使用同一个 session，确保 checksum 匹配）
-        is_edit = self._config.tid is not None
-        logger.info(f"正在{'编辑' if is_edit else '提交'}帖子 ...")
+        logger.info(f"正在{'编辑' if self._is_modify else '提交'}帖子 ...")
         result = self._client.submit_post(
             subject=title,
             content=bbcode,
@@ -144,7 +140,7 @@ class NgaPublisher(Publisher):
             tid=self._config.tid,
         )
 
-        if is_edit:
+        if self._is_modify:
             logger.info(f"  -> 编辑成功！tid={self._config.tid}")
         else:
             logger.info("  -> 发布成功！")
@@ -153,12 +149,44 @@ class NgaPublisher(Publisher):
             "platform": "nga",
             "status": "success",
             "title": title,
-            "bbcode_file": str(bbcode_path.resolve()),
             "bbcode_length": len(bbcode),
             "uploaded_images": len(self._uploaded_images),
             "response": result,
             "tid": self._config.tid,
         }
+
+    # ==================================================================
+    # 编辑模式：旧附件清理
+    # ==================================================================
+
+    def _delete_old_attachments(self) -> None:
+        """删除帖子当前的所有旧附件（编辑帖子前调用）。"""
+        tid = self._config.tid
+        assert tid is not None  # 仅在编辑模式下调用
+
+        logger.info("编辑模式：正在获取旧附件列表 ...")
+        old_attachments = self._client.get_recent_attachments(tid)
+
+        if not old_attachments:
+            logger.info("  → 没有旧附件需要删除。")
+            return
+
+        logger.info(f"  共 {len(old_attachments)} 个旧附件，正在逐个删除 ...")
+        deleted = 0
+        failed = 0
+        for attach in old_attachments:
+            aid = attach["name"]
+            try:
+                ok = self._client.delete_attachment(tid, aid)
+                if ok:
+                    deleted += 1
+                else:
+                    failed += 1
+            except Exception as e:
+                logger.warning(f"  [错误] 删除附件失败 {aid}: {e}")
+                failed += 1
+
+        logger.info(f"  → 删除完成: {deleted} 成功, {failed} 失败")
 
     # ==================================================================
     # IR → NGA BBCode
@@ -185,7 +213,7 @@ class NgaPublisher(Publisher):
             if result:
                 parts.append(result)
 
-        return "\n\n".join(parts)
+        return "\n".join(parts)
 
     def _convert_block(
         self,
@@ -393,7 +421,7 @@ class NgaPublisher(Publisher):
         if not children_bbcode:
             return ""
 
-        inner = "\n\n".join(children_bbcode)
+        inner = "\n".join(children_bbcode)
         return f"[quote]\n{inner}\n[/quote]"
 
     # ==================================================================
@@ -482,4 +510,4 @@ class NgaPublisher(Publisher):
         if not parts:
             return "[*]"
 
-        return f"[*]{' '.join(parts)}[/*]"
+        return f"[*]{' '.join(parts)}"

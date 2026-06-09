@@ -158,25 +158,20 @@ def _build_parser() -> ArgumentParser:
         "--dry-run", action="store_true", help="仅转换并输出 payload，不保存到草稿箱"
     )
     parser.add_argument(
-        "--update",
-        type=int,
-        default=None,
-        metavar="ARTICLE_ID",
-        help="更新已有草稿（传入草稿 ID，仅 B站）",
+        "--update", type=int, default=None, help="更新已有草稿（传入草稿 ID，仅 B站）"
     )
 
     # NGA 特定参数
     parser.add_argument(
         "--fid",
-        type=int,
+        type=str,
         default=None,
         help="NGA 版块 ID（如 516=王者荣耀），从版块 URL 中获取",
     )
     parser.add_argument(
         "--tid",
-        type=int,
+        type=str,
         default=None,
-        metavar="TOPIC_ID",
         help="NGA 主题 ID（编辑已有帖子时传入，如 46944820）",
     )
 

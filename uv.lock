@@ -7,6 +7,7 @@ name = "bilibili-article"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "json5" },
     { name = "loguru" },
     { name = "mistune" },
     { name = "pillow" },
@@ -16,6 +17,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "json5", specifier = ">=0.14.0" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "mistune", specifier = ">=3.2.1" },
     { name = "pillow", specifier = ">=12.2.0" },
@@ -121,6 +123,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/b9/28/99c51f664567218d824af024c0251650fb27e4ca066df188dab0769c5b91/idna-3.17.tar.gz", hash = "sha256:5eb0cb53bc467c12eadcf6de83163ad8527cec9416f44b9b61b19caedad2b87f", size = 196048, upload-time = "2026-05-28T14:32:38.55Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/de/a7/f76514cc40ad6234098ecdebda08732d75964776c51a42845b7da10649e2/idna-3.17-py3-none-any.whl", hash = "sha256:466e48829084efe2548012b855df21540b96f2e20e51bd124c851536556a592c", size = 65316, upload-time = "2026-05-28T14:32:37.035Z" },
+]
+
+[[package]]
+name = "json5"
+version = "0.14.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/9c/4b/6f8906aaf67d501e259b0adab4d312945bb7211e8b8d4dcc77c92320edaa/json5-0.14.0.tar.gz", hash = "sha256:b3f492fad9f6cdbced8b7d40b28b9b1c9701c5f561bef0d33b81c2ff433fefcb", size = 52656, upload-time = "2026-03-27T22:50:48.108Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b8/42/cf027b4ac873b076189d935b135397675dac80cb29acb13e1ab86ad6c631/json5-0.14.0-py3-none-any.whl", hash = "sha256:56cf861bab076b1178eb8c92e1311d273a9b9acea2ccc82c276abf839ebaef3a", size = 36271, upload-time = "2026-03-27T22:50:47.073Z" },
 ]
 
 [[package]]
