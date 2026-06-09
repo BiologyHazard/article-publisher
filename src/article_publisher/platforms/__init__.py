@@ -1,12 +1,12 @@
-from bilibili_article.platforms.base import Publisher
-from bilibili_article.platforms.bilibili import (
+from article_publisher.platforms.base import Publisher
+from article_publisher.platforms.bilibili import (
     BiliApiError,
     BiliClient,
     BiliPublishConfig,
     BiliPublisher,
 )
-from bilibili_article.platforms.nga import NgaPublisher
-from bilibili_article.platforms.skland import SklandPublisher
+from article_publisher.platforms.nga import NgaPublisher
+from article_publisher.platforms.skland import SklandPublisher
 
 __all__ = [
     "BiliApiError",

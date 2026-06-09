@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from bilibili_article.document import (
+from article_publisher.document import (
     Block,
     Blockquote,
     CodeBlock,
@@ -28,8 +28,8 @@ from bilibili_article.document import (
     TextRun,
     UnorderedList,
 )
-from bilibili_article.document import Paragraph as IRParagraph
-from bilibili_article.platforms.bilibili.opus import (
+from article_publisher.document import Paragraph as IRParagraph
+from article_publisher.platforms.bilibili.opus import (
     make_blockquote_paragraph,
     make_code_paragraph,
     make_divider_paragraph,
@@ -46,8 +46,8 @@ from bilibili_article.platforms.bilibili.opus import (
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from bilibili_article.platforms.bilibili.client import BiliClient
-    from bilibili_article.platforms.bilibili.models import (
+    from article_publisher.platforms.bilibili.client import BiliClient
+    from article_publisher.platforms.bilibili.models import (
         ArgPayload,
         InlineNode,
         Paragraph,

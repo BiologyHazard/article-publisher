@@ -6,8 +6,8 @@ from typing import Any
 
 import requests
 
-from bilibili_article.converters.base import BaseConverter
-from bilibili_article.document import (
+from article_publisher.converters.base import BaseConverter
+from article_publisher.document import (
     Block,
     Blockquote,
     CodeBlock,
@@ -23,8 +23,8 @@ from bilibili_article.document import (
     TextRun,
     UnorderedList,
 )
-from bilibili_article.log import ROOT_DIR as _PROJECT_ROOT
-from bilibili_article.log import logger
+from article_publisher.log import ROOT_DIR as _PROJECT_ROOT
+from article_publisher.log import logger
 
 # 临时图片目录（项目根目录内，用完清除）
 _TEMP_IMAGES_DIR = _PROJECT_ROOT / "temp" / "lark_images"
@@ -160,7 +160,9 @@ class _LarkHttpClient:
         self.app_id = app_id
         self.app_secret = app_secret
         self._session = requests.Session()
-        self._session.headers["User-Agent"] = "bilibili-article/0.1.0 (Python requests)"
+        self._session.headers["User-Agent"] = (
+            "article-publisher/0.1.0 (Python requests)"
+        )
         self._tenant_token: str | None = None
 
     def _ensure_token(self) -> str:

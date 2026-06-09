@@ -1,7 +1,7 @@
 [project]
-name = "bilibili-article"
+name = "article-publisher"
 version = "0.1.0"
-description = "Make bilibili articles with ease."
+description = "Multi-platform article publishing tool."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

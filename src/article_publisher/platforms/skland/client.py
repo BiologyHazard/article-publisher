@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any
 import requests
 from PIL import Image
 
-from bilibili_article.log import logger
+from article_publisher.log import logger
 
 if TYPE_CHECKING:
     from pathlib import Path

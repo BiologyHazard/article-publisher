@@ -13,7 +13,7 @@ cp .env.example .env
 # 然后从浏览器 Cookie 中复制 SESSDATA、bili_jct、buvid3 填入 .env
 
 # 3. 运行
-uv run python -m bilibili_article md articles/article1
+uv run python -m article_publisher md articles/article1
 ```
 
 ---
@@ -160,7 +160,7 @@ uv run python main.py articles/article1              # Markdown 模式
 uv run python main.py --lark <doc_id>                 # 飞书云文档模式
 uv run python main.py --lark <doc_id> --category 4    # 指定分区
 uv run python main.py --lark <doc_id> --private       # 仅自己可见
-uv run python -m bilibili_article --update 350908 md articles/article1  # 更新已有草稿
+uv run python -m article_publisher --update 350908 md articles/article1  # 更新已有草稿
 ```
 
 ### 指定分区
@@ -181,7 +181,7 @@ uv run python main.py articles/article1 --private
 
 ```python
 from pathlib import Path
-from bilibili_article import BiliClient, MarkdownConverter, BiliPublisher, BiliPublishConfig
+from article_publisher import BiliClient, MarkdownConverter, BiliPublisher, BiliPublishConfig
 
 client = BiliClient(sessdata, bili_jct, buvid3)
 converter = MarkdownConverter(Path("articles/article1/main.md"))
@@ -198,7 +198,7 @@ result = publisher.publish(doc)
 ```
 ├── main.py                          # 入口脚本
 ├── src/
-│   └── bilibili_article/            # 核心包
+│   └── article_publisher/           # 核心包
 │       ├── __init__.py              # 包导出
 │       ├── _auth.py                 # 认证配置加载
 │       ├── _wbi.py                  # WBI 签名工具

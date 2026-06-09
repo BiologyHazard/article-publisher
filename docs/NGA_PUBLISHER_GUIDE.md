@@ -1,7 +1,7 @@
 # NGA 发布器实现指南
 
 > 本文档详细记录了 NGA（Ngabbs.com / bbs.nga.cn）论坛的发布机制、API 接口、
-> 图片上传流程和发帖实现，用于指导 `bilibili-article` 项目中 NGA 发布器的开发与维护。
+> 图片上传流程和发帖实现，用于指导 `article-publisher` 项目中 NGA 发布器的开发与维护。
 
 ---
 
@@ -654,7 +654,7 @@ tid=46944336&pid=0&aid=-klbw3Q6-e4r9K1kT3cS1hc-u0.webp
 
 ```python
 # CLI 调用方式
-uv run -m bilibili_article --platform nga --fid -34587507 --tid 46944336 markdown articles/article1/main.md
+uv run -m article_publisher --platform nga --fid -34587507 --tid 46944336 markdown articles/article1/main.md
 
 # 内部流程
 config = NgaPublishConfig(fid=fid, tid=46944336)  # ← tid 非 None 时为编辑模式
@@ -766,7 +766,7 @@ def _textrun_to_bbcode(self, run: TextRun) -> str:
 #    NGA_COOKIE=ngaPassportUid=xxx; ngacn0comUserInfo=...; ...
 
 # 2. 运行（自动上传图片并发布）
-uv run -m bilibili_article --platform nga --fid -34587507 markdown articles/article1/main.md
+uv run -m article_publisher --platform nga --fid -34587507 markdown articles/article1/main.md
 
 # 3. 帖子发布成功，输出帖子 ID
 # 帖子提交成功！tid=46944820

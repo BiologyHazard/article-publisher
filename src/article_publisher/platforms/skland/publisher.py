@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from bilibili_article.document import (
+from article_publisher.document import (
     Block,
     Blockquote,
     CodeBlock,
@@ -30,13 +30,13 @@ from bilibili_article.document import (
     TextRun,
     UnorderedList,
 )
-from bilibili_article.document import Paragraph as IRParagraph
-from bilibili_article.platforms.base import Publisher
+from article_publisher.document import Paragraph as IRParagraph
+from article_publisher.platforms.base import Publisher
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from bilibili_article.platforms.skland.client import SklandClient
+    from article_publisher.platforms.skland.client import SklandClient
 
 
 # =============================================================================

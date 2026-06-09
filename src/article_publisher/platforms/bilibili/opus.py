@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
-    from bilibili_article.platforms.bilibili.models import (
+    from article_publisher.platforms.bilibili.models import (
         BlockquoteParagraph,
         CodeParagraph,
         DividerParagraph,

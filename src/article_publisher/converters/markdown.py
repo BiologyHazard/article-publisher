@@ -13,8 +13,8 @@ from typing import Any, ClassVar, cast
 
 import mistune
 
-from bilibili_article.converters.base import BaseConverter
-from bilibili_article.document import (
+from article_publisher.converters.base import BaseConverter
+from article_publisher.document import (
     Block,
     Blockquote,
     CodeBlock,
@@ -28,7 +28,7 @@ from bilibili_article.document import (
     TextRun,
     UnorderedList,
 )
-from bilibili_article.log import logger
+from article_publisher.log import logger
 
 # mistune AST token 类型
 _Token = dict[str, Any]

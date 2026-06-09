@@ -7,11 +7,11 @@
   - NGA (nga): 支持 markdown 和 lark 两种输入源，生成 BBCode 供用户自行发布
 
 用法示例:
-  uv run -m bilibili_article markdown articles/article1/main.md
-  uv run -m bilibili_article --platform bilibili lark <doc_id>
-  uv run -m bilibili_article --platform skland markdown articles/article1/main.md
-  uv run -m bilibili_article --platform nga markdown articles/article1/main.md
-  uv run -m bilibili_article --platform nga markdown articles/article1/main.md --fid 516
+  uv run -m article_publisher markdown articles/article1/main.md
+  uv run -m article_publisher --platform bilibili lark <doc_id>
+  uv run -m article_publisher --platform skland markdown articles/article1/main.md
+  uv run -m article_publisher --platform nga markdown articles/article1/main.md
+  uv run -m article_publisher --platform nga markdown articles/article1/main.md --fid 516
 """
 
 import sys
@@ -20,7 +20,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import assert_never
 
-from bilibili_article._auth import (
+from article_publisher._auth import (
     NGA_REQUIRED_ENV,
     REQUIRED_ENV,
     SKLAND_REQUIRED_ENV,
@@ -29,19 +29,19 @@ from bilibili_article._auth import (
     load_nga_auth,
     load_skland_auth,
 )
-from bilibili_article.converters.lark import LarkDocxConverter, cleanup_temp_images
-from bilibili_article.converters.markdown import MarkdownConverter
-from bilibili_article.document import Document
-from bilibili_article.log import logger
-from bilibili_article.platforms.bilibili import (
+from article_publisher.converters.lark import LarkDocxConverter, cleanup_temp_images
+from article_publisher.converters.markdown import MarkdownConverter
+from article_publisher.document import Document
+from article_publisher.log import logger
+from article_publisher.platforms.bilibili import (
     BiliApiError,
     BiliClient,
     BiliPublishConfig,
     BiliPublisher,
 )
-from bilibili_article.platforms.nga import NgaClient, NgaPublishConfig, NgaPublisher
-from bilibili_article.platforms.skland.client import SklandClient
-from bilibili_article.platforms.skland.publisher import (
+from article_publisher.platforms.nga import NgaClient, NgaPublishConfig, NgaPublisher
+from article_publisher.platforms.skland.client import SklandClient
+from article_publisher.platforms.skland.publisher import (
     SklandPublishConfig,
     SklandPublisher,
 )

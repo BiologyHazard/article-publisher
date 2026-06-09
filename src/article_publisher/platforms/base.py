@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from bilibili_article.document import Document
+    from article_publisher.document import Document
 
 
 class Publisher(ABC):
