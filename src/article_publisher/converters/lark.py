@@ -8,6 +8,7 @@ import requests
 
 from article_publisher.converters.base import BaseConverter
 from article_publisher.document import (
+    Alignment,
     Block,
     Blockquote,
     CodeBlock,
@@ -537,21 +538,24 @@ class LarkDocxConverter(BaseConverter):
         )
 
     @staticmethod
-    def _extract_align(block: dict[str, Any]) -> int:
+    def _extract_align(block: dict[str, Any]) -> Alignment:
         """从 Lark block 的 style 中提取对齐方式。
         Lark: 1=左对齐, 2=居中, 3=右对齐
-        IR:  0=左对齐, 1=居中, 2=右对齐
         """
         key = _ALIGN_KEY_MAP.get(block.get("block_type", 0))
         if key is None:
-            return 0
+            return Alignment.LEFT
         sub = block.get(key)
         if isinstance(sub, dict):
             s = sub.get("style") or {}
             lark_align = s.get("align", 1)
-            if lark_align != 1:
-                return lark_align - 1
-        return 0
+            _LARK_TO_ALIGNMENT = {
+                1: Alignment.LEFT,
+                2: Alignment.CENTER,
+                3: Alignment.RIGHT,
+            }
+            return _LARK_TO_ALIGNMENT.get(lark_align, Alignment.LEFT)
+        return Alignment.LEFT
 
     @staticmethod
     def _elements_to_plain_text(elements: list[Any]) -> str:

@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 from loguru import logger
 
 from article_publisher.document import (
+    Alignment,
     Block,
     Blockquote,
     CodeBlock,
@@ -292,9 +293,9 @@ class NgaPublisher(Publisher):
             return None
 
         text = inline
-        if block.align == 1:
+        if block.align is Alignment.CENTER:
             text = f"[align=center]{text}[/align]"
-        elif block.align == 2:
+        elif block.align is Alignment.RIGHT:
             text = f"[align=right]{text}[/align]"
         return text
 

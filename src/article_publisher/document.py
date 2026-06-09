@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum, auto
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
+
+class Alignment(Enum):
+    LEFT = auto()
+    CENTER = auto()
+    RIGHT = auto()
 
 
 @dataclass
@@ -55,7 +62,7 @@ class Heading(Block):
 
     level: int
     children: Sequence[InlineElement]
-    align: int = 0  # 0=左对齐, 1=居中, 2=右对齐
+    align: Alignment = Alignment.LEFT
     indent_level: int = 0  # 0=无缩进, 1=一级, 2=二级
 
 
@@ -64,7 +71,7 @@ class Paragraph(Block):
     """普通文本段落。"""
 
     children: Sequence[InlineElement]
-    align: int = 0  # 0=左对齐, 1=居中, 2=右对齐
+    align: Alignment = Alignment.LEFT
     indent_level: int = 0  # 0=无缩进, 1=一级, 2=二级
 
 

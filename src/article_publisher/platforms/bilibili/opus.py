@@ -9,6 +9,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict
 
+from bilibili_article.document import Alignment
+
+# B站 Opus API 对齐值: 0=左对齐, 1=居中, 2=右对齐
+_ALIGN_TO_OPUS: dict[Alignment, int] = {
+    Alignment.LEFT: 0,
+    Alignment.CENTER: 1,
+    Alignment.RIGHT: 2,
+}
+
 if TYPE_CHECKING:
     from article_publisher.platforms.bilibili.models import (
         BlockquoteParagraph,
@@ -155,7 +164,7 @@ def make_emote_node(raw_text: str) -> EmoteNode:
 
 
 def make_text_paragraph(
-    nodes: list[InlineNode], *, align: int | None = None, indent_level: int = 0
+    nodes: list[InlineNode], *, align: Alignment = Alignment.LEFT, indent_level: int = 0
 ) -> TextParagraph:
     """构造普通文本段落 (para_type=1)。"""
     para: TextParagraph = {
@@ -163,13 +172,13 @@ def make_text_paragraph(
         "format": {"indent": {"first_line_indent": 0, "indent": indent_level}},
         "text": {"nodes": nodes},
     }
-    if align is not None and align != 0:
-        para["format"]["align"] = align
+    if align is not Alignment.LEFT:
+        para["format"]["align"] = _ALIGN_TO_OPUS[align]
     return para
 
 
 def make_heading_paragraph(
-    nodes: list[InlineNode], level: int, *, align: int | None = None
+    nodes: list[InlineNode], level: int, *, align: Alignment = Alignment.LEFT
 ) -> HeadingParagraph:
     """构造标题段落 (para_type=9)，支持富文本内联节点。"""
     heading_type = {1: 1, 2: 2, 3: 3}.get(level, 3)
@@ -183,8 +192,8 @@ def make_heading_paragraph(
         },
         "text": {"nodes": styled_nodes},
     }
-    if align is not None and align != 0:
-        para["format"]["align"] = align
+    if align is not Alignment.LEFT:
+        para["format"]["align"] = _ALIGN_TO_OPUS[align]
     return para
 
 
@@ -222,7 +231,7 @@ def make_divider_paragraph() -> DividerParagraph:
 
 
 def make_blockquote_paragraph(
-    nodes: list[InlineNode], combine_hash: str, *, align: int | None = None
+    nodes: list[InlineNode], combine_hash: str, *, align: Alignment | None = None
 ) -> BlockquoteParagraph:
     """构造引用段落 (para_type=4)。"""
     para: BlockquoteParagraph = {
@@ -233,8 +242,8 @@ def make_blockquote_paragraph(
         },
         "text": {"nodes": nodes},
     }
-    if align is not None and align != 0:
-        para["format"]["align"] = align
+    if align is not None and align is not Alignment.LEFT:
+        para["format"]["align"] = _ALIGN_TO_OPUS[align]
     return para
 
 
@@ -244,7 +253,7 @@ def make_ordered_list_paragraph(
     order: int,
     combine_hash: str,
     *,
-    align: int | None = None,
+    align: Alignment | None = None,
 ) -> OrderedListParagraph:
     """构造有序列表段落 (para_type=5)。"""
     theme = {1: "arabic_num", 2: "lower_letter", 3: "roman_num"}.get(
@@ -253,7 +262,9 @@ def make_ordered_list_paragraph(
     para: OrderedListParagraph = {
         "para_type": 5,
         "format": {
-            "align": align if align is not None else 0,
+            "align": _ALIGN_TO_OPUS[align]
+            if align is not None
+            else _ALIGN_TO_OPUS[Alignment.LEFT],
             "list_format": {"level": level, "order": order, "theme": theme},
             "combine_hash": combine_hash,
         },
@@ -268,14 +279,16 @@ def make_unordered_list_paragraph(
     order: int,
     combine_hash: str,
     *,
-    align: int | None = None,
+    align: Alignment | None = None,
 ) -> UnorderedListParagraph:
     """构造无序列表段落 (para_type=6)。"""
     theme = {1: "dot", 2: "square", 3: "circle"}.get(level, "dot")
     para: UnorderedListParagraph = {
         "para_type": 6,
         "format": {
-            "align": align if align is not None else 0,
+            "align": _ALIGN_TO_OPUS[align]
+            if align is not None
+            else _ALIGN_TO_OPUS[Alignment.LEFT],
             "list_format": {"level": level, "order": order, "theme": theme},
             "combine_hash": combine_hash,
         },

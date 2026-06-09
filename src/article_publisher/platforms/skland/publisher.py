@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 from loguru import logger
 
 from article_publisher.document import (
+    Alignment,
     Block,
     Blockquote,
     CodeBlock,
@@ -32,6 +33,13 @@ from article_publisher.document import (
 )
 from article_publisher.document import Paragraph as IRParagraph
 from article_publisher.platforms.base import Publisher
+
+# 森空岛 API 对齐值: 1=左对齐, 2=居中, 3=右对齐
+_ALIGN_TO_SKLAND: dict[Alignment, int] = {
+    Alignment.LEFT: 1,
+    Alignment.CENTER: 2,
+    Alignment.RIGHT: 3,
+}
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -194,8 +202,8 @@ class SklandPublisher(Publisher):
                     "type": "paragraph",
                     "children": bold_children,
                 }
-                if block.align:
-                    ele["alignment"] = block.align
+                if block.align is not Alignment.LEFT:
+                    ele["alignment"] = _ALIGN_TO_SKLAND[block.align]
                 elements.append(ele)
 
         elif isinstance(block, IRParagraph):
@@ -207,8 +215,8 @@ class SklandPublisher(Publisher):
                 "type": "paragraph",
                 "children": children,
             }
-            if block.align:
-                ele["alignment"] = block.align
+            if block.align is not Alignment.LEFT:
+                ele["alignment"] = _ALIGN_TO_SKLAND[block.align]
             elements.append(ele)
 
         elif isinstance(block, ImageBlock):
