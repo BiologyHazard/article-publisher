@@ -148,6 +148,13 @@ _ALIGN_KEY_MAP: dict[int, str] = {
     13: "ordered",
 }
 
+# Lark align 值 → Alignment 枚举
+_LARK_TO_ALIGNMENT: dict[int, Alignment] = {
+    1: Alignment.LEFT,
+    2: Alignment.CENTER,
+    3: Alignment.RIGHT,
+}
+
 
 # =============================================================================
 # 飞书 REST 客户端
@@ -549,11 +556,6 @@ class LarkDocxConverter(BaseConverter):
         if isinstance(sub, dict):
             s = sub.get("style") or {}
             lark_align = s.get("align", 1)
-            _LARK_TO_ALIGNMENT = {
-                1: Alignment.LEFT,
-                2: Alignment.CENTER,
-                3: Alignment.RIGHT,
-            }
             return _LARK_TO_ALIGNMENT.get(lark_align, Alignment.LEFT)
         return Alignment.LEFT
 

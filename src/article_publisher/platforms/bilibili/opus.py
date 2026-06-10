@@ -231,7 +231,7 @@ def make_divider_paragraph() -> DividerParagraph:
 
 
 def make_blockquote_paragraph(
-    nodes: list[InlineNode], combine_hash: str, *, align: Alignment | None = None
+    nodes: list[InlineNode], combine_hash: str, *, align: Alignment = Alignment.LEFT
 ) -> BlockquoteParagraph:
     """构造引用段落 (para_type=4)。"""
     para: BlockquoteParagraph = {
@@ -242,7 +242,7 @@ def make_blockquote_paragraph(
         },
         "text": {"nodes": nodes},
     }
-    if align is not None and align is not Alignment.LEFT:
+    if align is not Alignment.LEFT:
         para["format"]["align"] = _ALIGN_TO_OPUS[align]
     return para
 
@@ -253,7 +253,7 @@ def make_ordered_list_paragraph(
     order: int,
     combine_hash: str,
     *,
-    align: Alignment | None = None,
+    align: Alignment = Alignment.LEFT,
 ) -> OrderedListParagraph:
     """构造有序列表段落 (para_type=5)。"""
     theme = {1: "arabic_num", 2: "lower_letter", 3: "roman_num"}.get(
@@ -262,9 +262,7 @@ def make_ordered_list_paragraph(
     para: OrderedListParagraph = {
         "para_type": 5,
         "format": {
-            "align": _ALIGN_TO_OPUS[align]
-            if align is not None
-            else _ALIGN_TO_OPUS[Alignment.LEFT],
+            "align": _ALIGN_TO_OPUS[align],
             "list_format": {"level": level, "order": order, "theme": theme},
             "combine_hash": combine_hash,
         },
@@ -279,16 +277,14 @@ def make_unordered_list_paragraph(
     order: int,
     combine_hash: str,
     *,
-    align: Alignment | None = None,
+    align: Alignment = Alignment.LEFT,
 ) -> UnorderedListParagraph:
     """构造无序列表段落 (para_type=6)。"""
     theme = {1: "dot", 2: "square", 3: "circle"}.get(level, "dot")
     para: UnorderedListParagraph = {
         "para_type": 6,
         "format": {
-            "align": _ALIGN_TO_OPUS[align]
-            if align is not None
-            else _ALIGN_TO_OPUS[Alignment.LEFT],
+            "align": _ALIGN_TO_OPUS[align],
             "list_format": {"level": level, "order": order, "theme": theme},
             "combine_hash": combine_hash,
         },
