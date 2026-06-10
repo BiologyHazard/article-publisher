@@ -18,10 +18,9 @@ from argparse import (
     RawDescriptionHelpFormatter,
     _SubParsersAction,
 )
-from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, assert_never
+from typing import assert_never
 
 from article_publisher._auth import (
     NGA_REQUIRED_ENV,
