@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict
 
-from bilibili_article.document import Alignment
+from article_publisher.document import Alignment
 
 # B站 Opus API 对齐值: 0=左对齐, 1=居中, 2=右对齐
 _ALIGN_TO_OPUS: dict[Alignment, int] = {

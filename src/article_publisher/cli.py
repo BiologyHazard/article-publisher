@@ -1,24 +1,27 @@
 """
 命令行入口。
 
-支持多平台发布，目前实现：
-  - B站 (bilibili): 支持 markdown 和 lark 两种输入源
-  - 森空岛 (skland): 支持 markdown 和 lark 两种输入源
-  - NGA (nga): 支持 markdown 和 lark 两种输入源，生成 BBCode 供用户自行发布
+平台作为一级子命令，输入源作为二级子命令，平台专属选项各自隔离。
 
 用法示例:
-  uv run -m article_publisher markdown articles/article1/main.md
-  uv run -m article_publisher --platform bilibili lark <doc_id>
-  uv run -m article_publisher --platform skland markdown articles/article1/main.md
-  uv run -m article_publisher --platform nga markdown articles/article1/main.md
-  uv run -m article_publisher --platform nga markdown articles/article1/main.md --fid 516
+  uv run -m article_publisher bilibili markdown articles/article1/main.md
+  uv run -m article_publisher bilibili lark <doc_id>
+  uv run -m article_publisher skland markdown articles/article1/main.md
+  uv run -m article_publisher nga markdown articles/article1/main.md --fid 516
+  uv run -m article_publisher nga lark <doc_id> --fid 516
 """
 
 import sys
-from argparse import ArgumentParser, Namespace, RawDescriptionHelpFormatter
+from argparse import (
+    ArgumentParser,
+    Namespace,
+    RawDescriptionHelpFormatter,
+    _SubParsersAction,
+)
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import assert_never
+from typing import Any, assert_never
 
 from article_publisher._auth import (
     NGA_REQUIRED_ENV,
@@ -86,10 +89,7 @@ NGA_AUTH_HELP = """错误：缺少 NGA Cookie
   按 F12 打开开发者工具 → Application（应用程序） → Cookies → https://ngabbs.com
   全选所有 Cookie 的 "Name=Value" 格式，复制粘贴到 .env 文件中。
 
-  示例：NGA_COOKIE=ngaPassportUid=12345; ngacn0comUserInfo=...; ...
-
-此外，还需要通过 --fid 参数指定目标版块 ID。
-版块 ID 可以在版块 URL 中找到，如 https://ngabbs.com/thread.php?fid=516 中的 516。"""
+  示例：NGA_COOKIE=ngaPassportUid=12345; ngacn0comUserInfo=...; ..."""
 
 CST = timezone(timedelta(hours=8), name="中国标准时间")
 """中国标准时间（UTC+8）"""
@@ -100,36 +100,46 @@ def _build_parser() -> ArgumentParser:
         description="多平台文章发布工具", formatter_class=RawDescriptionHelpFormatter
     )
 
+    subparsers = parser.add_subparsers(dest="platform", required=True, title="目标平台")
+
+    # ---- Bilibili ----
+    bili = subparsers.add_parser("bilibili", help="发布到 B站专栏")
+    _add_bilibili_options(bili)
+    bili_subs = bili.add_subparsers(dest="source", required=True, title="输入源")
+    _add_source_parsers(bili_subs)
+
+    # ---- 森空岛 ----
+    skland = subparsers.add_parser("skland", help="发布到森空岛")
+    _add_skland_options(skland)
+    skland_subs = skland.add_subparsers(dest="source", required=True, title="输入源")
+    _add_source_parsers(skland_subs)
+
+    # ---- NGA ----
+    nga = subparsers.add_parser("nga", help="发布到 NGA")
+    _add_nga_options(nga)
+    nga_subs = nga.add_subparsers(dest="source", required=True, title="输入源")
+    _add_source_parsers(nga_subs)
+
+    return parser
+
+
+def _add_source_parsers(subparsers: _SubParsersAction) -> None:
+    """为指定平台创建 markdown 和 lark 两个输入源子命令"""
+    md = subparsers.add_parser(
+        "markdown", aliases=["md"], help="从本地 Markdown 文件发布"
+    )
+    md.add_argument(
+        "file", help="Markdown 文件路径（图片路径相对于该文件所在目录解析）"
+    )
+
+    lark = subparsers.add_parser("lark", help="从飞书云文档发布")
+    lark.add_argument("doc_id", help="飞书云文档 ID")
+
+
+def _add_bilibili_options(parser: ArgumentParser) -> None:
+    """添加 B站 专栏发布专属选项。"""
     parser.add_argument(
-        "--platform",
-        type=str,
-        default="bilibili",
-        choices=["bilibili", "skland", "nga"],
-        help="目标平台（默认 bilibili）",
-    )
-
-    subparsers = parser.add_subparsers(dest="mode", required=True, title="模式")
-
-    # Markdown 子命令
-    markdown_parser = subparsers.add_parser(
-        "markdown",
-        aliases=["md"],
-        help="从本地 Markdown 文件发布",
-        description="从本地 Markdown 文件发布文章",
-    )
-    markdown_parser.add_argument(
-        "markdown_file", help="Markdown 文件路径（图片路径相对于该文件所在目录解析）"
-    )
-
-    # 飞书云文档子命令
-    lark_parser = subparsers.add_parser(
-        "lark", help="从飞书云文档发布", description="从飞书云文档导入并发布文章"
-    )
-    lark_parser.add_argument("doc_id", help="飞书云文档 ID")
-
-    # 文章元信息（B站特定选项）
-    parser.add_argument(
-        "--category", type=int, default=15, help="B站分区 ID（默认 15 = 生活）"
+        "--category", type=int, default=15, help="分区 ID（默认 15 = 生活）"
     )
     parser.add_argument("--private", action="store_true", help="设为仅自己可见")
     parser.add_argument("--close-comments", action="store_true", help="关闭评论")
@@ -143,39 +153,48 @@ def _build_parser() -> ArgumentParser:
         "--publish-time",
         type=str,
         default=None,
-        help=(
-            "定时发布时间（UTC+8），格式：YYYY-MM-DD HH:MM，"
-            "最早为当前时间 +2 小时，最晚为 7 天内"
-        ),
+        help="定时发布时间（UTC+8），格式：YYYY-MM-DD HH:MM",
     )
     parser.add_argument(
-        "--list-id", type=int, default=0, help="B站文集 ID（0=不加入文集）"
+        "--list-id", type=int, default=0, help="文集 ID（0=不加入文集）"
     )
     parser.add_argument(
         "--hashtags", type=str, default=None, help="话题 ID，逗号分隔，如：123,456"
     )
+    parser.add_argument("--dry-run", action="store_true", help="仅转换不发布")
     parser.add_argument(
-        "--dry-run", action="store_true", help="仅转换并输出 payload，不保存到草稿箱"
-    )
-    parser.add_argument(
-        "--update", type=int, default=None, help="更新已有草稿（传入草稿 ID，仅 B站）"
+        "--update", type=int, default=None, help="更新已有草稿（传入草稿 ID）"
     )
 
-    # NGA 特定参数
+
+def _add_skland_options(parser: ArgumentParser) -> None:
+    """添加森空岛发布专属选项。"""
+    parser.add_argument(
+        "--game-id", type=int, default=1, help="游戏分区（默认 1 = 明日方舟）"
+    )
+    parser.add_argument(
+        "--cate-id", type=int, default=4, help="子分区（默认 4 = 攻略）"
+    )
+    parser.add_argument("--cover", type=str, default=None, help="自定义封面图片路径")
+    parser.add_argument("--publish-time", type=str, default=None, help="定时发布时间戳")
+    parser.add_argument("--dry-run", action="store_true", help="仅转换不发布")
+
+
+def _add_nga_options(parser: ArgumentParser) -> None:
+    """添加 NGA 发布专属选项。"""
     parser.add_argument(
         "--fid",
         type=str,
-        default=None,
-        help="NGA 版块 ID（如 516=王者荣耀），从版块 URL 中获取",
+        required=True,
+        help="版块 ID（如 516=王者荣耀），从版块 URL 中获取",
     )
     parser.add_argument(
         "--tid",
         type=str,
         default=None,
-        help="NGA 主题 ID（编辑已有帖子时传入，如 46944820）",
+        help="主题 ID（编辑已有帖子时传入，如 46944820）",
     )
-
-    return parser
+    parser.add_argument("--dry-run", action="store_true", help="仅转换不发布")
 
 
 def _parse_publish_time(text: str) -> int:
@@ -192,14 +211,12 @@ def main() -> None:
     # 1. 创建 Converter
     # ------------------------------------------------------------------
     try:
-        if args.mode in ("markdown", "md"):
-            converter = _get_markdown_converter(
-                markdown_file_path=Path(args.markdown_file)
-            )
-        elif args.mode == "lark":
+        if args.source in ("markdown", "md"):
+            converter = _get_markdown_converter(markdown_file_path=Path(args.file))
+        elif args.source == "lark":
             converter = _get_lark_converter(doc_id=args.doc_id)
         else:
-            assert_never(args.mode)
+            assert_never(args.source)
     except Exception as e:
         logger.error(f"❌ 转换器初始化失败: {e}")
         sys.exit(1)
@@ -215,25 +232,22 @@ def main() -> None:
     # ------------------------------------------------------------------
     # 3. 根据目标平台创建 Publisher 并发布
     # ------------------------------------------------------------------
-    platform = args.platform
-
     try:
-        if platform == "bilibili":
+        if args.platform == "bilibili":
             _run_bilibili(doc, args)
-        elif platform == "skland":
+        elif args.platform == "skland":
             _run_skland(doc, args)
-        elif platform == "nga":
+        elif args.platform == "nga":
             _run_nga(doc, args)
         else:
-            assert_never(platform)
+            assert_never(args.platform)
     finally:
-        # 清理临时图片文件（仅飞书模式会产生）
-        _cleanup_lark_temp_images(args.mode)
+        _cleanup_lark_temp_images(args.source)
 
 
-def _cleanup_lark_temp_images(mode: str) -> None:
+def _cleanup_lark_temp_images(source: str) -> None:
     """清理飞书转换器产生的临时图片目录。"""
-    if mode != "lark":
+    if source != "lark":
         return
     cleanup_temp_images()
 
@@ -296,6 +310,8 @@ def _run_skland(doc: Document, args: Namespace) -> None:
     client = SklandClient(cfg["HYPERGRYPH_TOKEN"], cfg["SKLAND_DID"])
 
     config = SklandPublishConfig(
+        game_id=args.game_id,
+        cate_id=args.cate_id,
         cover_path=Path(args.cover).resolve() if args.cover else None,
         publish_time=args.publish_time,
     )
@@ -311,20 +327,14 @@ def _run_skland(doc: Document, args: Namespace) -> None:
 def _run_nga(doc: Document, args: Namespace) -> None:
     """NGA 发布流程：加载 Cookie、上传图片、生成 BBCode。"""
 
-    fid = args.fid
-    if not fid:
-        logger.error("NGA 模式需要指定 --fid 参数（版块 ID）")
-        logger.info("版块 ID 可在版块 URL 中找到，如 thread.php?fid=516 中的 516")
-        sys.exit(1)
-
     cfg = load_nga_auth()
     missing = [k for k in NGA_REQUIRED_ENV if k not in cfg]
     if missing:
         logger.error(NGA_AUTH_HELP)
         sys.exit(1)
 
-    client = NgaClient(cookie_str=cfg["NGA_COOKIE"], fid=fid)
-    config = NgaPublishConfig(fid=fid, tid=args.tid)
+    client = NgaClient(cookie_str=cfg["NGA_COOKIE"], fid=args.fid)
+    config = NgaPublishConfig(fid=args.fid, tid=args.tid)
     publisher = NgaPublisher(client, config=config)
 
     mode = "编辑" if args.tid else "发布"

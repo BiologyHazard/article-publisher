@@ -1,6 +1,6 @@
-# B站 Opus 专栏自动发布工具
+# 多平台文章发布工具
 
-将本地 Markdown 文章或 **飞书云文档**一键发布到 **B站创作中心草稿箱**。
+将本地 Markdown 文章或 **飞书云文档**一键发布到 **B站专栏 / 森空岛 / NGA**。
 
 ## 快速开始
 
@@ -13,7 +13,7 @@ cp .env.example .env
 # 然后从浏览器 Cookie 中复制 SESSDATA、bili_jct、buvid3 填入 .env
 
 # 3. 运行
-uv run python -m article_publisher md articles/article1
+uv run python -m article_publisher bilibili md articles/article1
 ```
 
 ---
@@ -43,19 +43,27 @@ uv run python -m article_publisher md articles/article1
 
 ## 运行
 
-### Markdown 模式
+平台作为一级子命令，输入源作为二级子命令：
+
+### B站
 
 ```bash
-uv run python main.py articles/article1
-uv run python main.py articles/我的新文章
+uv run -m article_publisher bilibili markdown articles/article1
+uv run -m article_publisher bilibili lark <document_id>
 ```
 
-### 飞书云文档模式
+### 森空岛
 
 ```bash
-uv run python main.py --lark <document_id>
-# 示例:
-uv run python main.py --lark UXiMw9NeNiH3ypkyaXmc5VR7nvc
+uv run -m article_publisher skland markdown articles/article1
+uv run -m article_publisher skland lark <document_id>
+```
+
+### NGA
+
+```bash
+uv run -m article_publisher nga markdown articles/article1 --fid 516
+uv run -m article_publisher nga lark <document_id> --fid 516
 ```
 
 ### 输出示例
