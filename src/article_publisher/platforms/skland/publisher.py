@@ -449,11 +449,11 @@ class SklandPublisher(Publisher):
         for child in children:
             if isinstance(child, TextRun):
                 text = child.text
-                if not text and not child.link_url:
+                if not text and child.link_url is None:
                     continue
 
                 # 超链接：只显示文本（森空岛 link 是块级元素，非 inline）
-                if child.link_url:
+                if child.link_url is not None:
                     result.append({"text": text})
                     continue
 

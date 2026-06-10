@@ -528,7 +528,7 @@ class LarkDocxConverter(BaseConverter):
         elif style.get("text_color") is not None:
             color = _TEXT_COLOR_MAP.get(style["text_color"], "")
 
-        link_url = ""
+        link_url = None
         link = style.get("link")
         if link and link.get("url"):
             link_url = urllib.parse.unquote(link["url"])

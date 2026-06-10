@@ -315,7 +315,7 @@ class NgaPublisher(Publisher):
         """将 IR TextRun 转换为 NGA BBCode 字符串。"""
         text = run.text
 
-        if run.link_url:
+        if run.link_url is not None:
             return f"[url={run.link_url}]{text}[/url]"
 
         # 应用样式（从外到内，因为 BBCode 解析是从外到内的）

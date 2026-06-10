@@ -39,7 +39,7 @@ class TextRun(InlineElement):
     strikethrough: bool = False
     inline_code: bool = False
     color: str = ""
-    link_url: str = ""
+    link_url: str | None = None
 
 
 @dataclass

@@ -413,7 +413,7 @@ class BiliPublisher:
     @staticmethod
     def _textrun_to_node(run: TextRun) -> InlineNode:
         """将 IR TextRun 转换为 B站 文本节点或链接节点。"""
-        if run.link_url:
+        if run.link_url is not None:
             return make_link_node(show_text=run.text, url=run.link_url)
         color = run.color
         if run.inline_code and not color:
