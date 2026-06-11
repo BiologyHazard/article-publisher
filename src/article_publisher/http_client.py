@@ -31,14 +31,14 @@ def gen_oss_compatible_formdata(form_data: aiohttp.FormData) -> aiohttp.Multipar
     """
     writer = form_data._gen_form_data()
     for payload, _encoding, _te_encoding in writer._parts:
-        new_header = CIMultiDict()
+        new_headers = CIMultiDict()
         content_disposition = payload._headers.popall(CONTENT_DISPOSITION, None)
         # 先插入 Content-Disposition → 排在最前
         if content_disposition is not None:
-            new_header.extend((CONTENT_DISPOSITION, v) for v in content_disposition)
+            new_headers.extend((CONTENT_DISPOSITION, v) for v in content_disposition)
         # 再插入其他 headers（如 Content-Type） → 排在后面
-        new_header.extend(payload._headers.items())
-        payload._headers = new_header
+        new_headers.extend(payload._headers.items())
+        payload._headers = new_headers
     return writer
 
 
