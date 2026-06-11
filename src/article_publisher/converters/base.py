@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from article_publisher.document import Document
 
 
-class BaseConverter(ABC):
+class Converter(ABC):
     """将输入内容转换为 IR Document 的基类。"""
 
     @abstractmethod

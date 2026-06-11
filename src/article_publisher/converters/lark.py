@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     import aiohttp
 
 
-from article_publisher.converters.base import BaseConverter
+from article_publisher.converters.base import Converter
 from article_publisher.document import (
     Alignment,
     Block,
@@ -220,7 +220,7 @@ class _LarkHttpClient(ClientSessionWithLog):
 # =============================================================================
 
 
-class LarkDocxConverter(BaseConverter):
+class LarkDocxConverter(Converter):
     """将飞书云文档转换为 IR Document。"""
 
     def __init__(self, app_id: str, app_secret: str, document_id: str):

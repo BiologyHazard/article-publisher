@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import mistune
 
-from article_publisher.converters.base import BaseConverter
+from article_publisher.converters.base import Converter
 from article_publisher.document import (
     Block,
     Blockquote,
@@ -72,7 +72,7 @@ def _collect_list_item_content(item: _Token) -> tuple[list[_Token], _Token | Non
 # =============================================================================
 
 
-class MarkdownConverter(BaseConverter):
+class MarkdownConverter(Converter):
     """将本地 Markdown 文件转换为 IR Document。"""
 
     def __init__(self, markdown_file_path: Path):
