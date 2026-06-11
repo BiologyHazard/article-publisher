@@ -225,7 +225,7 @@ class SklandPublisher(Publisher):
                 {
                     "elementId": _generate_element_id(),
                     "type": "dividing-line",
-                    "kind": "0",
+                    "kind": "4",
                     "children": [{"text": ""}],
                 }
             )
