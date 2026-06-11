@@ -2,12 +2,15 @@ from typing import Any
 
 import aiohttp
 
-from article_publisher.converters.lark.consts import LARK_API_BASE
-from article_publisher.converters.lark.models import (
-    GetDocumentData,
-    GetDocumentResponse,
+from article_publisher.converters.lark.models.block import (
+    Block,
+    ListDocumentBlockResponse,
 )
 from article_publisher.http_client import ClientSessionWithLog
+
+from .consts import LARK_API_BASE
+from .models import GetDocumentData, GetDocumentResponse
+from .models.download_media import DownloadMediaResult
 
 
 class LarkClient(ClientSessionWithLog):
@@ -68,3 +71,41 @@ class LarkClient(ClientSessionWithLog):
             f"/docx/v1/documents/{document_id}"
         )
         return obj["data"]
+
+    async def download_media(self, token: str) -> DownloadMediaResult:
+        """调用飞书下载媒体 API。"""
+
+        response = await self._request_with_auth(
+            "GET", f"/drive/v1/medias/{token}/download"
+        )
+        if response.status != 200:
+            raise RuntimeError(f"飞书媒体下载失败: HTTP {response.status}")
+
+        content_type = response.content_type
+        content_disposition = response.content_disposition
+        filename = None
+        if content_disposition:
+            filename = content_disposition.filename
+        buffer = await response.read()
+        return DownloadMediaResult(
+            buffer=buffer, content_type=content_type, filename=filename
+        )
+
+    async def list_document_block(self, document_id: str) -> list[Block]:
+        """分页加载所有块"""
+
+        items: list[Block] = []
+        page_token: str | None = None
+        while True:
+            params: dict[str, Any] = {"page_size": 500, "document_revision_id": -1}
+            if page_token is not None:
+                params["page_token"] = page_token
+            obj: ListDocumentBlockResponse = await self.get_json(
+                f"/docx/v1/documents/{document_id}/blocks", params=params
+            )
+            items.extend(obj["data"]["items"])
+            if not obj["data"]["has_more"]:
+                break
+            page_token = obj["data"].get("page_token")
+
+        return items

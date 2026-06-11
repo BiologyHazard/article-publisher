@@ -108,7 +108,7 @@ class MarkdownConverter(Converter):
             elif result is not None:
                 blocks.append(result)
         title = self.get_title()
-        return Document(title=title, blocks=blocks)
+        return Document(title=title, blocks=blocks, cover=None)
 
     # ==================================================================
     # Block-level conversion
@@ -349,4 +349,4 @@ class MarkdownConverter(Converter):
         # Markdown 图片标题语法: ![alt](url "title") → 用作 caption/描述
         caption = attrs.get("title") or attrs.get("alt", "")
         logger.info(f"  发现图片: {img_path}")
-        return ImageBlock(source=str(img_path), alt_text=alt_text, caption=caption)
+        return ImageBlock(source=img_path, alt_text=alt_text, caption=caption)

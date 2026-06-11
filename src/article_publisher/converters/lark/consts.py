@@ -1,9 +1,142 @@
+from enum import Enum
+
 from article_publisher.document import Alignment
 from article_publisher.log import ROOT_DIR as _PROJECT_ROOT
 
 # 临时图片目录（项目根目录内，用完清除）
 TEMP_IMAGES_DIR = _PROJECT_ROOT / "temp" / "lark_images"
 LARK_API_BASE = "https://open.feishu.cn/open-apis"
+
+
+class BlockType(Enum):
+    """飞书文档块类型枚举。"""
+
+    Page = 1
+    Text = 2
+    Heading1 = 3
+    Heading2 = 4
+    Heading3 = 5
+    Heading4 = 6
+    Heading5 = 7
+    Heading6 = 8
+    Heading7 = 9
+    Heading8 = 10
+    Heading9 = 11
+    Bullet = 12
+    Ordered = 13
+    Code = 14
+    Quote = 15
+    Todo = 17
+    Bitable = 18
+    Callout = 19
+    ChatCard = 20
+    Diagram = 21
+    Divider = 22
+    File = 23
+    Grid = 24
+    GridColumn = 25
+    Iframe = 26
+    Image = 27
+    Isv = 28
+    Mindnote = 29
+    Sheet = 30
+    Table = 31
+    TableCell = 32
+    View = 33
+    QuoteContainer = 34
+    Task = 35
+    Okr = 36
+    OkrObjective = 37
+    OkrKeyResult = 38
+    OkrProgress = 39
+    AddOns = 40
+    JiraIssue = 41
+    WikiCatalog = 42
+    Board = 43
+    Agenda = 44
+    AgendaItem = 45
+    AgendaItemTitle = 46
+    AgendaItemContent = 47
+    LinkPreview = 48
+    SourceSynced = 49
+    ReferenceSynced = 50
+    SubPageList = 51
+    AiTemplate = 52
+    Undefined = 999
+
+    @property
+    def json_key(self) -> str:
+        """获取该块类型在 JSON 中对应的字段名。"""
+
+        return JSON_KEYS[self]
+
+
+JSON_KEYS = {
+    BlockType.Page: "page",
+    BlockType.Text: "text",
+    BlockType.Heading1: "heading1",
+    BlockType.Heading2: "heading2",
+    BlockType.Heading3: "heading3",
+    BlockType.Heading4: "heading4",
+    BlockType.Heading5: "heading5",
+    BlockType.Heading6: "heading6",
+    BlockType.Heading7: "heading7",
+    BlockType.Heading8: "heading8",
+    BlockType.Heading9: "heading9",
+    BlockType.Bullet: "bullet",
+    BlockType.Ordered: "ordered",
+    BlockType.Code: "code",
+    BlockType.Quote: "quote",
+    BlockType.Todo: "todo",
+    BlockType.Bitable: "bitable",
+    BlockType.Callout: "callout",
+    BlockType.ChatCard: "chat_card",
+    BlockType.Diagram: "diagram",
+    BlockType.Divider: "divider",
+    BlockType.File: "file",
+    BlockType.Grid: "grid",
+    BlockType.GridColumn: "grid_column",
+    BlockType.Iframe: "iframe",
+    BlockType.Image: "image",
+    BlockType.Isv: "isv",
+    BlockType.Mindnote: "mindnote",
+    BlockType.Sheet: "sheet",
+    BlockType.Table: "table",
+    BlockType.TableCell: "table_cell",
+    BlockType.View: "view",
+    BlockType.QuoteContainer: "quote_container",
+    BlockType.Task: "task",
+    BlockType.Okr: "okr",
+    BlockType.OkrObjective: "okr_objective",
+    BlockType.OkrKeyResult: "okr_key_result",
+    BlockType.OkrProgress: "okr_progress",
+    BlockType.AddOns: "add_ons",
+    BlockType.JiraIssue: "jira_issue",
+    BlockType.WikiCatalog: "wiki_catalog",
+    BlockType.Board: "board",
+    BlockType.Agenda: "agenda",
+    BlockType.AgendaItem: "agenda_item",
+    BlockType.AgendaItemTitle: "agenda_item_title",
+    BlockType.AgendaItemContent: "agenda_item_content",
+    BlockType.LinkPreview: "link_preview",
+    BlockType.SourceSynced: "source_synced",
+    BlockType.ReferenceSynced: "reference_synced",
+    BlockType.SubPageList: "sub_page_list",
+    BlockType.AiTemplate: "ai_template",
+    BlockType.Undefined: "undefined",
+}
+
+HEADING_LEVELS = {
+    BlockType.Heading1: 1,
+    BlockType.Heading2: 2,
+    BlockType.Heading3: 3,
+    BlockType.Heading4: 4,
+    BlockType.Heading5: 5,
+    BlockType.Heading6: 6,
+    BlockType.Heading7: 7,
+    BlockType.Heading8: 8,
+    BlockType.Heading9: 9,
+}
 
 # 飞书文字颜色索引 → 十六进制颜色
 TEXT_COLOR_MAP: dict[int, str] = {

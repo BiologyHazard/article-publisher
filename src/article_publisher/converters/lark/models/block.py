@@ -420,10 +420,10 @@ class Block(TypedDict):
     undefined: NotRequired[Undefined]
 
 
-class ListBlocksData(TypedDict):
+class ListDocumentBlockData(TypedDict):
     items: list[Block]
     page_token: NotRequired[str]
     has_more: bool
 
 
-type ListBlocksResponse = LarkApiResponse[ListBlocksData]
+type ListDocumentBlockResponse = LarkApiResponse[ListDocumentBlockData]

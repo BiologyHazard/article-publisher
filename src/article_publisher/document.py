@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from pathlib import Path
 
 
 class Alignment(Enum):
@@ -63,7 +64,7 @@ class Heading(Block):
     level: int
     children: Sequence[InlineElement]
     align: Alignment = Alignment.LEFT
-    indent_level: int = 0  # 0=无缩进, 1=一级, 2=二级
+    indent_level: int = 0
 
 
 @dataclass
@@ -72,7 +73,7 @@ class Paragraph(Block):
 
     children: Sequence[InlineElement]
     align: Alignment = Alignment.LEFT
-    indent_level: int = 0  # 0=无缩进, 1=一级, 2=二级
+    indent_level: int = 0
 
 
 @dataclass
@@ -85,7 +86,7 @@ class ImageBlock(Block):
     Publisher 负责将 source 上传到目标平台图床。
     """
 
-    source: str
+    source: Path
     alt_text: str | None = None
     caption: str | None = None
 
@@ -139,5 +140,4 @@ class Document:
 
     title: str
     blocks: list[Block]
-    cover: str | None = None
-    """封面图片路径（本地文件路径，由转换器负责下载）"""
+    cover: Path | None

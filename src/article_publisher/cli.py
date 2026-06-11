@@ -32,8 +32,10 @@ from article_publisher._auth import (
     load_nga_auth,
     load_skland_auth,
 )
-from article_publisher.converters.lark.converter import cleanup_temp_images
-from article_publisher.converters.lark.converter import LarkDocxConverter
+from article_publisher.converters.lark.converter import (
+    LarkDocxConverter,
+    cleanup_temp_images,
+)
 from article_publisher.converters.markdown import MarkdownConverter
 from article_publisher.document import Document
 from article_publisher.log import logger

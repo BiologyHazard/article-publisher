@@ -1,19 +1,10 @@
+from __future__ import annotations
+
 import shutil
 import urllib.parse
+from typing import TYPE_CHECKING
 
 from article_publisher.converters.base import Converter
-from article_publisher.converters.lark.client import LarkClient
-from article_publisher.converters.lark.consts import (
-    ALIGN_KEY_MAP,
-    CODE_LANG_MAP,
-    LARK_TO_ALIGNMENT,
-    TEMP_IMAGES_DIR,
-    TEXT_COLOR_MAP,
-)
-from article_publisher.converters.lark.models import Block as LarkBlock
-from article_publisher.converters.lark.models import Document as LarkDocument
-from article_publisher.converters.lark.models import TextElement
-from article_publisher.converters.lark.models import TextRun as LarkTextRun
 from article_publisher.document import (
     Alignment,
     Block,
@@ -32,6 +23,26 @@ from article_publisher.document import (
     UnorderedList,
 )
 from article_publisher.log import logger
+
+from .client import LarkClient
+from .consts import (
+    ALIGN_KEY_MAP,
+    CODE_LANG_MAP,
+    HEADING_LEVELS,
+    LARK_TO_ALIGNMENT,
+    TEMP_IMAGES_DIR,
+    TEXT_COLOR_MAP,
+    BlockType,
+)
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from .models import Block as LarkBlock
+    from .models import Document as LarkDocument
+    from .models import Text as LarkText
+    from .models import TextElement as LarkTextElement
+    from .models import TextRun as LarkTextRun
 
 
 class LarkDocxConverter(Converter):
@@ -70,74 +81,54 @@ class LarkDocxConverter(Converter):
         cover_path = await self._download_cover()
         return Document(title=title, blocks=blocks, cover=cover_path)
 
-    async def _download_cover(self) -> str | None:
+    async def _download_cover(self) -> Path | None:
         """下载飞书文档封面图片，返回本地路径；无封面时返回 None。"""
         document = await self._get_document()
         if "cover" not in document:
             return None
-
         cover_token = document["cover"]["token"]
 
         try:
             logger.info(f"正在下载封面图: token={cover_token}")
-            image_data = await self._download_image(cover_token)
+            image = await self._client.download_media(cover_token)
             TEMP_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-            tmp_path = TEMP_IMAGES_DIR / f"cover_{cover_token}.png"
-            tmp_path.write_bytes(image_data)
-            logger.info(f"  → 封面下载完成: {tmp_path}")
-            return str(tmp_path)
+            filename = image.filename or f"{cover_token}.png"
+            temp_path = TEMP_IMAGES_DIR / filename
+            temp_path.write_bytes(image.buffer)
+            logger.info(f"  → 封面下载完成: {temp_path}")
+            return temp_path
         except Exception as e:
             logger.warning(f"封面下载失败: {e}")
             return None
 
-    # ------------------------------------------------------------------
-    # 块数据加载
-    # ------------------------------------------------------------------
-
     async def _load_blocks(self) -> None:
         """分页加载所有块，构建 block_id → block_dict 映射。"""
-        items: list[LarkBlock] = []
-        page_token = ""
-        while True:
-            params = {"page_size": 500}
-            if page_token:
-                params["page_token"] = page_token
-            data = await self._client.get_json(
-                f"/docx/v1/documents/{self._document_id}/blocks", params=params
-            )
-            items.extend(data["data"]["items"])
-            if not data["data"].get("has_more"):
-                break
-            page_token = data["data"]["page_token"]
+
+        items = await self._client.list_document_block(self._document_id)
 
         for block in items:
-            bid = block["block_id"]
-            self._blocks[bid] = block
-            if block.get("parent_id") == "":
-                self._root_block_id = bid
+            self._blocks[block["block_id"]] = block
+            if not block.get("parent_id"):  # root block 的 parent_id 为 ""
+                self._root_block_id = block["block_id"]
         if not self._root_block_id and items:
             self._root_block_id = items[0]["block_id"]
 
         logger.info(f"  已加载 {len(self._blocks)} 个块")
 
-    # ------------------------------------------------------------------
-    # 树遍历
-    # ------------------------------------------------------------------
-
     async def _walk_block(
         self, block_id: str, blocks: list[Block], depth: int = 0, indent_level: int = 0
     ) -> None:
         """深度优先遍历单个块，然后处理其子块（含列表分组）。"""
+
         block = self._blocks.get(block_id)
         if block is None:
             return
 
-        block_type = block["block_type"]
-        prefix = "  " * depth
-        children = block.get("children") or []
+        block_type = BlockType(block["block_type"])
+        children = block.get("children", [])
 
         # quote_container：子块需要被包裹为 Blockquote
-        if block_type == 34:
+        if block_type is BlockType.QuoteContainer:
             quote_children: list[Block] = []
             await self._walk_children(children, quote_children, depth + 1, indent_level)
             if quote_children:
@@ -145,14 +136,27 @@ class LarkDocxConverter(Converter):
             return
 
         # 普通块：转换当前块
-        ir_block = await self._convert_single(block_type, block, prefix, indent_level)
+        ir_block = await self._convert_single(block_type, block, indent_level)
         if ir_block is not None:
             blocks.append(ir_block)
 
         # 计算子块的缩进级别：
         # 仅文本/标题/列表块（block_type 2~13）下嵌套的子块才递增缩进
         # 容器块（grid、callout 等）的子块保持相同的缩进级别
-        if 2 <= block_type <= 13:
+        if block_type in (
+            BlockType.Text,
+            BlockType.Heading1,
+            BlockType.Heading2,
+            BlockType.Heading3,
+            BlockType.Heading4,
+            BlockType.Heading5,
+            BlockType.Heading6,
+            BlockType.Heading7,
+            BlockType.Heading8,
+            BlockType.Heading9,
+            BlockType.Bullet,
+            BlockType.Ordered,
+        ):
             child_indent = indent_level + 1
         else:
             child_indent = indent_level
@@ -168,28 +172,29 @@ class LarkDocxConverter(Converter):
         indent_level: int = 0,
     ) -> None:
         """处理子块列表，连续的同类型列表项自动分组为 OrderedList / UnorderedList。"""
+
         i = 0
         while i < len(child_ids):
             child_id = child_ids[i]
-            child = self._blocks.get(child_id)
-            if child is None:
+            child_block = self._blocks.get(child_id)
+            if child_block is None:
                 i += 1
                 continue
 
-            bt = child["block_type"]
+            child_block_type = BlockType(child_block["block_type"])
 
-            if bt in (12, 13):
+            if child_block_type in (BlockType.Bullet, BlockType.Ordered):
                 group_ids = [child_id]
                 i += 1
                 while i < len(child_ids):
                     nc = self._blocks.get(child_ids[i])
                     # 只合并同类型列表项（bullet 和 ordered 各自独立）
-                    if nc is None or nc["block_type"] != bt:
+                    if nc is None or nc["block_type"] != child_block_type.value:
                         break
                     group_ids.append(child_ids[i])
                     i += 1
 
-                is_ordered = bt == 13
+                is_ordered = child_block_type is BlockType.Ordered
                 items: list[ListItem] = []
                 for gid in group_ids:
                     item_blocks: list[Block] = []
@@ -219,41 +224,59 @@ class LarkDocxConverter(Converter):
                 await self._walk_block(child_id, blocks, depth + 1, indent_level)
                 i += 1
 
-    # ------------------------------------------------------------------
-    # 单块转换（block_type → IR Block | None）
-    # ------------------------------------------------------------------
-
     async def _convert_single(
-        self, block_type: int, block: LarkBlock, prefix: str, indent_level: int = 0
+        self, block_type: BlockType, block: LarkBlock, indent_level: int = 0
     ) -> Block | None:
         """将单个 Lark 块转换为 IR Block。"""
-        if block_type == 1:  # page
+
+        if block_type is BlockType.Page:
             return None
-        if block_type == 2:  # text
+        if block_type is BlockType.Text:
             return self._convert_text(block, indent_level)
-        if 3 <= block_type <= 11:  # heading1~9
+        if block_type in (
+            BlockType.Heading1,
+            BlockType.Heading2,
+            BlockType.Heading3,
+            BlockType.Heading4,
+            BlockType.Heading5,
+            BlockType.Heading6,
+            BlockType.Heading7,
+            BlockType.Heading8,
+            BlockType.Heading9,
+        ):
             return self._convert_heading(block, block_type, indent_level)
-        if block_type == 14:  # code
+        if block_type is BlockType.Code:
             return self._convert_code(block)
-        if block_type == 22:  # divider
+        if block_type is BlockType.Divider:
             return Divider()
-        if block_type == 27:  # image
-            return await self._convert_image(block, prefix)
-        if block_type in (19, 24, 25, 30, 31, 32):  # containers — flatten
+        if block_type is BlockType.Image:
+            return await self._convert_image(block)
+        if block_type in (
+            BlockType.Callout,
+            BlockType.Grid,
+            BlockType.GridColumn,
+            BlockType.Sheet,
+            BlockType.Table,
+            BlockType.TableCell,
+        ):  # containers — flatten
             return None
-        if block_type in (12, 13):  # lists — handled by _walk_children
+        if block_type in (
+            BlockType.Bullet,
+            BlockType.Ordered,
+        ):  # lists — handled by _walk_children
             return None
-        if block_type == 34:  # quote — handled by _walk_block
+        if block_type is BlockType.QuoteContainer:  # quote — handled by _walk_block
             return None
 
-        logger.warning(f"{prefix}未支持的块类型 (block_type={block_type})，已跳过")
+        logger.warning(f"未支持的块类型 (block_type={block_type!r})，已跳过")
         return None
 
     def _convert_text(
         self, block: LarkBlock, indent_level: int = 0
     ) -> Paragraph | None:
         """处理文本块 (block_type=2)。"""
-        text = block.get("text")
+
+        text: LarkText | None = block.get("text")
         if not text:
             return None
         children = self._elements_to_inline(text.get("elements", []))
@@ -263,18 +286,18 @@ class LarkDocxConverter(Converter):
         return Paragraph(children=children, align=align, indent_level=indent_level)
 
     def _convert_heading(
-        self, block: LarkBlock, block_type: int, indent_level: int = 0
+        self, block: LarkBlock, block_type: BlockType, indent_level: int = 0
     ) -> Heading:
         """处理标题块 (block_type=3~11 → heading1~heading9)。
         H4~H9 在 IR 中保留为 Heading，由 Publisher 回退为粗体文本。
         """
-        heading_level = block_type - 2  # 3→1, ..., 11→9
-        heading_key = f"heading{heading_level}"
-        heading = block.get(heading_key)
+
+        heading_level = HEADING_LEVELS.get(block_type, 1)
+        heading: LarkText | None = block.get(block_type.json_key)
         if not heading:
             return Heading(level=heading_level, children=[])
 
-        children = self._elements_to_inline(heading.get("elements", []))
+        children = self._elements_to_inline(heading["elements"])
         align = self._extract_align(block)
         return Heading(
             level=heading_level,
@@ -305,7 +328,7 @@ class LarkDocxConverter(Converter):
             return None
         return CodeBlock(language=lang, content=content)
 
-    async def _convert_image(self, block: LarkBlock, prefix: str) -> ImageBlock | None:
+    async def _convert_image(self, block: LarkBlock) -> ImageBlock | None:
         """处理图片 (block_type=27)：下载到项目内临时目录。"""
         image = block.get("image")
         if not image:
@@ -317,31 +340,22 @@ class LarkDocxConverter(Converter):
         caption = (image.get("caption") or {}).get("content", "")
 
         try:
-            logger.info(f"{prefix}正在下载图片: token={token}")
-            image_data = await self._download_image(token)
+            logger.info(f"正在下载图片: token={token}")
+            image = await self._client.download_media(token)
             # 存到项目内临时目录
             TEMP_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-            tmp_path = TEMP_IMAGES_DIR / f"{token}.png"
-            tmp_path.write_bytes(image_data)
-            logger.info(f"{prefix}  → 下载完成: {tmp_path}")
-            return ImageBlock(source=str(tmp_path), alt_text=None, caption=caption)
+            filename = image.filename or f"{token}.png"
+            tmp_path = TEMP_IMAGES_DIR / filename
+            tmp_path.write_bytes(image.buffer)
+            logger.info(f"  → 下载完成: {tmp_path}")
+            return ImageBlock(source=tmp_path, alt_text=filename, caption=caption)
         except Exception as e:
-            logger.error(f"{prefix}  [错误] 图片下载失败: {e}")
+            logger.error(f"  [错误] 图片下载失败: {e}")
             return None
 
-    # ------------------------------------------------------------------
-    # 飞书 API 调用
-    # ------------------------------------------------------------------
-
-    async def _download_image(self, token: str) -> bytes:
-        """调用飞书图片下载 API。"""
-        return await self._client.get_bytes(f"/drive/v1/medias/{token}/download")
-
-    # ------------------------------------------------------------------
-    # 内联元素转换
-    # ------------------------------------------------------------------
-
-    def _elements_to_inline(self, elements: list[TextElement]) -> list[InlineElement]:
+    def _elements_to_inline(
+        self, elements: list[LarkTextElement]
+    ) -> list[InlineElement]:
         """将飞书元素列表转换为 IR InlineElement 列表（TextRun / Formula）。"""
         result: list[InlineElement] = []
         for elem in elements:
@@ -404,7 +418,7 @@ class LarkDocxConverter(Converter):
         return Alignment.LEFT
 
     @staticmethod
-    def _elements_to_plain_text(elements: list[TextElement]) -> str:
+    def _elements_to_plain_text(elements: list[LarkTextElement]) -> str:
         """将 Lark TextElement 列表拼接为纯文本。"""
         if not elements:
             return ""
