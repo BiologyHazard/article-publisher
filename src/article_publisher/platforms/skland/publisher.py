@@ -114,7 +114,7 @@ class SklandPublisher(Publisher):
             return {"platform": "skland", "status": "dry_run", "title": title}
 
         # 生成并输出控制台导入脚本
-        return self._output_console_script(draft)
+        return await self._output_console_script(draft)
 
     # ==================================================================
     # IR → 森空岛 Draft JSON
@@ -323,9 +323,7 @@ class SklandPublisher(Publisher):
         quote_children: list[dict[str, Any]] = []
         for child in block.children:
             if isinstance(child, (Heading, IRParagraph)):
-                inline = self._convert_inline_to_skland(
-                    list(child.children) if isinstance(child.children, list) else []
-                )
+                inline = self._convert_inline_to_skland(list(child.children))
                 quote_children.append(
                     {
                         "elementId": _generate_element_id(),
@@ -362,9 +360,7 @@ class SklandPublisher(Publisher):
         """递归展平嵌套的 Blockquote。"""
         for child in block.children:
             if isinstance(child, (Heading, IRParagraph)):
-                inline = self._convert_inline_to_skland(
-                    list(child.children) if isinstance(child.children, list) else []
-                )
+                inline = self._convert_inline_to_skland(list(child.children))
                 target.append(
                     {
                         "elementId": _generate_element_id(),
@@ -401,9 +397,7 @@ class SklandPublisher(Publisher):
 
         for child in item.blocks:
             if isinstance(child, (Heading, IRParagraph)):
-                inline = self._convert_inline_to_skland(
-                    list(child.children) if isinstance(child.children, list) else []
-                )
+                inline = self._convert_inline_to_skland(list(child.children))
                 children.append(
                     {
                         "elementId": _generate_element_id(),
@@ -483,13 +477,13 @@ class SklandPublisher(Publisher):
     # 控制台脚本输出
     # ==================================================================
 
-    def _output_console_script(self, draft: dict[str, Any]) -> dict[str, Any]:
+    async def _output_console_script(self, draft: dict[str, Any]) -> dict[str, Any]:
         """
         生成并输出浏览器控制台导入脚本。
         用户复制粘贴到森空岛编辑器页面控制台即可加载草稿。
         """
         try:
-            user_id = self._client.get_user_id()
+            user_id = await self._client.get_user_id()
         except Exception as e:
             logger.warning(f"获取用户 ID 失败: {e}")
             user_id = "USER_ID"

@@ -5,7 +5,6 @@ B站 Publisher — 将 IR Document 发布到 B站 Opus 专栏草稿箱。
 from __future__ import annotations
 
 import json
-import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -177,12 +176,7 @@ class BiliPublisher:
 
         logger.info("Payload: ")
         payload_json = json.dumps(payload, ensure_ascii=False, indent=2)
-        try:
-            print(payload_json)
-        except UnicodeEncodeError:
-            # Windows 终端 GBK 编码回退
-            sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
-            print(payload_json)
+        print(payload_json)
 
         if dry_run:
             return {}

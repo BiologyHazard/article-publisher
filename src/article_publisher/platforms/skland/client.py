@@ -20,7 +20,10 @@ from typing import TYPE_CHECKING, Any
 import aiohttp
 from PIL import Image
 
-from article_publisher.http_client import BaseHttpClient, gen_oss_compatible_formdata
+from article_publisher.http_client import (
+    ClientSessionWithLog,
+    gen_oss_compatible_formdata,
+)
 from article_publisher.log import logger
 
 if TYPE_CHECKING:
@@ -64,7 +67,7 @@ class UploadedImage:
 
 
 def _build_sign_headers(
-    method: str, url: str, sign_token: str, d_id: str, *, body: str | None = None
+    method: str, url: str, sign_token: str, *, body: str | None = None
 ) -> dict[str, str]:
     """
     计算森空岛 API 请求签名头。
@@ -82,7 +85,7 @@ def _build_sign_headers(
     header_dict = {
         "platform": "3",
         "timestamp": timestamp,
-        "dId": d_id,
+        "dId": "",
         "vName": "1.21.0",
     }
 
@@ -109,11 +112,11 @@ SKLAND_APP_CODE = "4ca99fa6b56cc2ba"
 # =============================================================================
 
 
-class SklandClient(BaseHttpClient):
+class SklandClient(ClientSessionWithLog):
     """封装与森空岛后端交互的异步 HTTP 客户端。"""
 
-    def __init__(self, hypergryph_token: str, skland_did: str) -> None:
-        self._did = skland_did
+    def __init__(self, hypergryph_token: str) -> None:
+        self._hypergryph_token = hypergryph_token
         self._cred: str | None = None
         self._sign_token: str | None = None
 
@@ -168,7 +171,6 @@ class SklandClient(BaseHttpClient):
         resp = await self.request(
             "POST",
             f"{API_BASE}/web/v1/user/auth/generate_cred_by_code",
-            headers={"dId": self._did},
             json={"code": grant_code, "kind": 1},
         )
         data = await self._check_response(resp)
@@ -209,8 +211,12 @@ class SklandClient(BaseHttpClient):
         params: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """发送带签名的 API 请求，返回响应 data。"""
-        assert self._sign_token is not None, "未完成认证"
-        assert self._cred is not None, "未完成认证"
+        if self._cred is None or self._sign_token is None:
+            await self._perform_auth(self._hypergryph_token)
+
+        assert self._cred is not None and self._sign_token is not None, (
+            "认证失败，缺少 cred 或 sign_token"
+        )
 
         # 构造完整 URL
         url = f"{API_BASE}{path}"
@@ -221,9 +227,7 @@ class SklandClient(BaseHttpClient):
         body_str = json.dumps(json_body, separators=(",", ":")) if json_body else None
 
         # 计算签名头
-        sign_headers = _build_sign_headers(
-            method, url, self._sign_token, self._did, body=body_str
-        )
+        sign_headers = _build_sign_headers(method, url, self._sign_token, body=body_str)
         # cred 是独立请求头，不参与签名计算
         sign_headers["cred"] = self._cred
 

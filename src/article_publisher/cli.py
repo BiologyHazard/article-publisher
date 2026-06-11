@@ -20,7 +20,7 @@ from argparse import (
 )
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import assert_never
+from typing import cast
 
 from article_publisher._auth import (
     BILIBILI_REQUIRED_ENV_KEYS,
@@ -208,16 +208,12 @@ async def main() -> None:
     args = parser.parse_args()
 
     # 创建 converter
-    try:
-        if args.source in ("markdown", "md"):
-            converter = _get_markdown_converter(markdown_file_path=Path(args.file))
-        elif args.source == "lark":
-            converter = _get_lark_converter(doc_id=args.doc_id)
-        else:
-            assert_never(args.source)
-    except Exception as e:
-        logger.error(f"❌ 转换器初始化失败: {e}")
-        sys.exit(1)
+    if args.source in ("markdown", "md"):
+        converter = _get_markdown_converter(markdown_file_path=Path(args.file))
+    elif args.source == "lark":
+        converter = _get_lark_converter(doc_id=args.doc_id)
+    else:
+        raise ValueError(f"未知输入源: {args.source}")
 
     # 转换内容为 Document 对象
     logger.info("正在转换内容 ...")
@@ -234,15 +230,16 @@ async def main() -> None:
         elif args.platform == "nga":
             await _run_nga(doc, args)
         else:
-            assert_never(args.platform)
+            raise ValueError(f"未知平台: {args.platform}")
     finally:
-        _cleanup_lark_temp_images(args.source)
+        if args.source == "lark":
+            await _cleanup_lark(cast("LarkDocxConverter", converter))
 
 
-def _cleanup_lark_temp_images(source: str) -> None:
-    """清理飞书转换器产生的临时图片目录。"""
-    if source != "lark":
-        return
+async def _cleanup_lark(converter: LarkDocxConverter) -> None:
+    """关闭飞书客户端连接，并清理飞书转换器产生的临时图片目录。"""
+
+    await converter.close()
     cleanup_temp_images()
 
 
@@ -306,22 +303,20 @@ async def _run_skland(doc: Document, args: Namespace) -> None:
         logger.error(SKLAND_AUTH_HELP)
         sys.exit(1)
 
-    client = SklandClient(cfg["HYPERGRYPH_TOKEN"], cfg["SKLAND_DID"])
-    await client.authenticate(cfg["HYPERGRYPH_TOKEN"])
+    async with SklandClient(cfg["HYPERGRYPH_TOKEN"]) as client:
+        config = SklandPublishConfig(
+            game_id=args.game_id,
+            cate_id=args.cate_id,
+            cover_path=Path(args.cover).resolve() if args.cover else None,
+            publish_time=args.publish_time,
+        )
 
-    config = SklandPublishConfig(
-        game_id=args.game_id,
-        cate_id=args.cate_id,
-        cover_path=Path(args.cover).resolve() if args.cover else None,
-        publish_time=args.publish_time,
-    )
-
-    publisher = SklandPublisher(client, config=config)
-    try:
-        await publisher.publish(doc, dry_run=args.dry_run)
-    except Exception as e:
-        logger.error(f"❌ 运行时错误: {e}")
-        sys.exit(1)
+        publisher = SklandPublisher(client, config=config)
+        try:
+            await publisher.publish(doc, dry_run=args.dry_run)
+        except Exception as e:
+            logger.error(f"❌ 运行时错误: {e}")
+            sys.exit(1)
 
 
 async def _run_nga(doc: Document, args: Namespace) -> None:

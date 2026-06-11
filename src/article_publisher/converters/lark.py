@@ -26,7 +26,7 @@ from article_publisher.document import (
     TextRun,
     UnorderedList,
 )
-from article_publisher.http_client import BaseHttpClient
+from article_publisher.http_client import ClientSessionWithLog
 from article_publisher.log import ROOT_DIR as _PROJECT_ROOT
 from article_publisher.log import logger
 
@@ -164,7 +164,7 @@ _LARK_TO_ALIGNMENT: dict[int, Alignment] = {
 # =============================================================================
 
 
-class _LarkHttpClient(BaseHttpClient):
+class _LarkHttpClient(ClientSessionWithLog):
     """飞书 API 的异步 HTTP 客户端（自动管理 tenant_access_token）。"""
 
     def __init__(self, app_id: str, app_secret: str):
@@ -189,9 +189,7 @@ class _LarkHttpClient(BaseHttpClient):
         assert self._tenant_token is not None
         # _ensure_token 后需设置 Authorization 头部供后续请求使用
         # 直接修改 session 的默认头部
-        self._session._default_headers["Authorization"] = (  # type: ignore[union-attr]
-            f"Bearer {self._tenant_token}"
-        )
+        self._default_headers["Authorization"] = f"Bearer {self._tenant_token}"
         return self._tenant_token
 
     async def _request_with_auth(
@@ -201,7 +199,7 @@ class _LarkHttpClient(BaseHttpClient):
         await self._ensure_token()
         return await self.request(method, f"{LARK_API_BASE}{path}", **kwargs)
 
-    async def get(self, path: str, **kwargs: Any) -> dict[str, Any]:
+    async def get_json(self, path: str, **kwargs: Any) -> dict[str, Any]:
         """发送 GET 请求并返回 JSON 响应。"""
         resp = await self._request_with_auth("GET", path, **kwargs)
         data = await resp.json()
@@ -240,7 +238,7 @@ class LarkDocxConverter(BaseConverter):
     async def _fetch_document_info(self) -> dict[str, Any]:
         """获取文档基本信息（结果缓存避免重复请求）。"""
         if not hasattr(self, "_cached_doc_info"):
-            data = await self._lark.get(f"/docx/v1/documents/{self.document_id}")
+            data = await self._lark.get_json(f"/docx/v1/documents/{self.document_id}")
             doc = data["data"]["document"]
             self._cached_doc_info = {
                 "document_id": doc["document_id"],
@@ -274,7 +272,7 @@ class LarkDocxConverter(BaseConverter):
             params = {"page_size": 500}
             if page_token:
                 params["page_token"] = page_token
-            data = await self._lark.get(
+            data = await self._lark.get_json(
                 f"/docx/v1/documents/{self.document_id}/blocks", params=params
             )
             items.extend(data["data"]["items"])
@@ -589,6 +587,9 @@ class LarkDocxConverter(BaseConverter):
             if equation and equation.get("content"):
                 parts.append(equation["content"])
         return "".join(parts)
+
+    async def close(self) -> None:
+        await self._lark.close()
 
 
 # =============================================================================

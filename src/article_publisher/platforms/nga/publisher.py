@@ -473,9 +473,7 @@ class NgaPublisher(Publisher):
 
         for child in item.blocks:
             if isinstance(child, (Heading, IRParagraph)):
-                inline = self._convert_inline(
-                    list(child.children) if isinstance(child.children, list) else []
-                )
+                inline = self._convert_inline(list(child.children))
                 if inline:
                     parts.append(inline)
             elif isinstance(child, OrderedList):

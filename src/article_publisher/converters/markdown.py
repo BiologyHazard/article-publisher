@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import mistune
 
@@ -29,6 +29,9 @@ from article_publisher.document import (
     UnorderedList,
 )
 from article_publisher.log import logger
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 # mistune AST token 类型
 _Token = dict[str, Any]
@@ -135,7 +138,7 @@ class MarkdownConverter(BaseConverter):
         children = self._convert_inline(token.get("children", []))
         return Heading(level=level, children=children)
 
-    def _handle_paragraph(self, token: _Token) -> Block | None:
+    def _handle_paragraph(self, token: _Token) -> Block | Sequence[Block] | None:
         """普通段落。纯图片段落（含 softbreak 间隔）返回多个 ImageBlock。"""
         children: list[_Token] = token.get("children", [])
         if not children:
@@ -160,7 +163,7 @@ class MarkdownConverter(BaseConverter):
             if len(image_blocks) == 1:
                 return image_blocks[0]
             if len(image_blocks) > 1:
-                return image_blocks  # type: ignore[return-value]
+                return image_blocks
             return None
 
         # 图文混合段落：分割为文本段落 + 图片

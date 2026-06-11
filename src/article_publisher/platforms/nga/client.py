@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 import aiohttp
 import json5
 
-from article_publisher.http_client import BaseHttpClient
+from article_publisher.http_client import ClientSessionWithLog
 from article_publisher.log import logger
 
 if TYPE_CHECKING:
@@ -97,7 +97,7 @@ class Attachment(TypedDict):
 # =============================================================================
 
 
-class NgaClient(BaseHttpClient):
+class NgaClient(ClientSessionWithLog):
     """封装与 NGA 后端交互的异步 HTTP 客户端。"""
 
     def __init__(self, cookie_str: str, fid: int) -> None:
@@ -141,9 +141,9 @@ class NgaClient(BaseHttpClient):
     ) -> str:
         match action:
             case "new":
-                params = {"action": "new", "_newui": "", "fid": fid}
+                params: dict[str, Any] = {"action": "new", "_newui": "", "fid": fid}
             case "modify":
-                params = {
+                params: dict[str, Any] = {
                     "action": "modify",
                     "_newui": "",
                     "fid": fid,

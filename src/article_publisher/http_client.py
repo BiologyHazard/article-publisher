@@ -16,7 +16,7 @@ from multidict import CIMultiDict
 from article_publisher.log import logger
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from aiohttp.typedefs import StrOrURL
 
 
 def gen_oss_compatible_formdata(form_data: aiohttp.FormData) -> aiohttp.MultipartWriter:
@@ -42,65 +42,54 @@ def gen_oss_compatible_formdata(form_data: aiohttp.FormData) -> aiohttp.Multipar
     return writer
 
 
-class BaseHttpClient:
-    """异步 HTTP 客户端基类。
+class ClientSessionWithLog(aiohttp.ClientSession):
+    """
+    自动记录请求与响应 debug 日志的 :class:`aiohttp.ClientSession` 子类。
 
-    用法示例::
+    覆盖 :meth:`aiohttp.ClientSession._request`，在发送请求前和收到响应后
+    分别调用 ``_log_request`` 和 ``_log_response`` 输出 debug 日志，
+    帮助开发者在不改动业务代码的情况下追踪 HTTP 交互细节。
 
-        class MyClient(BaseHttpClient):
-            def __init__(self, token: str) -> None:
-                super().__init__(headers={"Authorization": f"Bearer {token}"})
+    日志输出格式（通过 ``_log_tag`` 控制前缀标签）::
 
-            async def get_data(self) -> dict[str, Any]:
-                resp = await self.request("GET", "https://api.example.com/data")
-                return await resp.json()
+        [HTTP REQ] POST https://example.com/api
+        [HTTP REQ] json: {"key": "value"}
+        [HTTP RSP] HTTP 200 https://example.com/api
+        [HTTP RSP] headers: {...}
+        [HTTP RSP] body: {"result": "ok"}
+
+    各平台客户端可继承此类并覆写 :meth:`_log_tag` 来区分日志来源，例如::
+
+        class BiliBiliClient(ClientSessionWithLog):
+            def _log_tag(self) -> str:
+                return "Bilibili"
     """
 
-    def __init__(
-        self,
-        headers: Mapping[str, str] | None = None,
-        cookies: Mapping[str, str] | None = None,
-    ) -> None:
-        self._session = aiohttp.ClientSession(headers=headers, cookies=cookies)
+    if TYPE_CHECKING:
+        # aiohttp.ClientSession 定义了 __aenter__ 和 __aexit__，但标注的返回类型为 ClientSession，
+        # 这里重新标注为 Self，以便在子类中使用 async with 时正确推断类型。
+        async def __aenter__(self) -> Self:
+            return self
 
-    async def close(self) -> None:
-        """关闭底层 aiohttp 会话。"""
-        await self._session.close()
-
-    async def __aenter__(self) -> Self:
-        return self
-
-    async def __aexit__(self, *args: object) -> None:
-        await self.close()
-
-    async def request(
-        self, method: str, url: str, **kwargs: Any
+    async def _request(
+        self, method: str, str_or_url: StrOrURL, **kwargs: Any
     ) -> aiohttp.ClientResponse:
-        """发送 HTTP 请求，自动记录请求与响应的 debug 日志。
+        """发送 HTTP 请求，自动记录请求与响应的 debug 日志。"""
 
-        返回的 :class:`aiohttp.ClientResponse` 对象可继续调用
-        ``.json()`` / ``.text()`` 等方法读取响应体（body 已被预读缓存）。
-
-        调用方建议用法::
-
-            resp = await client.request("POST", url, json=payload)
-            result = await resp.json()
-        """
-        await self._log_request(method, url, **kwargs)
-        response = await self._session.request(method, url, **kwargs)
-
-        # 预读响应体以记录日志；aiohttp 会缓存 body，
-        # 后续 .json() / .text() 可复用缓存
+        await self._log_request(method, str_or_url, **kwargs)
+        response = await super()._request(method, str_or_url, **kwargs)
         await self._log_response(response)
 
         return response
 
     def _log_tag(self) -> str:
         """返回日志前缀标签，子类可覆盖以区分平台。"""
+
         return "HTTP"
 
-    async def _log_request(self, method: str, url: str, **kwargs: Any) -> None:
+    async def _log_request(self, method: str, url: StrOrURL, **kwargs: Any) -> None:
         """debug 日志：打印请求的完整信息。"""
+
         tag = self._log_tag()
         logger.debug(f"[{tag} REQ] {method} {url}")
 
@@ -135,6 +124,7 @@ class BaseHttpClient:
 
     async def _log_response(self, response: aiohttp.ClientResponse) -> None:
         """debug 日志：打印响应的完整信息。"""
+
         tag = self._log_tag()
         logger.debug(f"[{tag} RSP] HTTP {response.status} {response.url}")
         logger.debug(f"[{tag} RSP] headers: {dict(response.headers)}")

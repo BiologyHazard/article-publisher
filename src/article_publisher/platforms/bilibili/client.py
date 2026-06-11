@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 import aiohttp
 from PIL import Image
 
-from article_publisher.http_client import BaseHttpClient
+from article_publisher.http_client import ClientSessionWithLog
 from article_publisher.log import logger
 from article_publisher.platforms.bilibili._wbi import (
     BILI_API_BASE,
@@ -40,7 +40,7 @@ class BiliApiError(Exception):
         super().__init__(f"[{code}] {message}")
 
 
-class BiliClient(BaseHttpClient):
+class BiliClient(ClientSessionWithLog):
     """封装与 B站后端交互的通用 HTTP 客户端。"""
 
     def __init__(self, sessdata: str, bili_jct: str, buvid3: str):
@@ -65,7 +65,7 @@ class BiliClient(BaseHttpClient):
     async def _ensure_mixin_key(self) -> str:
         """获取或生成 WBI mixin_key。"""
         if self._mixin_key is None:
-            img_key, sub_key = await fetch_wbi_keys(self._session)
+            img_key, sub_key = await fetch_wbi_keys(self)
             self._mixin_key = get_mixin_key(img_key + sub_key)
         return self._mixin_key
 
