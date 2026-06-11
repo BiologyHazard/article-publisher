@@ -54,11 +54,6 @@ if TYPE_CHECKING:
     )
 
 
-# =============================================================================
-# 发布配置
-# =============================================================================
-
-
 @dataclass
 class BiliPublishConfig:
     """B站 发布配置参数集合。"""
@@ -75,11 +70,6 @@ class BiliPublishConfig:
     image_urls: list[str] | None = None
     is_aigc: int = 0
     hashtag_ids: list[int] | None = None
-
-
-# =============================================================================
-# 摘要构建
-# =============================================================================
 
 
 def _build_summary(doc: Document) -> str:
@@ -113,19 +103,12 @@ def _build_summary(doc: Document) -> str:
     return full[:200].replace("\n", " ")
 
 
-# =============================================================================
-# B站 Publisher
-# =============================================================================
-
-
 class BiliPublisher:
     """将 IR Document 发布到 B站 专栏草稿箱。"""
 
-    def __init__(
-        self, client: BiliClient, config: BiliPublishConfig | None = None
-    ) -> None:
+    def __init__(self, client: BiliClient, config: BiliPublishConfig) -> None:
         self.client = client
-        self.config = config or BiliPublishConfig()
+        self.config = config
         self._counter = 0
 
     async def handle_cover(self, cover_path: Path | None) -> None:
@@ -208,10 +191,6 @@ class BiliPublisher:
         )
         return result
 
-    # ==================================================================
-    # IR → B站 Opus 转换
-    # ==================================================================
-
     async def _convert_document(self, doc: Document) -> list[Paragraph]:
         """将 IR Document 的 blocks 转换为 B站 Opus paragraphs 列表。"""
         paragraphs: list[Paragraph] = []
@@ -281,10 +260,6 @@ class BiliPublisher:
         elif isinstance(block, Divider):
             paragraphs.append(make_divider_paragraph())
 
-    # ==================================================================
-    # 图片处理
-    # ==================================================================
-
     async def _handle_image(
         self, block: ImageBlock, paragraphs: list[Paragraph]
     ) -> None:
@@ -313,10 +288,6 @@ class BiliPublisher:
             logger.info(f"  → 上传成功: {info['url']}")
         except Exception as e:
             logger.error(f"  [错误] 图片上传失败: {e}")
-
-    # ==================================================================
-    # 引用块处理
-    # ==================================================================
 
     async def _handle_blockquote(
         self, block: Blockquote, paragraphs: list[Paragraph]
@@ -347,10 +318,6 @@ class BiliPublisher:
                 await self._emit_blockquote_children(
                     child.children, combine_hash, paragraphs
                 )
-
-    # ==================================================================
-    # 列表处理
-    # ==================================================================
 
     def _handle_list(
         self,
@@ -411,10 +378,6 @@ class BiliPublisher:
             elif isinstance(child, (OrderedList, UnorderedList)):
                 continue  # 嵌套列表由 _handle_list 内部处理
         return nodes
-
-    # ==================================================================
-    # 内联元素转换
-    # ==================================================================
 
     def _convert_inline(self, children: Sequence[InlineElement]) -> list[InlineNode]:
         """将 IR InlineElement 列表转换为 B站 InlineNode 列表。"""
