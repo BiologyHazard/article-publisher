@@ -295,15 +295,13 @@ class LarkDocxConverter(Converter):
         heading_level = HEADING_LEVELS.get(block_type, 1)
         heading: LarkText | None = block.get(block_type.json_key)
         if not heading:
-            return Heading(level=heading_level, children=[])
+            return Heading(level=heading_level, text=Paragraph(children=[]))
 
         children = self._elements_to_inline(heading["elements"])
         align = self._extract_align(block)
         return Heading(
             level=heading_level,
-            children=children,
-            align=align,
-            indent_level=indent_level,
+            text=Paragraph(children=children, align=align, indent_level=indent_level),
         )
 
     def _convert_code(self, block: LarkBlock) -> CodeBlock | None:

@@ -275,7 +275,7 @@ class NgaPublisher(Publisher):
         NGA 无独立标题标签，用 [size]+[b] 模拟。
         H1~H3 使用不同字号，H4+ 回退为纯粗体。
         """
-        inline = self._convert_inline(list(block.children))
+        inline = self._convert_inline(list(block.text.children))
         if block.level <= 3:
             size = _HEADING_SIZE.get(block.level, "120%")
             return f"[size={size}][b]{inline}[/b][/size]"
@@ -472,8 +472,12 @@ class NgaPublisher(Publisher):
         parts: list[str] = []
 
         for child in item.blocks:
-            if isinstance(child, (Heading, IRParagraph)):
-                inline = self._convert_inline(list(child.children))
+            if isinstance(child, IRParagraph):
+                inline = self._convert_inline(child.children)
+                if inline:
+                    parts.append(inline)
+            elif isinstance(child, Heading):
+                inline = self._convert_inline(list(child.text.children))
                 if inline:
                     parts.append(inline)
             elif isinstance(child, OrderedList):

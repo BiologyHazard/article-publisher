@@ -62,9 +62,7 @@ class Heading(Block):
     """标题（支持富文本格式）"""
 
     level: int
-    children: Sequence[InlineElement]
-    align: Alignment = Alignment.LEFT
-    indent_level: int = 0
+    text: Paragraph
 
 
 @dataclass

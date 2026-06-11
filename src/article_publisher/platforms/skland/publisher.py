@@ -166,7 +166,7 @@ class SklandPublisher(Publisher):
     ) -> None:
         """将单个 IR Block 转换为一个或多个森空岛文档元素。"""
         if isinstance(block, Heading):
-            children = self._convert_inline_to_skland(list(block.children))
+            children = self._convert_inline_to_skland(list(block.text.children))
             if block.level <= 3:
                 elements.append(
                     {
@@ -188,8 +188,8 @@ class SklandPublisher(Publisher):
                     "type": "paragraph",
                     "children": bold_children,
                 }
-                if block.align is not Alignment.LEFT:
-                    ele["alignment"] = _ALIGN_TO_SKLAND[block.align]
+                if block.text.align is not Alignment.LEFT:
+                    ele["alignment"] = _ALIGN_TO_SKLAND[block.text.align]
                 elements.append(ele)
 
         elif isinstance(block, IRParagraph):
@@ -320,8 +320,17 @@ class SklandPublisher(Publisher):
 
         quote_children: list[dict[str, Any]] = []
         for child in block.children:
-            if isinstance(child, (Heading, IRParagraph)):
-                inline = self._convert_inline_to_skland(list(child.children))
+            if isinstance(child, IRParagraph):
+                inline = self._convert_inline_to_skland(child.children)
+                quote_children.append(
+                    {
+                        "elementId": _generate_element_id(),
+                        "type": "paragraph",
+                        "children": inline or [{"text": ""}],
+                    }
+                )
+            elif isinstance(child, Heading):
+                inline = self._convert_inline_to_skland(list(child.text.children))
                 quote_children.append(
                     {
                         "elementId": _generate_element_id(),
@@ -357,8 +366,17 @@ class SklandPublisher(Publisher):
     ) -> None:
         """递归展平嵌套的 Blockquote。"""
         for child in block.children:
-            if isinstance(child, (Heading, IRParagraph)):
-                inline = self._convert_inline_to_skland(list(child.children))
+            if isinstance(child, IRParagraph):
+                inline = self._convert_inline_to_skland(child.children)
+                target.append(
+                    {
+                        "elementId": _generate_element_id(),
+                        "type": "paragraph",
+                        "children": inline or [{"text": ""}],
+                    }
+                )
+            elif isinstance(child, Heading):
+                inline = self._convert_inline_to_skland(list(child.text.children))
                 target.append(
                     {
                         "elementId": _generate_element_id(),
@@ -394,8 +412,18 @@ class SklandPublisher(Publisher):
         children: list[dict[str, Any]] = []
 
         for child in item.blocks:
-            if isinstance(child, (Heading, IRParagraph)):
-                inline = self._convert_inline_to_skland(list(child.children))
+            if isinstance(child, IRParagraph):
+                inline = self._convert_inline_to_skland(child.children)
+                children.append(
+                    {
+                        "elementId": _generate_element_id(),
+                        "type": "list-item-text",
+                        "alignment": 1,
+                        "children": inline or [{"text": ""}],
+                    }
+                )
+            elif isinstance(child, Heading):
+                inline = self._convert_inline_to_skland(list(child.text.children))
                 children.append(
                     {
                         "elementId": _generate_element_id(),

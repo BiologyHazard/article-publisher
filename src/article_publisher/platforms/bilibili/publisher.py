@@ -78,20 +78,21 @@ def _build_summary(doc: Document) -> str:
     """从 IR Document 中提取纯文本摘要（取前 200 字）。"""
     texts: list[str] = []
 
+    def _inline_text(children: Sequence[InlineElement]) -> str:
+        parts: list[str] = []
+        for c in children:
+            if isinstance(c, TextRun):
+                parts.append(c.text)
+            elif isinstance(c, Formula):
+                parts.append(c.latex)
+        return "".join(parts)
+
     def extract_text_from_blocks(blocks: list[Block]) -> None:
         for block in blocks:
             if isinstance(block, Heading):
-                for child in block.children:
-                    if isinstance(child, TextRun):
-                        texts.append(child.text)
-                    elif isinstance(child, Formula):
-                        texts.append(child.latex)
+                texts.append(_inline_text(block.text.children))
             elif isinstance(block, IRParagraph):
-                for child in block.children:
-                    if isinstance(child, TextRun):
-                        texts.append(child.text)
-                    elif isinstance(child, Formula):
-                        texts.append(child.latex)
+                texts.append(_inline_text(block.children))
             elif isinstance(block, CodeBlock):
                 texts.append(block.content)
             elif isinstance(block, Blockquote):
@@ -212,10 +213,10 @@ class BiliPublisher:
     async def _convert_block(self, block: Block, paragraphs: list[Paragraph]) -> None:
         """将单个 IR Block 转换为零个或多个 B站 Opus paragraphs。"""
         if isinstance(block, Heading):
-            nodes = self._convert_inline(list(block.children))
+            nodes = self._convert_inline(list(block.text.children))
             if block.level <= 3:
                 paragraphs.append(
-                    make_heading_paragraph(nodes, block.level, align=block.align)
+                    make_heading_paragraph(nodes, block.level, align=block.text.align)
                 )
             else:
                 # H4~H9 回退为粗体文本段落（重建节点以避免突变原节点）
@@ -240,7 +241,9 @@ class BiliPublisher:
                         styled_nodes.append(node)
                 paragraphs.append(
                     make_text_paragraph(
-                        styled_nodes, align=block.align, indent_level=block.indent_level
+                        styled_nodes,
+                        align=block.text.align,
+                        indent_level=block.text.indent_level,
                     )
                 )
 
@@ -316,7 +319,7 @@ class BiliPublisher:
         """递归展平 Blockquote 子块（含嵌套 Blockquote 和 ImageBlock）。"""
         for child in children:
             if isinstance(child, Heading):
-                nodes = self._convert_inline(list(child.children))
+                nodes = self._convert_inline(list(child.text.children))
                 paragraphs.append(make_blockquote_paragraph(nodes, combine_hash))
             elif isinstance(child, IRParagraph):
                 nodes = self._convert_inline(list(child.children))
@@ -383,7 +386,7 @@ class BiliPublisher:
         nodes: list[InlineNode] = []
         for child in item.blocks:
             if isinstance(child, Heading):
-                nodes.extend(self._convert_inline(list(child.children)))
+                nodes.extend(self._convert_inline(list(child.text.children)))
             elif isinstance(child, IRParagraph):
                 nodes.extend(self._convert_inline(list(child.children)))
             elif isinstance(child, (OrderedList, UnorderedList)):

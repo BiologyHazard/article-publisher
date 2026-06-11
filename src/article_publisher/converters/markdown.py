@@ -136,7 +136,7 @@ class MarkdownConverter(Converter):
         """# ~ ### 标题（支持富文本格式）"""
         level = token["attrs"]["level"]
         children = self._convert_inline(token.get("children", []))
-        return Heading(level=level, children=children)
+        return Heading(level=level, text=Paragraph(children=children))
 
     def _handle_paragraph(self, token: _Token) -> Block | Sequence[Block] | None:
         """普通段落。纯图片段落（含 softbreak 间隔）返回多个 ImageBlock。"""
