@@ -37,7 +37,6 @@ from article_publisher.converters.markdown import MarkdownConverter
 from article_publisher.document import Document
 from article_publisher.log import logger
 from article_publisher.platforms.bilibili import (
-    BiliApiError,
     BiliClient,
     BiliPublishConfig,
     BiliPublisher,
@@ -253,46 +252,36 @@ async def _run_bilibili(doc: Document, args: Namespace) -> None:
         logger.error(AUTH_HELP)
         sys.exit(1)
 
-    client = BiliClient(cfg["SESSDATA"], cfg["bili_jct"], cfg["buvid3"])
+    # 构建配置
+    config = BiliPublishConfig(
+        category_id=args.category,
+        article_id=args.update,
+        private_pub=1 if args.private else 2,
+        reprint=1,
+        original=1 if args.original else 0,
+        comment_selected=1 if args.select_comments else 0,
+        up_closed_reply=1 if args.close_comments else 0,
+        timer_pub_time=_parse_publish_time(args.publish_time)
+        if args.publish_time
+        else 0,
+        list_id=args.list_id,
+        is_aigc=1 if args.aigc else 0,
+        hashtag_ids=(
+            [int(x) for x in args.hashtags.split(",") if x] if args.hashtags else None
+        ),
+    )
 
-    try:
-        # 构建配置
-        config = BiliPublishConfig(
-            category_id=args.category,
-            article_id=args.update,
-            private_pub=1 if args.private else 2,
-            reprint=1,
-            original=1 if args.original else 0,
-            comment_selected=1 if args.select_comments else 0,
-            up_closed_reply=1 if args.close_comments else 0,
-            timer_pub_time=_parse_publish_time(args.publish_time)
-            if args.publish_time
-            else 0,
-            list_id=args.list_id,
-            is_aigc=1 if args.aigc else 0,
-            hashtag_ids=(
-                [int(x) for x in args.hashtags.split(",") if x]
-                if args.hashtags
-                else None
-            ),
-        )
-
-        # 发布
+    async with BiliClient(
+        sessdata=cfg["SESSDATA"], bili_jct=cfg["bili_jct"], buvid3=cfg["buvid3"]
+    ) as client:
+        # 创建发布器
         publisher = BiliPublisher(client, config=config)
 
         # 上传封面图
         await publisher.handle_cover(args.cover)
 
-        try:
-            await publisher.publish(doc, dry_run=args.dry_run)
-        except BiliApiError as e:
-            logger.error(f"❌ API 错误 [{e.code}]: {e.message}")
-            sys.exit(1)
-        except Exception as e:
-            logger.error(f"❌ 运行时错误: {e}")
-            sys.exit(1)
-    finally:
-        await client.close()
+        # 发布文章
+        await publisher.publish(doc, dry_run=args.dry_run)
 
 
 async def _run_skland(doc: Document, args: Namespace) -> None:
@@ -304,20 +293,16 @@ async def _run_skland(doc: Document, args: Namespace) -> None:
         logger.error(SKLAND_AUTH_HELP)
         sys.exit(1)
 
-    async with SklandClient(cfg["HYPERGRYPH_TOKEN"]) as client:
-        config = SklandPublishConfig(
-            game_id=args.game_id,
-            cate_id=args.cate_id,
-            cover_path=Path(args.cover).resolve() if args.cover else None,
-            publish_time=args.publish_time,
-        )
+    config = SklandPublishConfig(
+        game_id=args.game_id,
+        cate_id=args.cate_id,
+        cover_path=Path(args.cover).resolve() if args.cover else None,
+        publish_time=args.publish_time,
+    )
 
+    async with SklandClient(cfg["HYPERGRYPH_TOKEN"]) as client:
         publisher = SklandPublisher(client, config=config)
-        try:
-            await publisher.publish(doc, dry_run=args.dry_run)
-        except Exception as e:
-            logger.error(f"❌ 运行时错误: {e}")
-            sys.exit(1)
+        await publisher.publish(doc, dry_run=args.dry_run)
 
 
 async def _run_nga(doc: Document, args: Namespace) -> None:
@@ -329,18 +314,14 @@ async def _run_nga(doc: Document, args: Namespace) -> None:
         logger.error(NGA_AUTH_HELP)
         sys.exit(1)
 
-    client = NgaClient(cookie_str=cfg["NGA_COOKIE"], fid=args.fid)
     config = NgaPublishConfig(fid=args.fid, tid=args.tid)
-    publisher = NgaPublisher(client, config=config)
 
     mode = "编辑" if args.tid else "发布"
     logger.info(f"NGA {mode}模式 (tid={args.tid if args.tid else '新帖'})")
 
-    try:
+    async with NgaClient(cookie_str=cfg["NGA_COOKIE"], fid=args.fid) as client:
+        publisher = NgaPublisher(client, config=config)
         await publisher.publish(doc, dry_run=args.dry_run)
-    except Exception as e:
-        logger.error(f"❌ 运行时错误: {e}")
-        sys.exit(1)
 
 
 def _get_markdown_converter(markdown_file_path: Path) -> MarkdownConverter:

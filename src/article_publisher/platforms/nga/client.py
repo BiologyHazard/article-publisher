@@ -100,7 +100,7 @@ class Attachment(TypedDict):
 class NgaClient(ClientSessionWithLog):
     """封装与 NGA 后端交互的异步 HTTP 客户端。"""
 
-    def __init__(self, cookie_str: str, fid: int) -> None:
+    def __init__(self, cookie_str: str, fid: str) -> None:
         """
         Args:
             cookie_str: 完整的 Cookie 字符串（从浏览器复制）
@@ -258,7 +258,7 @@ class NgaClient(ClientSessionWithLog):
         form.add_field("origin_domain", "bbs.nga.cn")
         form.add_field("__output", "1")
         form.add_field("auth", auth)
-        form.add_field("fid", str(self.fid))
+        form.add_field("fid", self.fid)
         form.add_field(
             "attachment_file1_url_utf8_name", urllib.parse.quote(file_name, safe="")
         )
@@ -315,7 +315,7 @@ class NgaClient(ClientSessionWithLog):
         # 非 ASCII 内容（标题、正文）需要 GBK URL 编码
         data: dict[str, str] = {
             "action": "modify" if tid else "new",
-            "fid": str(self.fid),
+            "fid": self.fid,
             "post_subject": subject,
             "post_content": content,
             "hidden": "2",
