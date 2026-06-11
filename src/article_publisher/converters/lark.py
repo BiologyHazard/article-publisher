@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import shutil
 import urllib.parse
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import requests
+if TYPE_CHECKING:
+    import aiohttp
+
 
 from article_publisher.converters.base import BaseConverter
 from article_publisher.document import (
@@ -24,6 +26,7 @@ from article_publisher.document import (
     TextRun,
     UnorderedList,
 )
+from article_publisher.http_client import BaseHttpClient
 from article_publisher.log import ROOT_DIR as _PROJECT_ROOT
 from article_publisher.log import logger
 
@@ -161,47 +164,57 @@ _LARK_TO_ALIGNMENT: dict[int, Alignment] = {
 # =============================================================================
 
 
-class _LarkHttpClient:
-    """飞书 API 的简单 HTTP 客户端（自动管理 tenant_access_token）。"""
+class _LarkHttpClient(BaseHttpClient):
+    """飞书 API 的异步 HTTP 客户端（自动管理 tenant_access_token）。"""
 
     def __init__(self, app_id: str, app_secret: str):
         self.app_id = app_id
         self.app_secret = app_secret
-        self._session = requests.Session()
-        self._session.headers["User-Agent"] = (
-            "article-publisher/0.1.0 (Python requests)"
-        )
         self._tenant_token: str | None = None
+        super().__init__(headers={"User-Agent": "article-publisher/0.1.0 (aiohttp)"})
 
-    def _ensure_token(self) -> str:
+    def _log_tag(self) -> str:
+        return "LARK"
+
+    async def _ensure_token(self) -> str:
         if self._tenant_token:
             return self._tenant_token
-        response = self._session.post(
+        resp = await self.request(
+            "POST",
             f"{LARK_API_BASE}/auth/v3/tenant_access_token/internal",
             json={"app_id": self.app_id, "app_secret": self.app_secret},
         )
-        data = response.json()
+        data = await resp.json()
         self._tenant_token = data["tenant_access_token"]
         assert self._tenant_token is not None
-        self._session.headers["Authorization"] = f"Bearer {self._tenant_token}"
+        # _ensure_token 后需设置 Authorization 头部供后续请求使用
+        # 直接修改 session 的默认头部
+        self._session._default_headers["Authorization"] = (  # type: ignore[union-attr]
+            f"Bearer {self._tenant_token}"
+        )
         return self._tenant_token
 
-    def get(self, path: str, **kwargs) -> dict[str, Any]:
+    async def _request_with_auth(
+        self, method: str, path: str, **kwargs: Any
+    ) -> aiohttp.ClientResponse:
+        """发送已携带 tenant_access_token 的 HTTP 请求。"""
+        await self._ensure_token()
+        return await self.request(method, f"{LARK_API_BASE}{path}", **kwargs)
+
+    async def get(self, path: str, **kwargs: Any) -> dict[str, Any]:
         """发送 GET 请求并返回 JSON 响应。"""
-        self._ensure_token()
-        response = self._session.get(f"{LARK_API_BASE}{path}", **kwargs)
-        data = response.json()
+        resp = await self._request_with_auth("GET", path, **kwargs)
+        data = await resp.json()
         if data.get("code") != 0:
             raise RuntimeError(f"飞书 API 错误: [{data.get('code')}] {data.get('msg')}")
         return data
 
-    def get_bytes(self, path: str, **kwargs) -> bytes:
+    async def get_bytes(self, path: str, **kwargs: Any) -> bytes:
         """发送 GET 请求并返回原始字节（用于下载文件）。"""
-        self._ensure_token()
-        response = self._session.get(f"{LARK_API_BASE}{path}", **kwargs)
-        if response.status_code != 200:
-            raise RuntimeError(f"飞书文件下载失败: HTTP {response.status_code}")
-        return response.content
+        resp = await self._request_with_auth("GET", path, **kwargs)
+        if resp.status != 200:
+            raise RuntimeError(f"飞书文件下载失败: HTTP {resp.status}")
+        return await resp.read()
 
 
 # =============================================================================
@@ -224,10 +237,10 @@ class LarkDocxConverter(BaseConverter):
     # 文档元信息
     # ------------------------------------------------------------------
 
-    def _fetch_document_info(self) -> dict[str, Any]:
+    async def _fetch_document_info(self) -> dict[str, Any]:
         """获取文档基本信息（结果缓存避免重复请求）。"""
         if not hasattr(self, "_cached_doc_info"):
-            data = self._lark.get(f"/docx/v1/documents/{self.document_id}")
+            data = await self._lark.get(f"/docx/v1/documents/{self.document_id}")
             doc = data["data"]["document"]
             self._cached_doc_info = {
                 "document_id": doc["document_id"],
@@ -236,23 +249,24 @@ class LarkDocxConverter(BaseConverter):
             }
         return self._cached_doc_info
 
-    def get_title(self) -> str:
+    async def get_title(self) -> str:
         """从飞书文档基本信息中提取标题。"""
-        return self._fetch_document_info().get("title", "未命名文章")
+        info = await self._fetch_document_info()
+        return info.get("title", "未命名文章")
 
-    def convert(self) -> Document:
+    async def convert(self) -> Document:
         """执行转换，返回 IR Document。"""
-        self._load_blocks()
+        await self._load_blocks()
         blocks: list[Block] = []
-        self._walk_block(self._root_block_id, blocks, depth=0)
-        title = self.get_title()
+        await self._walk_block(self._root_block_id, blocks, depth=0)
+        title = await self.get_title()
         return Document(title=title, blocks=blocks)
 
     # ------------------------------------------------------------------
     # 块数据加载
     # ------------------------------------------------------------------
 
-    def _load_blocks(self) -> None:
+    async def _load_blocks(self) -> None:
         """分页加载所有块，构建 block_id → block_dict 映射。"""
         items: list[dict[str, Any]] = []
         page_token = ""
@@ -260,7 +274,7 @@ class LarkDocxConverter(BaseConverter):
             params = {"page_size": 500}
             if page_token:
                 params["page_token"] = page_token
-            data = self._lark.get(
+            data = await self._lark.get(
                 f"/docx/v1/documents/{self.document_id}/blocks", params=params
             )
             items.extend(data["data"]["items"])
@@ -282,7 +296,7 @@ class LarkDocxConverter(BaseConverter):
     # 树遍历
     # ------------------------------------------------------------------
 
-    def _walk_block(
+    async def _walk_block(
         self, block_id: str, blocks: list[Block], depth: int = 0, indent_level: int = 0
     ) -> None:
         """深度优先遍历单个块，然后处理其子块（含列表分组）。"""
@@ -297,13 +311,13 @@ class LarkDocxConverter(BaseConverter):
         # quote_container：子块需要被包裹为 Blockquote
         if block_type == 34:
             quote_children: list[Block] = []
-            self._walk_children(children, quote_children, depth + 1, indent_level)
+            await self._walk_children(children, quote_children, depth + 1, indent_level)
             if quote_children:
                 blocks.append(Blockquote(children=quote_children))
             return
 
         # 普通块：转换当前块
-        ir_block = self._convert_single(block_type, block, prefix, indent_level)
+        ir_block = await self._convert_single(block_type, block, prefix, indent_level)
         if ir_block is not None:
             blocks.append(ir_block)
 
@@ -316,9 +330,9 @@ class LarkDocxConverter(BaseConverter):
             child_indent = indent_level
 
         # 递归处理子块（自动分组连续列表项）
-        self._walk_children(children, blocks, depth + 1, child_indent)
+        await self._walk_children(children, blocks, depth + 1, child_indent)
 
-    def _walk_children(
+    async def _walk_children(
         self,
         child_ids: list[str],
         blocks: list[Block],
@@ -364,7 +378,7 @@ class LarkDocxConverter(BaseConverter):
                         item_blocks.append(Paragraph(children=inline_elements))
 
                     # 递归处理子块（嵌套列表等）
-                    self._walk_children(
+                    await self._walk_children(
                         gblock.get("children", []), item_blocks, depth + 1, indent_level
                     )
                     items.append(ListItem(blocks=item_blocks))
@@ -374,14 +388,14 @@ class LarkDocxConverter(BaseConverter):
                 else:
                     blocks.append(UnorderedList(items=items))
             else:
-                self._walk_block(child_id, blocks, depth + 1, indent_level)
+                await self._walk_block(child_id, blocks, depth + 1, indent_level)
                 i += 1
 
     # ------------------------------------------------------------------
     # 单块转换（block_type → IR Block | None）
     # ------------------------------------------------------------------
 
-    def _convert_single(
+    async def _convert_single(
         self, block_type: int, block: dict[str, Any], prefix: str, indent_level: int = 0
     ) -> Block | None:
         """将单个 Lark 块转换为 IR Block。"""
@@ -396,7 +410,7 @@ class LarkDocxConverter(BaseConverter):
         if block_type == 22:  # divider
             return Divider()
         if block_type == 27:  # image
-            return self._convert_image(block, prefix)
+            return await self._convert_image(block, prefix)
         if block_type in (19, 24, 25, 30, 31, 32):  # containers — flatten
             return None
         if block_type in (12, 13):  # lists — handled by _walk_children
@@ -463,7 +477,9 @@ class LarkDocxConverter(BaseConverter):
             return None
         return CodeBlock(language=lang, content=content)
 
-    def _convert_image(self, block: dict[str, Any], prefix: str) -> ImageBlock | None:
+    async def _convert_image(
+        self, block: dict[str, Any], prefix: str
+    ) -> ImageBlock | None:
         """处理图片 (block_type=27)：下载到项目内临时目录。"""
         image = block.get("image")
         if not image:
@@ -476,7 +492,7 @@ class LarkDocxConverter(BaseConverter):
 
         try:
             logger.info(f"{prefix}正在下载图片: token={token}")
-            image_data = self._download_image(token)
+            image_data = await self._download_image(token)
             # 存到项目内临时目录
             _TEMP_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
             tmp_path = _TEMP_IMAGES_DIR / f"{token}.png"
@@ -491,9 +507,9 @@ class LarkDocxConverter(BaseConverter):
     # 飞书 API 调用
     # ------------------------------------------------------------------
 
-    def _download_image(self, token: str) -> bytes:
+    async def _download_image(self, token: str) -> bytes:
         """调用飞书图片下载 API。"""
-        return self._lark.get_bytes(f"/drive/v1/medias/{token}/download")
+        return await self._lark.get_bytes(f"/drive/v1/medias/{token}/download")
 
     # ------------------------------------------------------------------
     # 内联元素转换

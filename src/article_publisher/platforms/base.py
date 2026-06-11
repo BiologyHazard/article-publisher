@@ -17,6 +17,6 @@ class Publisher(ABC):
     """将 IR Document 发布到目标平台的抽象基类。"""
 
     @abstractmethod
-    def publish(self, doc: Document, *, dry_run: bool = False) -> dict[str, Any]:
+    async def publish(self, doc: Document, *, dry_run: bool = False) -> dict[str, Any]:
         """将 IR Document 发布到目标平台，返回 API 响应。"""
         ...

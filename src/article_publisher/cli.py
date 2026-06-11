@@ -202,7 +202,7 @@ def _parse_publish_time(text: str) -> int:
     return int(dt.timestamp())
 
 
-def main() -> None:
+async def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
 
@@ -224,7 +224,7 @@ def main() -> None:
     # 2. 转换内容为 IR Document
     # ------------------------------------------------------------------
     logger.info("正在转换内容 ...")
-    doc = converter.convert()
+    doc = await converter.convert()
     logger.info(f"转换完成，共 {len(doc.blocks)} 个段落")
     logger.info(f"标题: {doc.title}")
 
@@ -233,11 +233,11 @@ def main() -> None:
     # ------------------------------------------------------------------
     try:
         if args.platform == "bilibili":
-            _run_bilibili(doc, args)
+            await _run_bilibili(doc, args)
         elif args.platform == "skland":
-            _run_skland(doc, args)
+            await _run_skland(doc, args)
         elif args.platform == "nga":
-            _run_nga(doc, args)
+            await _run_nga(doc, args)
         else:
             assert_never(args.platform)
     finally:
@@ -251,7 +251,7 @@ def _cleanup_lark_temp_images(source: str) -> None:
     cleanup_temp_images()
 
 
-def _run_bilibili(doc: Document, args: Namespace) -> None:
+async def _run_bilibili(doc: Document, args: Namespace) -> None:
     """B站 发布流程：设置认证、封面、配置，然后发布。"""
 
     # 加载认证
@@ -263,41 +263,46 @@ def _run_bilibili(doc: Document, args: Namespace) -> None:
 
     client = BiliClient(cfg["SESSDATA"], cfg["bili_jct"], cfg["buvid3"])
 
-    # 构建配置
-    config = BiliPublishConfig(
-        category_id=args.category,
-        article_id=args.update,
-        private_pub=1 if args.private else 2,
-        reprint=1,
-        original=1 if args.original else 0,
-        comment_selected=1 if args.select_comments else 0,
-        up_closed_reply=1 if args.close_comments else 0,
-        timer_pub_time=_parse_publish_time(args.publish_time)
-        if args.publish_time
-        else 0,
-        list_id=args.list_id,
-        is_aigc=1 if args.aigc else 0,
-        hashtag_ids=(
-            [int(x) for x in args.hashtags.split(",") if x] if args.hashtags else None
-        ),
-    )
-
-    # 上传封面图
-    _handle_cover(client, config, args)
-
-    # 发布
-    publisher = BiliPublisher(client, config=config)
     try:
-        publisher.publish(doc, dry_run=args.dry_run)
-    except BiliApiError as e:
-        logger.error(f"❌ API 错误 [{e.code}]: {e.message}")
-        sys.exit(1)
-    except Exception as e:
-        logger.error(f"❌ 运行时错误: {e}")
-        sys.exit(1)
+        # 构建配置
+        config = BiliPublishConfig(
+            category_id=args.category,
+            article_id=args.update,
+            private_pub=1 if args.private else 2,
+            reprint=1,
+            original=1 if args.original else 0,
+            comment_selected=1 if args.select_comments else 0,
+            up_closed_reply=1 if args.close_comments else 0,
+            timer_pub_time=_parse_publish_time(args.publish_time)
+            if args.publish_time
+            else 0,
+            list_id=args.list_id,
+            is_aigc=1 if args.aigc else 0,
+            hashtag_ids=(
+                [int(x) for x in args.hashtags.split(",") if x]
+                if args.hashtags
+                else None
+            ),
+        )
+
+        # 上传封面图
+        await _handle_cover(client, config, args)
+
+        # 发布
+        publisher = BiliPublisher(client, config=config)
+        try:
+            await publisher.publish(doc, dry_run=args.dry_run)
+        except BiliApiError as e:
+            logger.error(f"❌ API 错误 [{e.code}]: {e.message}")
+            sys.exit(1)
+        except Exception as e:
+            logger.error(f"❌ 运行时错误: {e}")
+            sys.exit(1)
+    finally:
+        await client.close()
 
 
-def _run_skland(doc: Document, args: Namespace) -> None:
+async def _run_skland(doc: Document, args: Namespace) -> None:
     """森空岛 发布流程：设置认证、封面、配置，然后发布。"""
 
     cfg = load_skland_auth()
@@ -307,6 +312,7 @@ def _run_skland(doc: Document, args: Namespace) -> None:
         sys.exit(1)
 
     client = SklandClient(cfg["HYPERGRYPH_TOKEN"], cfg["SKLAND_DID"])
+    await client.authenticate(cfg["HYPERGRYPH_TOKEN"])
 
     config = SklandPublishConfig(
         game_id=args.game_id,
@@ -317,13 +323,13 @@ def _run_skland(doc: Document, args: Namespace) -> None:
 
     publisher = SklandPublisher(client, config=config)
     try:
-        publisher.publish(doc, dry_run=args.dry_run)
+        await publisher.publish(doc, dry_run=args.dry_run)
     except Exception as e:
         logger.error(f"❌ 运行时错误: {e}")
         sys.exit(1)
 
 
-def _run_nga(doc: Document, args: Namespace) -> None:
+async def _run_nga(doc: Document, args: Namespace) -> None:
     """NGA 发布流程：加载 Cookie、上传图片、生成 BBCode。"""
 
     cfg = load_nga_auth()
@@ -340,13 +346,13 @@ def _run_nga(doc: Document, args: Namespace) -> None:
     logger.info(f"NGA {mode}模式 (tid={args.tid if args.tid else '新帖'})")
 
     try:
-        publisher.publish(doc, dry_run=args.dry_run)
+        await publisher.publish(doc, dry_run=args.dry_run)
     except Exception as e:
         logger.error(f"❌ 运行时错误: {e}")
         sys.exit(1)
 
 
-def _handle_cover(
+async def _handle_cover(
     client: BiliClient, config: BiliPublishConfig, args: Namespace
 ) -> None:
     """上传封面图到 B站 图床并更新配置。"""
@@ -355,7 +361,7 @@ def _handle_cover(
         logger.info(f"[dry-run] 跳过封面上传: {cover_path}")
     elif cover_path:
         logger.info(f"上传封面图: {cover_path}")
-        image_info = client.upload_image(cover_path)
+        image_info = await client.upload_image(cover_path)
         config.image_urls = [image_info["url"]]
         logger.info(f"  → {image_info['url']}")
 

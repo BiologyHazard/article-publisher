@@ -94,7 +94,7 @@ class MarkdownConverter(BaseConverter):
                 return self._extract_text(token)
         return "未命名文章"
 
-    def convert(self) -> Document:
+    async def convert(self) -> Document:
         blocks: list[Block] = []
         for token in self._parsed:
             if token["type"] == "blank_line":

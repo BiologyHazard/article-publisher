@@ -51,7 +51,6 @@ if TYPE_CHECKING:
 # 常量
 # =============================================================================
 
-_DEFAULT_OUTPUT = "skland_draft.json"
 _ELEMENT_ID_CHARS = string.ascii_letters + string.digits
 
 
@@ -101,29 +100,18 @@ class SklandPublisher(Publisher):
         self._client = client
         self._config = config or SklandPublishConfig()
 
-    def publish(self, doc: Document, *, dry_run: bool = False) -> dict[str, Any]:
+    async def publish(self, doc: Document, *, dry_run: bool = False) -> dict[str, Any]:
         """将 IR Document 转换为森空岛草稿 JSON，保存文件并输出控制台脚本。"""
         logger.info("正在将 IR 转换为森空岛草稿格式 ...")
-        draft = self._convert_document(doc, dry_run=dry_run)
+        draft = await self._convert_document(doc, dry_run=dry_run)
         logger.info(f"转换完成，共 {len(draft['document'])} 个文档元素")
 
         title = doc.title
         logger.info(f"标题: {title}")
 
-        # 输出 Draft JSON
-        output_path = Path(_DEFAULT_OUTPUT)
-        logger.info(f"草稿 JSON 已保存到: {output_path.resolve()}")
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(draft, f, ensure_ascii=False, indent=2)
-
         if dry_run:
             logger.info("[dry-run] 跳过草稿导入脚本输出")
-            return {
-                "platform": "skland",
-                "status": "dry_run",
-                "title": title,
-                "draft_file": str(output_path.resolve()),
-            }
+            return {"platform": "skland", "status": "dry_run", "title": title}
 
         # 生成并输出控制台导入脚本
         return self._output_console_script(draft)
@@ -132,14 +120,14 @@ class SklandPublisher(Publisher):
     # IR → 森空岛 Draft JSON
     # ==================================================================
 
-    def _convert_document(
+    async def _convert_document(
         self, doc: Document, *, dry_run: bool = False
     ) -> dict[str, Any]:
         """将 IR Document 转换为森空岛 Draft JSON。"""
         elements: list[dict[str, Any]] = []
 
         for block in doc.blocks:
-            self._convert_block(block, elements, dry_run=dry_run)
+            await self._convert_block(block, elements, dry_run=dry_run)
 
         # 封面图
         cover_id = ""
@@ -150,7 +138,7 @@ class SklandPublisher(Publisher):
                     logger.info(f"[dry-run] 跳过封面上传: {cover_path}")
                 else:
                     logger.info(f"上传封面图: {cover_path}")
-                    uploaded = self._client.upload_image(cover_path)
+                    uploaded = await self._client.upload_image(cover_path)
                     cover_id = uploaded.image_id
             else:
                 logger.warning(f"封面文件不存在，忽略: {cover_path}")
@@ -175,7 +163,7 @@ class SklandPublisher(Publisher):
 
         return {"version": 2, "model": model, "document": elements}
 
-    def _convert_block(
+    async def _convert_block(
         self, block: Block, elements: list[dict[str, Any]], *, dry_run: bool = False
     ) -> None:
         """将单个 IR Block 转换为一个或多个森空岛文档元素。"""
@@ -220,7 +208,7 @@ class SklandPublisher(Publisher):
             elements.append(ele)
 
         elif isinstance(block, ImageBlock):
-            self._handle_image_block(block, elements, dry_run=dry_run)
+            await self._handle_image_block(block, elements, dry_run=dry_run)
 
         elif isinstance(block, CodeBlock):
             self._handle_code_block(block, elements)
@@ -267,7 +255,7 @@ class SklandPublisher(Publisher):
     # 图片处理
     # ==================================================================
 
-    def _handle_image_block(
+    async def _handle_image_block(
         self,
         block: ImageBlock,
         elements: list[dict[str, Any]],
@@ -286,7 +274,7 @@ class SklandPublisher(Publisher):
 
         logger.info(f"正在上传图片: {img_path}")
         try:
-            uploaded = self._client.upload_image(img_path)
+            uploaded = await self._client.upload_image(img_path)
             elements.append(self._build_image_wrapper(uploaded, block.caption))
             logger.info(f"  → 上传成功: {uploaded.url}")
         except Exception as e:
@@ -538,12 +526,10 @@ window.open(`https://www.skland.com/editor/article?draftId=${{draftId}}`, '_blan
         print(script)
         logger.info("-" * 60)
         logger.info(f"  草稿 ID: {draft_id}")
-        logger.info(f"  草稿文件: {Path(_DEFAULT_OUTPUT).resolve()}")
 
         return {
             "platform": "skland",
             "status": "draft_ready",
             "title": draft["model"]["title"],
             "draft_id": draft_id,
-            "draft_file": str(Path(_DEFAULT_OUTPUT).resolve()),
         }

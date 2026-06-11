@@ -129,13 +129,13 @@ class BiliPublisher:
         self.config = config or BiliPublishConfig()
         self._counter = 0
 
-    def publish(self, doc: Document, *, dry_run: bool = False) -> dict[str, Any]:
+    async def publish(self, doc: Document, *, dry_run: bool = False) -> dict[str, Any]:
         """将 IR Document 发布到 B站 草稿箱。"""
         self._dry_run = dry_run
         config = self.config
 
         logger.info("正在将 IR 转换为 B站 Opus 格式 ...")
-        paragraphs = self._convert_document(doc)
+        paragraphs = await self._convert_document(doc)
         logger.info(f"转换完成，共 {len(paragraphs)} 个段落")
 
         title = doc.title
@@ -188,7 +188,7 @@ class BiliPublisher:
             return {}
 
         logger.info("正在保存到草稿箱 ...")
-        result = self.client.save_draft(payload)
+        result = await self.client.save_draft(payload)
         aid = result["data"]["article_id"]
         logger.info(f"✅ 成功！草稿 ID: {aid}")
         logger.info(
@@ -200,14 +200,14 @@ class BiliPublisher:
     # IR → B站 Opus 转换
     # ==================================================================
 
-    def _convert_document(self, doc: Document) -> list[Paragraph]:
+    async def _convert_document(self, doc: Document) -> list[Paragraph]:
         """将 IR Document 的 blocks 转换为 B站 Opus paragraphs 列表。"""
         paragraphs: list[Paragraph] = []
         for block in doc.blocks:
-            self._convert_block(block, paragraphs)
+            await self._convert_block(block, paragraphs)
         return paragraphs
 
-    def _convert_block(self, block: Block, paragraphs: list[Paragraph]) -> None:
+    async def _convert_block(self, block: Block, paragraphs: list[Paragraph]) -> None:
         """将单个 IR Block 转换为零个或多个 B站 Opus paragraphs。"""
         if isinstance(block, Heading):
             nodes = self._convert_inline(list(block.children))
@@ -252,13 +252,13 @@ class BiliPublisher:
                 )
 
         elif isinstance(block, ImageBlock):
-            self._handle_image(block, paragraphs)
+            await self._handle_image(block, paragraphs)
 
         elif isinstance(block, CodeBlock):
             paragraphs.append(make_code_paragraph(block.content, block.language))
 
         elif isinstance(block, Blockquote):
-            self._handle_blockquote(block, paragraphs)
+            await self._handle_blockquote(block, paragraphs)
 
         elif isinstance(block, OrderedList):
             self._handle_list(block, ordered=True, paragraphs=paragraphs)
@@ -273,7 +273,9 @@ class BiliPublisher:
     # 图片处理
     # ==================================================================
 
-    def _handle_image(self, block: ImageBlock, paragraphs: list[Paragraph]) -> None:
+    async def _handle_image(
+        self, block: ImageBlock, paragraphs: list[Paragraph]
+    ) -> None:
         """上传图片到 B站 图床并追加图片段落。"""
         img_path = Path(block.source)
         if not img_path.is_file():
@@ -286,7 +288,7 @@ class BiliPublisher:
 
         logger.info(f"正在上传图片: {img_path}")
         try:
-            info = self.client.upload_image(img_path)
+            info = await self.client.upload_image(img_path)
             paragraphs.append(
                 make_image_paragraph(
                     info["url"],
@@ -304,7 +306,7 @@ class BiliPublisher:
     # 引用块处理
     # ==================================================================
 
-    def _handle_blockquote(
+    async def _handle_blockquote(
         self, block: Blockquote, paragraphs: list[Paragraph]
     ) -> None:
         """将 IR Blockquote 转换为 B站 引用段落（共享 combine_hash）。"""
@@ -312,9 +314,9 @@ class BiliPublisher:
             return
         self._counter += 1
         combine_hash = f"bq_{int(time.time() * 1000000)}_{self._counter}"
-        self._emit_blockquote_children(block.children, combine_hash, paragraphs)
+        await self._emit_blockquote_children(block.children, combine_hash, paragraphs)
 
-    def _emit_blockquote_children(
+    async def _emit_blockquote_children(
         self, children: list[Block], combine_hash: str, paragraphs: list[Paragraph]
     ) -> None:
         """递归展平 Blockquote 子块（含嵌套 Blockquote 和 ImageBlock）。"""
@@ -327,10 +329,12 @@ class BiliPublisher:
                 if nodes:
                     paragraphs.append(make_blockquote_paragraph(nodes, combine_hash))
             elif isinstance(child, ImageBlock):
-                self._handle_image(child, paragraphs)
+                await self._handle_image(child, paragraphs)
             elif isinstance(child, Blockquote):
                 # 嵌套引用：递归展平，共享同一个 combine_hash
-                self._emit_blockquote_children(child.children, combine_hash, paragraphs)
+                await self._emit_blockquote_children(
+                    child.children, combine_hash, paragraphs
+                )
 
     # ==================================================================
     # 列表处理

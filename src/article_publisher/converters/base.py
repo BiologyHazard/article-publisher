@@ -18,6 +18,6 @@ class BaseConverter(ABC):
     """将输入内容转换为 IR Document 的基类。"""
 
     @abstractmethod
-    def convert(self) -> Document:
+    async def convert(self) -> Document:
         """执行转换，返回平台无关的 IR Document。"""
         ...

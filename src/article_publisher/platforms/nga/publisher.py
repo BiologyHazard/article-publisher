@@ -79,7 +79,7 @@ class NgaPublisher(Publisher):
         # 上传后的图片缓存 (source_path → UploadedImage)
         self._uploaded_images: dict[str, UploadedImage] = {}
 
-    def publish(self, doc: Document, *, dry_run: bool = False) -> dict[str, Any]:
+    async def publish(self, doc: Document, *, dry_run: bool = False) -> dict[str, Any]:
         """将 IR Document 转换为 NGA BBCode 并提交到 post.php。"""
         logger.info("正在将 IR 转换为 NGA BBCode ...")
 
@@ -89,7 +89,7 @@ class NgaPublisher(Publisher):
 
         # GET /post.php 以获取 auth
         if not dry_run:
-            self._client.get_post_php(
+            await self._client.get_post_php(
                 action="modify" if self._is_modify else "new",
                 fid=self._config.fid,
                 tid=self._config.tid,
@@ -97,7 +97,7 @@ class NgaPublisher(Publisher):
                 article=self._config.article,
             )
 
-        bbcode = self._convert_document(
+        bbcode = await self._convert_document(
             doc,
             dry_run=dry_run,
             attachment_strings=attachment_strings,
@@ -129,11 +129,11 @@ class NgaPublisher(Publisher):
 
         # 编辑模式：先删除帖子中的旧附件（全量删除）
         if self._is_modify:
-            self._delete_old_attachments()
+            await self._delete_old_attachments()
 
         # 提交帖子（与上传使用同一个 session，确保 checksum 匹配）
         logger.info(f"正在{'编辑' if self._is_modify else '提交'}帖子 ...")
-        result = self._client.submit_post(
+        result = await self._client.submit_post(
             subject=title,
             content=bbcode,
             attachment_strings=attachment_strings,
@@ -160,13 +160,13 @@ class NgaPublisher(Publisher):
     # 编辑模式：旧附件清理
     # ==================================================================
 
-    def _delete_old_attachments(self) -> None:
+    async def _delete_old_attachments(self) -> None:
         """删除帖子当前的所有旧附件（编辑帖子前调用）。"""
         tid = self._config.tid
         assert tid is not None  # 仅在编辑模式下调用
 
         logger.info("编辑模式：正在获取旧附件列表 ...")
-        old_attachments = self._client.get_recent_attachments(tid)
+        old_attachments = await self._client.get_recent_attachments(tid)
 
         if not old_attachments:
             logger.info("  → 没有旧附件需要删除。")
@@ -178,7 +178,7 @@ class NgaPublisher(Publisher):
         for attach in old_attachments:
             aid = attach["name"]
             try:
-                ok = self._client.delete_attachment(tid, aid)
+                ok = await self._client.delete_attachment(tid, aid)
                 if ok:
                     deleted += 1
                 else:
@@ -193,7 +193,7 @@ class NgaPublisher(Publisher):
     # IR → NGA BBCode
     # ==================================================================
 
-    def _convert_document(
+    async def _convert_document(
         self,
         doc: Document,
         *,
@@ -205,7 +205,7 @@ class NgaPublisher(Publisher):
         parts: list[str] = []
 
         for block in doc.blocks:
-            result = self._convert_block(
+            result = await self._convert_block(
                 block,
                 dry_run=dry_run,
                 attachment_strings=attachment_strings,
@@ -216,7 +216,7 @@ class NgaPublisher(Publisher):
 
         return "\n".join(parts)
 
-    def _convert_block(
+    async def _convert_block(
         self,
         block: Block,
         *,
@@ -230,7 +230,7 @@ class NgaPublisher(Publisher):
         elif isinstance(block, IRParagraph):
             return self._convert_paragraph(block)
         elif isinstance(block, ImageBlock):
-            return self._handle_image(
+            return await self._handle_image(
                 block,
                 dry_run=dry_run,
                 attachment_strings=attachment_strings,
@@ -239,14 +239,14 @@ class NgaPublisher(Publisher):
         elif isinstance(block, CodeBlock):
             return self._convert_codeblock(block)
         elif isinstance(block, Blockquote):
-            return self._convert_blockquote(
+            return await self._convert_blockquote(
                 block,
                 dry_run=dry_run,
                 attachment_strings=attachment_strings,
                 attachment_checks=attachment_checks,
             )
         elif isinstance(block, OrderedList):
-            return self._convert_list(
+            return await self._convert_list(
                 block,
                 ordered=True,
                 dry_run=dry_run,
@@ -254,7 +254,7 @@ class NgaPublisher(Publisher):
                 attachment_checks=attachment_checks,
             )
         elif isinstance(block, UnorderedList):
-            return self._convert_list(
+            return await self._convert_list(
                 block,
                 ordered=False,
                 dry_run=dry_run,
@@ -339,7 +339,7 @@ class NgaPublisher(Publisher):
     # 图片处理
     # ==================================================================
 
-    def _handle_image(
+    async def _handle_image(
         self,
         block: ImageBlock,
         *,
@@ -368,7 +368,7 @@ class NgaPublisher(Publisher):
 
         logger.info(f"正在上传图片: {img_path.name}")
         try:
-            uploaded = self._client.upload_image(img_path)
+            uploaded = await self._client.upload_image(img_path)
             self._uploaded_images[img_path.name] = uploaded
             logger.info("  → 上传成功")
 
@@ -399,7 +399,7 @@ class NgaPublisher(Publisher):
     # 引用块
     # ==================================================================
 
-    def _convert_blockquote(
+    async def _convert_blockquote(
         self,
         block: Blockquote,
         *,
@@ -410,7 +410,7 @@ class NgaPublisher(Publisher):
         """将引用块转换为 [quote] BBCode（支持嵌套）。"""
         children_bbcode: list[str] = []
         for child in block.children:
-            result = self._convert_block(
+            result = await self._convert_block(
                 child,
                 dry_run=dry_run,
                 attachment_strings=attachment_strings,
@@ -429,7 +429,7 @@ class NgaPublisher(Publisher):
     # 列表
     # ==================================================================
 
-    def _convert_list(
+    async def _convert_list(
         self,
         block: OrderedList | UnorderedList,
         *,
@@ -441,7 +441,7 @@ class NgaPublisher(Publisher):
         """将列表转换为 [list] BBCode（支持嵌套）。"""
         items: list[str] = []
         for item in block.items:
-            item_bbcode = self._convert_list_item(
+            item_bbcode = await self._convert_list_item(
                 item,
                 dry_run=dry_run,
                 attachment_strings=attachment_strings,
@@ -460,7 +460,7 @@ class NgaPublisher(Publisher):
         else:
             return f"[list]\n{inner}\n[/list]"
 
-    def _convert_list_item(
+    async def _convert_list_item(
         self,
         item: ListItem,
         *,
@@ -479,7 +479,7 @@ class NgaPublisher(Publisher):
                 if inline:
                     parts.append(inline)
             elif isinstance(child, OrderedList):
-                nested = self._convert_list(
+                nested = await self._convert_list(
                     child,
                     ordered=True,
                     dry_run=dry_run,
@@ -489,7 +489,7 @@ class NgaPublisher(Publisher):
                 if nested:
                     parts.append(nested)
             elif isinstance(child, UnorderedList):
-                nested = self._convert_list(
+                nested = await self._convert_list(
                     child,
                     ordered=False,
                     dry_run=dry_run,
@@ -499,7 +499,7 @@ class NgaPublisher(Publisher):
                 if nested:
                     parts.append(nested)
             elif isinstance(child, ImageBlock):
-                result = self._handle_image(
+                result = await self._handle_image(
                     child,
                     dry_run=dry_run,
                     attachment_strings=attachment_strings,

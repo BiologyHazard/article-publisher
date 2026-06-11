@@ -14,9 +14,10 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from pathlib import Path
 
-import requests
+import aiohttp
 from PIL import Image
 
+from article_publisher.http_client import BaseHttpClient
 from article_publisher.log import logger
 from article_publisher.platforms.bilibili._wbi import (
     BILI_API_BASE,
@@ -39,65 +40,78 @@ class BiliApiError(Exception):
         super().__init__(f"[{code}] {message}")
 
 
-class BiliClient:
+class BiliClient(BaseHttpClient):
     """封装与 B站后端交互的通用 HTTP 客户端。"""
 
     def __init__(self, sessdata: str, bili_jct: str, buvid3: str):
         self.csrf = bili_jct
-        self.session = requests.Session()
-        self.session.headers.update(
-            {
+        super().__init__(
+            headers={
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36 Edg/149.0.0.0",
                 "Referer": "https://member.bilibili.com/",
                 "Origin": "https://member.bilibili.com",
-            }
+            },
+            cookies={"SESSDATA": sessdata, "bili_jct": bili_jct, "buvid3": buvid3},
         )
-        self.session.cookies.set("SESSDATA", sessdata, domain=".bilibili.com")
-        self.session.cookies.set("bili_jct", bili_jct, domain=".bilibili.com")
-        self.session.cookies.set("buvid3", buvid3, domain=".bilibili.com")
         self._mixin_key: str | None = None
+
+    def _log_tag(self) -> str:
+        return "BILI"
 
     # ------------------------------------------------------------------
     # WBI 签名
     # ------------------------------------------------------------------
 
-    def _ensure_mixin_key(self) -> str:
+    async def _ensure_mixin_key(self) -> str:
         """获取或生成 WBI mixin_key。"""
         if self._mixin_key is None:
-            img_key, sub_key = fetch_wbi_keys(self.session)
+            img_key, sub_key = await fetch_wbi_keys(self._session)
             self._mixin_key = get_mixin_key(img_key + sub_key)
         return self._mixin_key
 
-    def sign(self, params: dict[str, Any]) -> dict[str, Any]:
+    async def sign(self, params: dict[str, Any]) -> dict[str, Any]:
         """为参数字典附加 WBI 签名。"""
-        mixin_key = self._ensure_mixin_key()
+        mixin_key = await self._ensure_mixin_key()
         return sign_wbi_params(params, mixin_key)
 
     # ------------------------------------------------------------------
     # 图片上传
     # ------------------------------------------------------------------
 
-    def upload_image(self, file_path: Path) -> UploadedImage:
+    async def upload_image(self, file_path: Path) -> UploadedImage:
         """
         将本地图片上传到 B站图床，返回图片 URL、宽高及文件大小。
         """
         try:
-            return self._upload_image_bfs(file_path)
+            return await self._upload_image_bfs(file_path)
         except BiliApiError as e:
             logger.info(f"upload_bfs 上传失败 ({e.message})，尝试 upcover 接口...")
-            return self._upload_image_fallback(file_path)
+            return await self._upload_image_fallback(file_path)
 
-    def _upload_image_bfs(self, file_path: Path) -> UploadedImage:
+    async def _upload_image_bfs(self, file_path: Path) -> UploadedImage:
         """使用 Opus 编辑器专用接口上传图片（需要 WBI 签名）。"""
         url = f"{BILI_API_BASE}/x/dynamic/feed/draw/upload_bfs"
-        params = self.sign({"csrf": self.csrf, "biz": "new_dyn", "category": "daily"})
+        params = await self.sign(
+            {"csrf": self.csrf, "biz": "new_dyn", "category": "daily"}
+        )
         file_name = file_path.name
         file_size_kb = round(file_path.stat().st_size / 1024, 2)
-        with open(file_path, "rb") as f:
-            files = {"file_up": (file_name, f, self._detect_mime(file_path))}
-            data = {"biz": "new_dyn", "category": "daily", "csrf": self.csrf}
-            response = self.session.post(url, params=params, files=files, data=data)
-        result = response.json()
+
+        mime_type = Image.open(file_path).get_format_mimetype()
+        data = aiohttp.FormData()
+        data.add_field(
+            "file_up",
+            file_path.read_bytes(),
+            filename=file_name,
+            content_type=mime_type,
+        )
+        data.add_field("biz", "new_dyn")
+        data.add_field("category", "daily")
+        data.add_field("csrf", self.csrf)
+
+        resp = await self.request("POST", url, params=params, data=data)
+        result = await resp.json()
+
         if result.get("code") != 0:
             raise BiliApiError(
                 result.get("code", -1), result.get("message", "upload_bfs失败"), result
@@ -106,16 +120,23 @@ class BiliClient:
             file_path, result["data"]["image_url"], file_size_kb
         )
 
-    def _upload_image_fallback(self, file_path: Path) -> UploadedImage:
+    async def _upload_image_fallback(self, file_path: Path) -> UploadedImage:
         """使用旧版 upcover 接口上传图片。"""
         url = f"{BILI_API_BASE}/x/article/creative/article/upcover"
         file_name = file_path.name
         file_size_kb = round(file_path.stat().st_size / 1024, 2)
-        with open(file_path, "rb") as f:
-            files = {"binary": (file_name, f, self._detect_mime(file_path))}
-            data = {"csrf": self.csrf, "cover": ""}
-            response = self.session.post(url, files=files, data=data)
-        result = response.json()
+
+        mime = self._detect_mime(file_path)
+        data = aiohttp.FormData()
+        data.add_field(
+            "binary", file_path.read_bytes(), filename=file_name, content_type=mime
+        )
+        data.add_field("csrf", self.csrf)
+        data.add_field("cover", "")
+
+        resp = await self.request("POST", url, data=data)
+        result = await resp.json()
+
         if result.get("code") != 0:
             raise BiliApiError(
                 result.get("code", -1), result.get("message", "图片上传失败"), result
@@ -149,16 +170,16 @@ class BiliClient:
     # 专栏草稿箱
     # ------------------------------------------------------------------
 
-    def save_draft(self, payload: Payload) -> dict[str, Any]:
+    async def save_draft(self, payload: Payload) -> dict[str, Any]:
         """
         将专栏保存到草稿箱。
         payload 结构详见 models.py 中的 Payload 定义。
         返回响应 JSON。
         """
         url = f"{BILI_API_BASE}/x/dynamic/feed/article/draft/add"
-        params = self.sign({"csrf": self.csrf})
-        response = self.session.post(url, params=params, json=payload)  # type: ignore
-        result = response.json()
+        params = await self.sign({"csrf": self.csrf})
+        resp = await self.request("POST", url, params=params, json=payload)
+        result = await resp.json()
         if result.get("code") != 0:
             raise BiliApiError(
                 result.get("code", -1), result.get("message", "保存草稿失败"), result

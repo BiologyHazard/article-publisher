@@ -14,9 +14,10 @@ import urllib.parse
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
+import aiohttp
 import json5
-import requests
 
+from article_publisher.http_client import BaseHttpClient
 from article_publisher.log import logger
 
 if TYPE_CHECKING:
@@ -96,8 +97,8 @@ class Attachment(TypedDict):
 # =============================================================================
 
 
-class NgaClient:
-    """封装与 NGA 后端交互的 HTTP 客户端。"""
+class NgaClient(BaseHttpClient):
+    """封装与 NGA 后端交互的异步 HTTP 客户端。"""
 
     def __init__(self, cookie_str: str, fid: int) -> None:
         """
@@ -110,68 +111,27 @@ class NgaClient:
         """当前登录用户的 UID（从 __U 中提取，可用于获取帖子列表 URL）"""
         self._auth_token: str | None = None
 
-        self._session = requests.Session()
-        self._session.headers.update(
-            {"User-Agent": _USER_AGENT, "Referer": f"{NGA_BASE}/", "Origin": NGA_BASE}
-        )
-
-        # 解析并设置 Cookie
-        # cookies 来自 bbs.nga.cn，设置 domain 以覆盖所有 nga.cn 子域
+        # 解析 Cookie 字符串为字典
+        cookies: dict[str, str] = {}
         for pair in cookie_str.split(";"):
             pair = pair.strip()
             if "=" in pair:
                 key, value = pair.split("=", 1)
-                self._session.cookies.set(key.strip(), value.strip(), domain=".nga.cn")
+                cookies[key.strip()] = value.strip()
 
-    # ==================================================================
-    # Debug 日志辅助
-    # ==================================================================
+        super().__init__(
+            headers={
+                "User-Agent": _USER_AGENT,
+                "Referer": f"{NGA_BASE}/",
+                "Origin": NGA_BASE,
+            },
+            cookies=cookies,
+        )
 
-    @staticmethod
-    def _log_request(method: str, url: str, **kwargs: Any) -> None:
-        """debug 日志：打印请求的完整信息。"""
-        logger.debug(f"[NGA REQ] {method} {url}")
-        # 打印查询参数
-        if kwargs.get("params"):
-            logger.debug(f"[NGA REQ] params: {kwargs['params']}")
-        # 打印请求体（排除二进制文件内容）
-        if kwargs.get("data"):
-            data = kwargs["data"]
-            if isinstance(data, bytes):
-                try:
-                    logger.debug(f"[NGA REQ] body (bytes): {data[:2000]}")
-                except Exception:
-                    logger.debug(f"[NGA REQ] body (bytes): <{len(data)} bytes>")
-            else:
-                logger.debug(f"[NGA REQ] body: {data}")
-        if kwargs.get("files"):
-            file_info = {}
-            for k, v in kwargs["files"].items():
-                if isinstance(v, tuple):
-                    # (filename, fileobj, content_type) 格式
-                    file_info[k] = f"<file: {v[0] if isinstance(v, tuple) else '?'}>"
-                else:
-                    file_info[k] = "<file object>"
-            logger.debug(f"[NGA REQ] files: {file_info}")
-        if kwargs.get("headers"):
-            # 只打印关键头部，不打印完整的 Cookie
-            safe_headers = {
-                k: v
-                for k, v in kwargs["headers"].items()
-                if k.lower() not in ("cookie", "authorization")
-            }
-            logger.debug(f"[NGA REQ] headers: {safe_headers}")
+    def _log_tag(self) -> str:
+        return "NGA"
 
-    @staticmethod
-    def _log_response(resp: requests.Response) -> None:
-        """debug 日志：打印响应的完整信息。"""
-        logger.debug(f"[NGA RSP] HTTP {resp.status_code} {resp.url}")
-        logger.debug(f"[NGA RSP] headers: {dict(resp.headers)}")
-        # 打印响应体
-        text = resp.text
-        logger.debug(f"[NGA RSP] body: {text}")
-
-    def get_post_php(
+    async def get_post_php(
         self,
         action: Action,
         fid: str,
@@ -196,18 +156,17 @@ class NgaClient:
 
         url = f"{NGA_BASE}/post.php"
 
-        self._log_request("GET", url, params=params)
-        resp = self._session.get(url, params=params)
-        self._log_response(resp)
+        resp = await self.request("GET", url, params=params)
+        text = await resp.text()
 
         try:
-            self._auth_token = self._parse_auth(resp.text)
+            self._auth_token = self._parse_auth(text)
         except NgaApiError:
             raise NgaApiError(
-                f"获取 auth token 失败。请检查 Cookie 是否有效。\n{resp.text[:512]}"
+                f"获取 auth token 失败。请检查 Cookie 是否有效。\n{text[:512]}"
             ) from None
 
-        return resp.text
+        return text
 
     # ==================================================================
     # Auth Token
@@ -273,7 +232,7 @@ class NgaClient:
     # 图片上传
     # ==================================================================
 
-    def upload_image(self, file_path: Path) -> UploadedImage:
+    async def upload_image(self, file_path: Path) -> UploadedImage:
         """
         将本地图片上传到 NGA 图床。
 
@@ -289,36 +248,36 @@ class NgaClient:
         logger.info(f"上传图片: {file_path.name} ({file_size} bytes)")
 
         # 构建 multipart form-data
-        with open(file_path, "rb") as f:
-            files: dict[str, Any] = {
-                "attachment_file1_dscp": (None, ""),
-                "attachment_file1_img": (None, "1"),
-                "attachment_file1_auto_size": (None, "8"),
-                "attachment_file1_watermark": (None, ""),
-                "func": (None, "upload"),
-                "v2": (None, "1"),
-                "origin_domain": (None, "bbs.nga.cn"),
-                "__output": (None, "1"),
-                "auth": (None, auth),
-                "fid": (None, str(self.fid)),
-                "attachment_file1_url_utf8_name": (
-                    None,
-                    urllib.parse.quote(file_name, safe=""),
-                ),
-                "attachment_file1": (file_name, f, "application/octet-stream"),
-            }
+        form = aiohttp.FormData()
+        form.add_field("attachment_file1_dscp", "")
+        form.add_field("attachment_file1_img", "1")
+        form.add_field("attachment_file1_auto_size", "8")
+        form.add_field("attachment_file1_watermark", "")
+        form.add_field("func", "upload")
+        form.add_field("v2", "1")
+        form.add_field("origin_domain", "bbs.nga.cn")
+        form.add_field("__output", "1")
+        form.add_field("auth", auth)
+        form.add_field("fid", str(self.fid))
+        form.add_field(
+            "attachment_file1_url_utf8_name", urllib.parse.quote(file_name, safe="")
+        )
+        form.add_field(
+            "attachment_file1",
+            file_path.read_bytes(),
+            filename=file_name,
+            content_type="application/octet-stream",
+        )
 
-            self._log_request("POST", ATTACH_UPLOAD_URL, files=files)
-            resp = self._session.post(ATTACH_UPLOAD_URL, files=files)
-            self._log_response(resp)
+        resp = await self.request("POST", ATTACH_UPLOAD_URL, data=form)
 
-        if resp.status_code != 200:
-            raise NgaApiError(
-                f"图片上传失败 (HTTP {resp.status_code}): {resp.text[:200]}"
-            )
+        if resp.status != 200:
+            text = await resp.text()
+            raise NgaApiError(f"图片上传失败 (HTTP {resp.status}): {text[:200]}")
 
+        text = await resp.text()
         # 解析响应
-        result = self._parse_upload_response(resp.text)
+        result = self._parse_upload_response(text)
 
         logger.info(f"  → 上传成功: {result['url']}")
         return UploadedImage(
@@ -332,7 +291,7 @@ class NgaClient:
     # 提交帖子
     # ==================================================================
 
-    def submit_post(
+    async def submit_post(
         self,
         subject: str,
         content: str,
@@ -389,10 +348,8 @@ class NgaClient:
         body = b"&".join(body_parts)
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
-        self._log_request("POST", url, data=body, headers=headers)
-        resp = self._session.post(url, data=body, headers=headers)
-        self._log_response(resp)
-        text = resp.text
+        resp = await self.request("POST", url, data=body, headers=headers)
+        text = await resp.text()
 
         # 解析响应
         result = self._parse_window_script_muti_get_var_store(text)
@@ -416,7 +373,7 @@ class NgaClient:
     # 附件管理（编辑帖子用）
     # ==================================================================
 
-    def get_recent_attachments(self, tid: str) -> list[Attachment]:
+    async def get_recent_attachments(self, tid: str) -> list[Attachment]:
         """
         获取帖子当前的所有附件列表。
 
@@ -436,15 +393,13 @@ class NgaClient:
             "__act": "get_recent_attach",
             "__output": "3",
         }
-        data: dict[str, str] = {"tid": tid}
+        post_data: dict[str, str] = {"tid": tid}
 
         logger.info(f"获取帖子附件列表 (tid={tid}) ...")
-        self._log_request("POST", url, params=params, data=data)
-        resp = self._session.post(url, params=params, data=data)
-        self._log_response(resp)
-        resp.raise_for_status()
+        resp = await self.request("POST", url, params=params, data=post_data)
+        text = await resp.text()
 
-        result = self._parse_window_script_muti_get_var_store(resp.text)
+        result = self._parse_window_script_muti_get_var_store(text)
         if "error" in result:
             logger.warning(f"  [错误] {result['error']}")
             return []
@@ -457,7 +412,7 @@ class NgaClient:
         logger.info(f"  → 找到 {len(attachments)} 个附件")
         return attachments
 
-    def delete_attachment(self, tid: str, aid: str, pid: str = "0") -> bool:
+    async def delete_attachment(self, tid: str, aid: str, pid: str = "0") -> bool:
         """
         删除帖子中的单个附件。
 
@@ -480,15 +435,13 @@ class NgaClient:
         }
 
         logger.info(f"删除附件: {aid}")
-        self._log_request("POST", url, data=data)
-        resp = self._session.post(url, data=data)
-        self._log_response(resp)
+        resp = await self.request("POST", url, data=data)
 
-        if resp.status_code == 200:
+        if resp.status == 200:
             logger.debug(f"  → 删除成功: {aid}")
             return True
         else:
-            logger.warning(f"  → 删除失败 (HTTP {resp.status_code}): {aid}")
+            logger.warning(f"  → 删除失败 (HTTP {resp.status}): {aid}")
             return False
 
     # ==================================================================

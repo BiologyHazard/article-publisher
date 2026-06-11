@@ -8,7 +8,9 @@
   uv run -m article_publisher nga markdown articles/article1/main.md --fid 516
 """
 
+import asyncio
+
 from article_publisher.cli import main
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
