@@ -3,17 +3,21 @@ from typing import Any
 import aiohttp
 
 from article_publisher.converters.lark.consts import LARK_API_BASE
+from article_publisher.converters.lark.models import (
+    GetDocumentData,
+    GetDocumentResponse,
+)
 from article_publisher.http_client import ClientSessionWithLog
 
 
-class LarkHttpClient(ClientSessionWithLog):
+class LarkClient(ClientSessionWithLog):
     """飞书 API 的异步 HTTP 客户端（自动管理 tenant_access_token）。"""
 
     def __init__(self, app_id: str, app_secret: str):
-        self.app_id = app_id
-        self.app_secret = app_secret
+        self._app_id = app_id
+        self._app_secret = app_secret
         self._tenant_token: str | None = None
-        super().__init__(headers={"User-Agent": "article-publisher/0.1.0 (aiohttp)"})
+        super().__init__()
 
     def _log_tag(self) -> str:
         return "LARK"
@@ -21,10 +25,11 @@ class LarkHttpClient(ClientSessionWithLog):
     async def _ensure_token(self) -> str:
         if self._tenant_token:
             return self._tenant_token
+
         resp = await self.request(
             "POST",
             f"{LARK_API_BASE}/auth/v3/tenant_access_token/internal",
-            json={"app_id": self.app_id, "app_secret": self.app_secret},
+            json={"app_id": self._app_id, "app_secret": self._app_secret},
         )
         data = await resp.json()
         self._tenant_token = data["tenant_access_token"]
@@ -41,7 +46,7 @@ class LarkHttpClient(ClientSessionWithLog):
         await self._ensure_token()
         return await self.request(method, f"{LARK_API_BASE}{path}", **kwargs)
 
-    async def get_json(self, path: str, **kwargs: Any) -> dict[str, Any]:
+    async def get_json(self, path: str, **kwargs: Any) -> Any:
         """发送 GET 请求并返回 JSON 响应。"""
         resp = await self._request_with_auth("GET", path, **kwargs)
         data = await resp.json()
@@ -55,3 +60,11 @@ class LarkHttpClient(ClientSessionWithLog):
         if resp.status != 200:
             raise RuntimeError(f"飞书文件下载失败: HTTP {resp.status}")
         return await resp.read()
+
+    async def get_document(self, document_id: str) -> GetDocumentData:
+        """获取文档基本信息"""
+
+        obj: GetDocumentResponse = await self.get_json(
+            f"/docx/v1/documents/{document_id}"
+        )
+        return obj["data"]

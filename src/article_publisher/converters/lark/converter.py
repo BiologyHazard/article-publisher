@@ -1,9 +1,8 @@
 import shutil
 import urllib.parse
-from typing import Any
 
 from article_publisher.converters.base import Converter
-from article_publisher.converters.lark.client import LarkHttpClient
+from article_publisher.converters.lark.client import LarkClient
 from article_publisher.converters.lark.consts import (
     ALIGN_KEY_MAP,
     CODE_LANG_MAP,
@@ -11,6 +10,10 @@ from article_publisher.converters.lark.consts import (
     TEMP_IMAGES_DIR,
     TEXT_COLOR_MAP,
 )
+from article_publisher.converters.lark.models import Block as LarkBlock
+from article_publisher.converters.lark.models import Document as LarkDocument
+from article_publisher.converters.lark.models import TextElement
+from article_publisher.converters.lark.models import TextRun as LarkTextRun
 from article_publisher.document import (
     Alignment,
     Block,
@@ -34,42 +37,32 @@ from article_publisher.log import logger
 class LarkDocxConverter(Converter):
     """将飞书云文档转换为 IR Document。"""
 
-    def __init__(self, app_id: str, app_secret: str, document_id: str):
-        self.document_id = document_id
-        self._lark = LarkHttpClient(app_id, app_secret)
-
-        # block_id → block dict
-        self._blocks: dict[str, dict[str, Any]] = {}
+    def __init__(self, app_id: str, app_secret: str, document_id: str) -> None:
+        self._document_id = document_id
+        self._client = LarkClient(app_id, app_secret)
+        self._blocks: dict[str, LarkBlock] = {}
         self._root_block_id: str = ""
+        self._document: LarkDocument | None = None
 
-    # ------------------------------------------------------------------
-    # 文档元信息
-    # ------------------------------------------------------------------
+    async def _get_document(self) -> LarkDocument:
+        """获取飞书文档基本信息（标题、封面等），并缓存结果。"""
 
-    async def _fetch_document_info(self) -> dict[str, Any]:
-        """获取文档基本信息（结果缓存避免重复请求）。"""
-        if not hasattr(self, "_cached_doc_info"):
-            data = await self._lark.get_json(f"/docx/v1/documents/{self.document_id}")
-            doc = data["data"]["document"]
-            cover_token: str | None = None
-            cover = doc.get("cover")
-            if cover and cover.get("token"):
-                cover_token = cover["token"]
-            self._cached_doc_info = {
-                "document_id": doc["document_id"],
-                "title": doc["title"],
-                "revision_id": doc["revision_id"],
-                "cover_token": cover_token,
-            }
-        return self._cached_doc_info
+        if self._document is not None:
+            return self._document
+
+        data = await self._client.get_document(self._document_id)
+        self._document = data["document"]
+        return self._document
 
     async def get_title(self) -> str:
         """从飞书文档基本信息中提取标题。"""
-        info = await self._fetch_document_info()
-        return info.get("title", "未命名文章")
+
+        document = await self._get_document()
+        return document["title"]
 
     async def convert(self) -> Document:
         """执行转换，返回 IR Document。"""
+
         await self._load_blocks()
         blocks: list[Block] = []
         await self._walk_block(self._root_block_id, blocks, depth=0)
@@ -79,10 +72,11 @@ class LarkDocxConverter(Converter):
 
     async def _download_cover(self) -> str | None:
         """下载飞书文档封面图片，返回本地路径；无封面时返回 None。"""
-        info = await self._fetch_document_info()
-        cover_token = info.get("cover_token")
-        if not cover_token:
+        document = await self._get_document()
+        if "cover" not in document:
             return None
+
+        cover_token = document["cover"]["token"]
 
         try:
             logger.info(f"正在下载封面图: token={cover_token}")
@@ -102,14 +96,14 @@ class LarkDocxConverter(Converter):
 
     async def _load_blocks(self) -> None:
         """分页加载所有块，构建 block_id → block_dict 映射。"""
-        items: list[dict[str, Any]] = []
+        items: list[LarkBlock] = []
         page_token = ""
         while True:
             params = {"page_size": 500}
             if page_token:
                 params["page_token"] = page_token
-            data = await self._lark.get_json(
-                f"/docx/v1/documents/{self.document_id}/blocks", params=params
+            data = await self._client.get_json(
+                f"/docx/v1/documents/{self._document_id}/blocks", params=params
             )
             items.extend(data["data"]["items"])
             if not data["data"].get("has_more"):
@@ -230,7 +224,7 @@ class LarkDocxConverter(Converter):
     # ------------------------------------------------------------------
 
     async def _convert_single(
-        self, block_type: int, block: dict[str, Any], prefix: str, indent_level: int = 0
+        self, block_type: int, block: LarkBlock, prefix: str, indent_level: int = 0
     ) -> Block | None:
         """将单个 Lark 块转换为 IR Block。"""
         if block_type == 1:  # page
@@ -256,7 +250,7 @@ class LarkDocxConverter(Converter):
         return None
 
     def _convert_text(
-        self, block: dict[str, Any], indent_level: int = 0
+        self, block: LarkBlock, indent_level: int = 0
     ) -> Paragraph | None:
         """处理文本块 (block_type=2)。"""
         text = block.get("text")
@@ -269,7 +263,7 @@ class LarkDocxConverter(Converter):
         return Paragraph(children=children, align=align, indent_level=indent_level)
 
     def _convert_heading(
-        self, block: dict[str, Any], block_type: int, indent_level: int = 0
+        self, block: LarkBlock, block_type: int, indent_level: int = 0
     ) -> Heading:
         """处理标题块 (block_type=3~11 → heading1~heading9)。
         H4~H9 在 IR 中保留为 Heading，由 Publisher 回退为粗体文本。
@@ -289,7 +283,7 @@ class LarkDocxConverter(Converter):
             indent_level=indent_level,
         )
 
-    def _convert_code(self, block: dict[str, Any]) -> CodeBlock | None:
+    def _convert_code(self, block: LarkBlock) -> CodeBlock | None:
         """处理代码块 (block_type=14)。"""
         code = block.get("code")
         if not code:
@@ -311,9 +305,7 @@ class LarkDocxConverter(Converter):
             return None
         return CodeBlock(language=lang, content=content)
 
-    async def _convert_image(
-        self, block: dict[str, Any], prefix: str
-    ) -> ImageBlock | None:
+    async def _convert_image(self, block: LarkBlock, prefix: str) -> ImageBlock | None:
         """处理图片 (block_type=27)：下载到项目内临时目录。"""
         image = block.get("image")
         if not image:
@@ -343,13 +335,13 @@ class LarkDocxConverter(Converter):
 
     async def _download_image(self, token: str) -> bytes:
         """调用飞书图片下载 API。"""
-        return await self._lark.get_bytes(f"/drive/v1/medias/{token}/download")
+        return await self._client.get_bytes(f"/drive/v1/medias/{token}/download")
 
     # ------------------------------------------------------------------
     # 内联元素转换
     # ------------------------------------------------------------------
 
-    def _elements_to_inline(self, elements: list[Any]) -> list[InlineElement]:
+    def _elements_to_inline(self, elements: list[TextElement]) -> list[InlineElement]:
         """将飞书元素列表转换为 IR InlineElement 列表（TextRun / Formula）。"""
         result: list[InlineElement] = []
         for elem in elements:
@@ -361,7 +353,7 @@ class LarkDocxConverter(Converter):
                 result.append(Formula(latex=equation["content"]))
         return result
 
-    def _text_run_to_run(self, text_run: dict[str, Any]) -> TextRun:
+    def _text_run_to_run(self, text_run: LarkTextRun) -> TextRun:
         """将单个飞书 text_run 转换为 IR TextRun。"""
         content = text_run["content"]
         style = text_run.get("text_element_style") or {}
@@ -375,8 +367,10 @@ class LarkDocxConverter(Converter):
         color = ""
         if inline_code:
             color = "#c7254e"
-        elif style.get("text_color") is not None:
-            color = TEXT_COLOR_MAP.get(style["text_color"], "")
+        else:
+            text_color = style.get("text_color")
+            if text_color is not None:
+                color = TEXT_COLOR_MAP.get(text_color, "")
 
         link_url = None
         link = style.get("link")
@@ -395,7 +389,7 @@ class LarkDocxConverter(Converter):
         )
 
     @staticmethod
-    def _extract_align(block: dict[str, Any]) -> Alignment:
+    def _extract_align(block: LarkBlock) -> Alignment:
         """从 Lark block 的 style 中提取对齐方式。
         Lark: 1=左对齐, 2=居中, 3=右对齐
         """
@@ -410,7 +404,7 @@ class LarkDocxConverter(Converter):
         return Alignment.LEFT
 
     @staticmethod
-    def _elements_to_plain_text(elements: list[Any]) -> str:
+    def _elements_to_plain_text(elements: list[TextElement]) -> str:
         """将 Lark TextElement 列表拼接为纯文本。"""
         if not elements:
             return ""
@@ -425,7 +419,7 @@ class LarkDocxConverter(Converter):
         return "".join(parts)
 
     async def close(self) -> None:
-        await self._lark.close()
+        await self._client.close()
 
 
 def cleanup_temp_images() -> None:
