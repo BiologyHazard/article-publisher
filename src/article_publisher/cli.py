@@ -23,10 +23,11 @@ from pathlib import Path
 from typing import assert_never
 
 from article_publisher._auth import (
-    NGA_REQUIRED_ENV,
-    REQUIRED_ENV,
-    SKLAND_REQUIRED_ENV,
-    load_auth,
+    BILIBILI_REQUIRED_ENV_KEYS,
+    LARK_REQUIRED_ENV_KEYS,
+    NGA_REQUIRED_ENV_KEYS,
+    SKLAND_REQUIRED_ENV_KEYS,
+    load_bilibili_auth,
     load_lark_auth,
     load_nga_auth,
     load_skland_auth,
@@ -101,19 +102,19 @@ def _build_parser() -> ArgumentParser:
 
     subparsers = parser.add_subparsers(dest="platform", required=True, title="目标平台")
 
-    # ---- Bilibili ----
+    # Bilibili
     bili = subparsers.add_parser("bilibili", help="发布到 B站专栏")
     _add_bilibili_options(bili)
     bili_subs = bili.add_subparsers(dest="source", required=True, title="输入源")
     _add_source_parsers(bili_subs)
 
-    # ---- 森空岛 ----
+    # 森空岛
     skland = subparsers.add_parser("skland", help="发布到森空岛")
     _add_skland_options(skland)
     skland_subs = skland.add_subparsers(dest="source", required=True, title="输入源")
     _add_source_parsers(skland_subs)
 
-    # ---- NGA ----
+    # NGA
     nga = subparsers.add_parser("nga", help="发布到 NGA")
     _add_nga_options(nga)
     nga_subs = nga.add_subparsers(dest="source", required=True, title="输入源")
@@ -206,9 +207,7 @@ async def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
 
-    # ------------------------------------------------------------------
-    # 1. 创建 Converter
-    # ------------------------------------------------------------------
+    # 创建 converter
     try:
         if args.source in ("markdown", "md"):
             converter = _get_markdown_converter(markdown_file_path=Path(args.file))
@@ -220,17 +219,13 @@ async def main() -> None:
         logger.error(f"❌ 转换器初始化失败: {e}")
         sys.exit(1)
 
-    # ------------------------------------------------------------------
-    # 2. 转换内容为 IR Document
-    # ------------------------------------------------------------------
+    # 转换内容为 Document 对象
     logger.info("正在转换内容 ...")
     doc = await converter.convert()
     logger.info(f"转换完成，共 {len(doc.blocks)} 个段落")
     logger.info(f"标题: {doc.title}")
 
-    # ------------------------------------------------------------------
-    # 3. 根据目标平台创建 Publisher 并发布
-    # ------------------------------------------------------------------
+    # 根据平台创建 publisher 并发布
     try:
         if args.platform == "bilibili":
             await _run_bilibili(doc, args)
@@ -255,8 +250,8 @@ async def _run_bilibili(doc: Document, args: Namespace) -> None:
     """B站 发布流程：设置认证、封面、配置，然后发布。"""
 
     # 加载认证
-    cfg = load_auth()
-    missing = [k for k in REQUIRED_ENV if k not in cfg]
+    cfg = load_bilibili_auth()
+    missing = [k for k in BILIBILI_REQUIRED_ENV_KEYS if k not in cfg]
     if missing:
         logger.error(AUTH_HELP)
         sys.exit(1)
@@ -306,7 +301,7 @@ async def _run_skland(doc: Document, args: Namespace) -> None:
     """森空岛 发布流程：设置认证、封面、配置，然后发布。"""
 
     cfg = load_skland_auth()
-    missing = [k for k in SKLAND_REQUIRED_ENV if k not in cfg]
+    missing = [k for k in SKLAND_REQUIRED_ENV_KEYS if k not in cfg]
     if missing:
         logger.error(SKLAND_AUTH_HELP)
         sys.exit(1)
@@ -333,7 +328,7 @@ async def _run_nga(doc: Document, args: Namespace) -> None:
     """NGA 发布流程：加载 Cookie、上传图片、生成 BBCode。"""
 
     cfg = load_nga_auth()
-    missing = [k for k in NGA_REQUIRED_ENV if k not in cfg]
+    missing = [k for k in NGA_REQUIRED_ENV_KEYS if k not in cfg]
     if missing:
         logger.error(NGA_AUTH_HELP)
         sys.exit(1)
@@ -378,14 +373,13 @@ def _get_markdown_converter(markdown_file_path: Path) -> MarkdownConverter:
 
 def _get_lark_converter(doc_id: str) -> LarkDocxConverter:
     """创建飞书云文档转换器。"""
-    lark_cfg = load_lark_auth()
-    if "LARK_APP_ID" not in lark_cfg or "LARK_APP_SECRET" not in lark_cfg:
+    cfg = load_lark_auth()
+    missing = [k for k in LARK_REQUIRED_ENV_KEYS if k not in cfg]
+    if missing:
         logger.error(LARK_AUTH_HELP)
         sys.exit(1)
 
     logger.info(f"📄 飞书云文档: {doc_id}")
     return LarkDocxConverter(
-        app_id=lark_cfg["LARK_APP_ID"],
-        app_secret=lark_cfg["LARK_APP_SECRET"],
-        document_id=doc_id,
+        app_id=cfg["LARK_APP_ID"], app_secret=cfg["LARK_APP_SECRET"], document_id=doc_id
     )
