@@ -277,11 +277,12 @@ async def _run_bilibili(doc: Document, args: Namespace) -> None:
             ),
         )
 
-        # 上传封面图
-        await _handle_cover(client, config, args)
-
         # 发布
         publisher = BiliPublisher(client, config=config)
+
+        # 上传封面图
+        await publisher.handle_cover(args.cover)
+
         try:
             await publisher.publish(doc, dry_run=args.dry_run)
         except BiliApiError as e:
@@ -340,20 +341,6 @@ async def _run_nga(doc: Document, args: Namespace) -> None:
     except Exception as e:
         logger.error(f"❌ 运行时错误: {e}")
         sys.exit(1)
-
-
-async def _handle_cover(
-    client: BiliClient, config: BiliPublishConfig, args: Namespace
-) -> None:
-    """上传封面图到 B站 图床并更新配置。"""
-    cover_path = Path(args.cover).resolve() if args.cover else None
-    if args.dry_run and cover_path:
-        logger.info(f"[dry-run] 跳过封面上传: {cover_path}")
-    elif cover_path:
-        logger.info(f"上传封面图: {cover_path}")
-        image_info = await client.upload_image(cover_path)
-        config.image_urls = [image_info["url"]]
-        logger.info(f"  → {image_info['url']}")
 
 
 def _get_markdown_converter(markdown_file_path: Path) -> MarkdownConverter:

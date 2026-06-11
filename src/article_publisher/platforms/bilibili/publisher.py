@@ -128,6 +128,24 @@ class BiliPublisher:
         self.config = config or BiliPublishConfig()
         self._counter = 0
 
+    async def handle_cover(self, cover_path: Path | None) -> None:
+        """上传封面图到 B站 图床并更新配置。
+
+        Args:
+            cover_path: 封面图片路径。为 None 或空时跳过。
+        """
+        if cover_path is None:
+            return
+
+        cover = cover_path.resolve()
+        if self._dry_run:
+            logger.info(f"[dry-run] 跳过封面上传: {cover}")
+        else:
+            logger.info(f"上传封面图: {cover}")
+            image_info = await self.client.upload_image(cover)
+            self.config.image_urls = [image_info["url"]]
+            logger.info(f"  → {image_info['url']}")
+
     async def publish(self, doc: Document, *, dry_run: bool = False) -> dict[str, Any]:
         """将 IR Document 发布到 B站 草稿箱。"""
         self._dry_run = dry_run
