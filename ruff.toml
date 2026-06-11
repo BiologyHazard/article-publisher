@@ -10,7 +10,7 @@ select = [
     "E9",
     "F",  # pyflakes
     "A",  # flake8-builtins
-    "ASYNC",  # flake8-async
+    # "ASYNC",  # flake8-async
     "B",  # flake8-bugbear
     "C4",  # flake8-comprehensions
     "DTZ",  # flake8-datetimez

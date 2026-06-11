@@ -103,10 +103,10 @@ class MarkdownConverter(Converter):
             if token["type"] == "blank_line":
                 continue
             result = self._convert_block(token)
-            if isinstance(result, list):
-                blocks.extend(result)
-            elif result is not None:
+            if isinstance(result, Block):
                 blocks.append(result)
+            elif result is not None:
+                blocks.extend(result)
         title = self.get_title()
         return Document(title=title, blocks=blocks, cover=None)
 
