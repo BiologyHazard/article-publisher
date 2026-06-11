@@ -13,7 +13,7 @@ cp .env.example .env
 # 然后从浏览器 Cookie 中复制 SESSDATA、bili_jct、buvid3 填入 .env
 
 # 3. 运行
-uv run python -m article_publisher bilibili md articles/article1
+uv run python -m article_publisher bilibili markdown articles/article1
 ```
 
 ---

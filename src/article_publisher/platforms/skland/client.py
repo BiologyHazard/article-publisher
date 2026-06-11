@@ -18,16 +18,43 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import aiohttp
+from aiohttp.hdrs import CONTENT_DISPOSITION
+from multidict import CIMultiDict
 from PIL import Image
 
-from article_publisher.http_client import (
-    ClientSessionWithLog,
-    gen_oss_compatible_formdata,
-)
+from article_publisher.http_client import ClientSessionWithLog
 from article_publisher.log import logger
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+def gen_oss_compatible_formdata(form_data: aiohttp.FormData) -> aiohttp.MultipartWriter:
+    """
+    生成兼容 OSS 的 FormData，重排 multipart 部分的 headers。
+
+    .. warning::
+        本函数访问了 aiohttp 的内部私有属性（``FormData._gen_form_data()``、
+        ``MultipartWriter._parts``、``payload._headers``），在 aiohttp 升级时
+        可能因内部实现变更而失效。
+
+    OSS 要求 multipart/form-data 中每个 part 的 Content-Disposition 必须在第一位，
+    aiohttp 默认生成的 multipart 顺序未定义，可能导致 OSS 无法正确解析。
+    该函数通过访问 MultipartWriter 内部结构重排 headers 来兼容 OSS。
+
+    参考文档：https://api.aliyun.com/troubleshoot?q=0006-00000109
+    """
+    writer = form_data._gen_form_data()
+    for payload, _encoding, _te_encoding in writer._parts:
+        new_headers = CIMultiDict()
+        content_disposition = payload._headers.popall(CONTENT_DISPOSITION, None)
+        # 先插入 Content-Disposition → 排在最前
+        if content_disposition is not None:
+            new_headers.extend((CONTENT_DISPOSITION, v) for v in content_disposition)
+        # 再插入其他 headers（如 Content-Type） → 排在后面
+        new_headers.extend(payload._headers.items())
+        payload._headers = new_headers
+    return writer
 
 
 # =============================================================================

@@ -93,6 +93,13 @@ NGA_AUTH_HELP = """错误：缺少 NGA Cookie
 
   示例：NGA_COOKIE=ngaPassportUid=12345; ngacn0comUserInfo=...; ..."""
 
+
+class CliError(Exception):
+    """CLI 执行过程中可预见的错误，由 main() 统一捕获并调用 sys.exit(1)。"""
+
+    pass
+
+
 CST = timezone(timedelta(hours=8), name="中国标准时间")
 """中国标准时间（UTC+8）"""
 
@@ -210,21 +217,21 @@ async def main() -> None:
     args = parser.parse_args()
 
     # 创建 converter
-    if args.source in ("markdown", "md"):
-        converter = _get_markdown_converter(markdown_file_path=Path(args.file))
-    elif args.source == "lark":
-        converter = _get_lark_converter(doc_id=args.doc_id)
-    else:
-        raise ValueError(f"未知输入源: {args.source}")
-
-    # 转换内容为 Document 对象
-    logger.info("正在转换内容 ...")
-    doc = await converter.convert()
-    logger.info(f"转换完成，共 {len(doc.blocks)} 个段落")
-    logger.info(f"标题: {doc.title}")
-
-    # 根据平台创建 publisher 并发布
     try:
+        if args.source in ("markdown", "md"):
+            converter = _get_markdown_converter(markdown_file_path=Path(args.file))
+        elif args.source == "lark":
+            converter = _get_lark_converter(doc_id=args.doc_id)
+        else:
+            raise ValueError(f"未知输入源: {args.source}")
+
+        # 转换内容为 Document 对象
+        logger.info("正在转换内容 ...")
+        doc = await converter.convert()
+        logger.info(f"转换完成，共 {len(doc.blocks)} 个段落")
+        logger.info(f"标题: {doc.title}")
+
+        # 根据平台创建 publisher 并发布
         if args.platform == "bilibili":
             await _run_bilibili(doc, args)
         elif args.platform == "skland":
@@ -233,6 +240,8 @@ async def main() -> None:
             await _run_nga(doc, args)
         else:
             raise ValueError(f"未知平台: {args.platform}")
+    except CliError:
+        sys.exit(1)
     finally:
         if args.source == "lark":
             await _cleanup_lark(cast("LarkDocxConverter", converter))
@@ -253,7 +262,7 @@ async def _run_bilibili(doc: Document, args: Namespace) -> None:
     missing = [k for k in BILIBILI_REQUIRED_ENV_KEYS if k not in cfg]
     if missing:
         logger.error(AUTH_HELP)
-        sys.exit(1)
+        raise CliError()
 
     # 构建配置
     config = BiliPublishConfig(
@@ -272,7 +281,7 @@ async def _run_bilibili(doc: Document, args: Namespace) -> None:
         hashtag_ids=(
             [int(x) for x in args.hashtags.split(",") if x] if args.hashtags else None
         ),
-        cover_path=args.cover,
+        cover_path=Path(args.cover).resolve() if args.cover else None,
     )
 
     async with BiliClient(
@@ -289,7 +298,7 @@ async def _run_skland(doc: Document, args: Namespace) -> None:
     missing = [k for k in SKLAND_REQUIRED_ENV_KEYS if k not in cfg]
     if missing:
         logger.error(SKLAND_AUTH_HELP)
-        sys.exit(1)
+        raise CliError()
 
     config = SklandPublishConfig(
         game_id=args.game_id,
@@ -310,7 +319,7 @@ async def _run_nga(doc: Document, args: Namespace) -> None:
     missing = [k for k in NGA_REQUIRED_ENV_KEYS if k not in cfg]
     if missing:
         logger.error(NGA_AUTH_HELP)
-        sys.exit(1)
+        raise CliError()
 
     config = NgaPublishConfig(fid=args.fid, tid=args.tid)
 
@@ -326,7 +335,7 @@ def _get_markdown_converter(markdown_file_path: Path) -> MarkdownConverter:
     """创建 Markdown 转换器。"""
     if not markdown_file_path.is_file():
         logger.error(f"错误：文件不存在: {markdown_file_path}")
-        sys.exit(1)
+        raise CliError()
 
     logger.info(f"📄 Markdown 文件: {markdown_file_path}")
     return MarkdownConverter(markdown_file_path)
@@ -338,7 +347,7 @@ def _get_lark_converter(doc_id: str) -> LarkDocxConverter:
     missing = [k for k in LARK_REQUIRED_ENV_KEYS if k not in cfg]
     if missing:
         logger.error(LARK_AUTH_HELP)
-        sys.exit(1)
+        raise CliError()
 
     logger.info(f"📄 飞书云文档: {doc_id}")
     return LarkDocxConverter(

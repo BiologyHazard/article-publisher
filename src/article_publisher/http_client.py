@@ -10,36 +10,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Self
 
 import aiohttp
-from aiohttp.hdrs import CONTENT_DISPOSITION
-from multidict import CIMultiDict
 
 from article_publisher.log import logger
 
 if TYPE_CHECKING:
     from aiohttp.typedefs import StrOrURL
-
-
-def gen_oss_compatible_formdata(form_data: aiohttp.FormData) -> aiohttp.MultipartWriter:
-    """
-    生成兼容 OSS 的 FormData，重排 multipart 部分的 headers。
-
-    OSS 要求 multipart/form-data 中每个 part 的 Content-Disposition 必须在第一位，
-    aiohttp 默认生成的 multipart 顺序未定义，可能导致 OSS 无法正确解析。
-    该函数通过访问 MultipartWriter 内部结构重排 headers 来兼容 OSS。
-
-    参考文档：https://api.aliyun.com/troubleshoot?q=0006-00000109
-    """
-    writer = form_data._gen_form_data()
-    for payload, _encoding, _te_encoding in writer._parts:
-        new_headers = CIMultiDict()
-        content_disposition = payload._headers.popall(CONTENT_DISPOSITION, None)
-        # 先插入 Content-Disposition → 排在最前
-        if content_disposition is not None:
-            new_headers.extend((CONTENT_DISPOSITION, v) for v in content_disposition)
-        # 再插入其他 headers（如 Content-Type） → 排在后面
-        new_headers.extend(payload._headers.items())
-        payload._headers = new_headers
-    return writer
 
 
 class ClientSessionWithLog(aiohttp.ClientSession):
@@ -102,9 +77,40 @@ class ClientSessionWithLog(aiohttp.ClientSession):
         if kwargs.get("data"):
             data = kwargs["data"]
             if isinstance(data, aiohttp.MultipartWriter):
-                logger.debug(
-                    f"[{tag} REQ] body: {(await data.as_bytes()).decode('utf-8', errors='replace')}"
-                )
+                # 避免将整个 multipart body 序列化到内存中仅用于日志记录。
+                # 改用结构化的摘要信息（字段名、文件名），减少额外开销。
+                try:
+                    parts_info: list[dict[str, Any]] = []
+                    parts = getattr(data, "_parts", None) or []
+                    for idx, part in enumerate(parts, start=1):
+                        headers = getattr(part, "headers", {}) or {}
+                        disposition = headers.get(aiohttp.hdrs.CONTENT_DISPOSITION, "")
+                        field_name: str | None = None
+                        filename: str | None = None
+                        if disposition:
+                            for item in disposition.split(";"):
+                                item = item.strip()
+                                if item.startswith("name="):
+                                    field_name = item.split("=", 1)[1].strip('"')
+                                elif item.startswith("filename="):
+                                    filename = item.split("=", 1)[1].strip('"')
+                        parts_info.append(
+                            {
+                                "index": idx,
+                                "name": field_name,
+                                "filename": filename,
+                                "content_type": headers.get(aiohttp.hdrs.CONTENT_TYPE),
+                            }
+                        )
+                    logger.debug(
+                        f"[{tag} REQ] multipart body: "
+                        f"{len(parts_info)} part(s): {parts_info}"
+                    )
+                except Exception:
+                    logger.debug(
+                        f"[{tag} REQ] multipart body: "
+                        f"<{len(getattr(data, '_parts', []))} parts>"
+                    )
             elif isinstance(data, bytes):
                 try:
                     logger.debug(f"[{tag} REQ] body (bytes): {data[:2000]}")

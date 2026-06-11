@@ -38,8 +38,8 @@ class LarkClient(ClientSessionWithLog):
         self._tenant_token = data["tenant_access_token"]
         assert self._tenant_token is not None
         # _ensure_token 后需设置 Authorization 头部供后续请求使用
-        # 直接修改 session 的默认头部
-        self._default_headers["Authorization"] = f"Bearer {self._tenant_token}"
+        # 使用公开 API headers 修改默认头部
+        self.headers["Authorization"] = f"Bearer {self._tenant_token}"
         return self._tenant_token
 
     async def _request_with_auth(

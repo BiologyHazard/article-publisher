@@ -6,9 +6,4 @@ from article_publisher.platforms.bilibili.publisher import (
     BiliPublisher,
 )
 
-__all__ = [
-    "BiliApiError",
-    "BiliClient",
-    "BiliPublishConfig",
-    "BiliPublisher",
-]
+__all__ = ["BiliApiError", "BiliClient", "BiliPublishConfig", "BiliPublisher"]

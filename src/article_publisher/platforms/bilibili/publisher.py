@@ -70,7 +70,7 @@ class BiliPublishConfig:
     image_urls: list[str] | None = None
     is_aigc: int = 0
     hashtag_ids: list[int] | None = None
-    cover_path: str | None = None
+    cover_path: Path | None = None
     """命令行传入的自定义封面图片路径，优先于 doc.cover"""
 
 
@@ -125,11 +125,11 @@ class BiliPublisher:
         if self.config.image_urls:
             return
 
-        cover_path = self.config.cover_path or doc.cover
-        if not cover_path:
+        cover = self.config.cover_path or doc.cover
+        if not cover:
             return
 
-        cover = Path(cover_path).resolve()
+        cover = cover.resolve()
         if self._dry_run:
             logger.info(f"[dry-run] 跳过封面上传: {cover}")
         else:
