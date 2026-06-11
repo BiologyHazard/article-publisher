@@ -135,14 +135,6 @@ class SklandClient(ClientSessionWithLog):
     def _log_tag(self) -> str:
         return "SKLAND"
 
-    async def authenticate(self, hypergryph_token: str) -> None:
-        """使用鹰角网络 token 完成森空岛认证（首次使用前调用）。"""
-        await self._perform_auth(hypergryph_token)
-
-    # ==================================================================
-    # 认证流程
-    # ==================================================================
-
     async def _perform_auth(self, hypergryph_token: str) -> None:
         """完成森空岛认证：HYPERGRYPH_TOKEN → grant code → cred + sign_token。"""
         grant_code = await self._get_grant_code(hypergryph_token)

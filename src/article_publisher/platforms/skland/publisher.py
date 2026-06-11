@@ -94,11 +94,9 @@ def _generate_element_id() -> str:
 class SklandPublisher(Publisher):
     """将 IR Document 发布到森空岛草稿箱。"""
 
-    def __init__(
-        self, client: SklandClient, config: SklandPublishConfig | None = None
-    ) -> None:
+    def __init__(self, client: SklandClient, config: SklandPublishConfig) -> None:
         self._client = client
-        self._config = config or SklandPublishConfig()
+        self._config = config
 
     async def publish(self, doc: Document, *, dry_run: bool = False) -> dict[str, Any]:
         """将 IR Document 转换为森空岛草稿 JSON，保存文件并输出控制台脚本。"""

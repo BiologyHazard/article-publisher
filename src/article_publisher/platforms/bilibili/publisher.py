@@ -70,6 +70,8 @@ class BiliPublishConfig:
     image_urls: list[str] | None = None
     is_aigc: int = 0
     hashtag_ids: list[int] | None = None
+    cover_path: str | None = None
+    """命令行传入的自定义封面图片路径，优先于 doc.cover"""
 
 
 def _build_summary(doc: Document) -> str:
@@ -111,16 +113,22 @@ class BiliPublisher:
         self.config = config
         self._counter = 0
 
-    async def handle_cover(self, cover_path: Path | None) -> None:
-        """上传封面图到 B站 图床并更新配置。
+    async def _handle_cover(self, doc: Document) -> None:
+        """处理封面图。
 
-        Args:
-            cover_path: 封面图片路径。为 None 或空时跳过。
+        优先级：
+        1. config.image_urls 已设置（由外部提前上传）
+        2. config.cover_path（CLI --cover 传入）
+        3. doc.cover（由转换器从源文档提取）
         """
-        if cover_path is None:
+        if self.config.image_urls:
             return
 
-        cover = cover_path.resolve()
+        cover_path = self.config.cover_path or doc.cover
+        if not cover_path:
+            return
+
+        cover = Path(cover_path).resolve()
         if self._dry_run:
             logger.info(f"[dry-run] 跳过封面上传: {cover}")
         else:
@@ -133,6 +141,9 @@ class BiliPublisher:
         """将 IR Document 发布到 B站 草稿箱。"""
         self._dry_run = dry_run
         config = self.config
+
+        # 处理封面图
+        await self._handle_cover(doc)
 
         logger.info("正在将 IR 转换为 B站 Opus 格式 ...")
         paragraphs = await self._convert_document(doc)

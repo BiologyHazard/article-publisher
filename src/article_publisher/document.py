@@ -139,3 +139,5 @@ class Document:
 
     title: str
     blocks: list[Block]
+    cover: str | None = None
+    """封面图片路径（本地文件路径，由转换器负责下载）"""

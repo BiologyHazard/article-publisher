@@ -269,18 +269,13 @@ async def _run_bilibili(doc: Document, args: Namespace) -> None:
         hashtag_ids=(
             [int(x) for x in args.hashtags.split(",") if x] if args.hashtags else None
         ),
+        cover_path=args.cover,
     )
 
     async with BiliClient(
         sessdata=cfg["SESSDATA"], bili_jct=cfg["bili_jct"], buvid3=cfg["buvid3"]
     ) as client:
-        # 创建发布器
         publisher = BiliPublisher(client, config=config)
-
-        # 上传封面图
-        await publisher.handle_cover(args.cover)
-
-        # 发布文章
         await publisher.publish(doc, dry_run=args.dry_run)
 
 

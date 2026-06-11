@@ -240,10 +240,15 @@ class LarkDocxConverter(Converter):
         if not hasattr(self, "_cached_doc_info"):
             data = await self._lark.get_json(f"/docx/v1/documents/{self.document_id}")
             doc = data["data"]["document"]
+            cover_token: str | None = None
+            cover = doc.get("cover")
+            if cover and cover.get("token"):
+                cover_token = cover["token"]
             self._cached_doc_info = {
                 "document_id": doc["document_id"],
                 "title": doc["title"],
                 "revision_id": doc["revision_id"],
+                "cover_token": cover_token,
             }
         return self._cached_doc_info
 
@@ -258,7 +263,27 @@ class LarkDocxConverter(Converter):
         blocks: list[Block] = []
         await self._walk_block(self._root_block_id, blocks, depth=0)
         title = await self.get_title()
-        return Document(title=title, blocks=blocks)
+        cover_path = await self._download_cover()
+        return Document(title=title, blocks=blocks, cover=cover_path)
+
+    async def _download_cover(self) -> str | None:
+        """下载飞书文档封面图片，返回本地路径；无封面时返回 None。"""
+        info = await self._fetch_document_info()
+        cover_token = info.get("cover_token")
+        if not cover_token:
+            return None
+
+        try:
+            logger.info(f"正在下载封面图: token={cover_token}")
+            image_data = await self._download_image(cover_token)
+            _TEMP_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+            tmp_path = _TEMP_IMAGES_DIR / f"cover_{cover_token}.png"
+            tmp_path.write_bytes(image_data)
+            logger.info(f"  → 封面下载完成: {tmp_path}")
+            return str(tmp_path)
+        except Exception as e:
+            logger.warning(f"封面下载失败: {e}")
+            return None
 
     # ------------------------------------------------------------------
     # 块数据加载
