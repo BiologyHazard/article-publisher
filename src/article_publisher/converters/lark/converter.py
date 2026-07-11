@@ -354,12 +354,16 @@ class LarkDocxConverter(Converter):
     def _elements_to_inline(
         self, elements: list[LarkTextElement]
     ) -> list[InlineElement]:
-        """将飞书元素列表转换为 IR InlineElement 列表（TextRun / Formula）。"""
+        """将飞书元素列表转换为 IR InlineElement 列表（TextRun / Formula）。
+
+        注意：content 为空的 text_run（飞书中的空白行）也会保留为空的 TextRun，
+        以确保发布后的文档保持原有段落结构。
+        """
         result: list[InlineElement] = []
         for elem in elements:
             text_run = elem.get("text_run")
             equation = elem.get("equation")
-            if text_run and text_run.get("content"):
+            if text_run is not None:
                 result.append(self._text_run_to_run(text_run))
             elif equation and equation.get("content"):
                 result.append(Formula(latex=equation["content"]))

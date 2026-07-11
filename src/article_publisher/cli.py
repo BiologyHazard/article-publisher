@@ -321,7 +321,11 @@ async def _run_nga(doc: Document, args: Namespace) -> None:
         logger.error(NGA_AUTH_HELP)
         raise CliError()
 
-    config = NgaPublishConfig(fid=args.fid, tid=args.tid)
+    pid = article = None
+    if args.tid is not None:
+        pid = article = "0"  # 编辑已有帖子时，pid=0，article=0
+
+    config = NgaPublishConfig(fid=args.fid, tid=args.tid, pid=pid, article=article)
 
     mode = "编辑" if args.tid else "发布"
     logger.info(f"NGA {mode}模式 (tid={args.tid if args.tid else '新帖'})")

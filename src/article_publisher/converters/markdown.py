@@ -347,6 +347,6 @@ class MarkdownConverter(Converter):
         attrs = token.get("attrs") or {}
         alt_text = attrs.get("alt", "")
         # Markdown 图片标题语法: ![alt](url "title") → 用作 caption/描述
-        caption = attrs.get("title") or attrs.get("alt", "")
+        caption = attrs.get("title", "")
         logger.info(f"  发现图片: {img_path}")
         return ImageBlock(source=img_path, alt_text=alt_text, caption=caption)

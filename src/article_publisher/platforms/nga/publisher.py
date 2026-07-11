@@ -211,7 +211,7 @@ class NgaPublisher(Publisher):
                 attachment_strings=attachment_strings,
                 attachment_checks=attachment_checks,
             )
-            if result:
+            if result is not None:
                 parts.append(result)
 
         return "\n".join(parts)
@@ -286,11 +286,11 @@ class NgaPublisher(Publisher):
     # Paragraph
     # ==================================================================
 
-    def _convert_paragraph(self, block: IRParagraph) -> str | None:
+    def _convert_paragraph(self, block: IRParagraph) -> str:
         """将普通段落转换为 NGA BBCode。"""
         inline = self._convert_inline(list(block.children))
         if not inline:
-            return None
+            return ""
 
         text = inline
         if block.align is Alignment.CENTER:
@@ -360,7 +360,7 @@ class NgaPublisher(Publisher):
         if img_path.name in self._uploaded_images:
             return self._uploaded_images[img_path.name].bbcode
 
-        caption = block.caption or block.alt_text or ""
+        caption = block.caption or ""
 
         if dry_run:
             logger.info(f"[dry-run] 跳过上传: {img_path.name}")
@@ -416,7 +416,7 @@ class NgaPublisher(Publisher):
                 attachment_strings=attachment_strings,
                 attachment_checks=attachment_checks,
             )
-            if result:
+            if result is not None:
                 children_bbcode.append(result)
 
         if not children_bbcode:
