@@ -9,6 +9,26 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+__all__ = [
+    "Alignment",
+    "Block",
+    "Blockquote",
+    "CodeBlock",
+    "Divider",
+    "Document",
+    "Formula",
+    "Heading",
+    "ImageBlock",
+    "InlineElement",
+    "ListItem",
+    "Node",
+    "OrderedList",
+    "Paragraph",
+    "TextRun",
+    "UnorderedList",
+]
+
+
 class Alignment(Enum):
     LEFT = auto()
     CENTER = auto()
