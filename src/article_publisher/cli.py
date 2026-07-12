@@ -11,6 +11,8 @@
   uv run -m article_publisher nga lark <doc_id> --fid 516
 """
 
+import dataclasses
+import json
 import sys
 from argparse import (
     ArgumentParser,
@@ -230,6 +232,14 @@ async def main() -> None:
         doc = await converter.convert()
         logger.info(f"转换完成，共 {len(doc.blocks)} 个段落")
         logger.info(f"标题: {doc.title}")
+
+        # dry-run 模式下打印 converter 处理后的完整中间表示
+        if args.dry_run:
+            logger.info("=" * 60)
+            logger.info("  [dry-run] Converter IR Document 预览：")
+            logger.info("=" * 60)
+            print(json.dumps(dataclasses.asdict(doc), ensure_ascii=False, indent=2))
+            logger.info("=" * 60)
 
         # 根据平台创建 publisher 并发布
         if args.platform == "bilibili":
