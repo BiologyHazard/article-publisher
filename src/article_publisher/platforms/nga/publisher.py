@@ -108,14 +108,13 @@ class NgaPublisher(Publisher):
         title = doc.title
         logger.info(f"标题: {title}")
 
+        logger.info("=" * 60)
+        logger.info("  [dry-run] NGA BBS 代码预览：")
+        logger.info("=" * 60)
+        print(bbcode)
+        logger.info("=" * 60)
+
         if dry_run:
-            logger.info("=" * 60)
-            logger.info("  [dry-run] NGA BBS 代码预览：")
-            logger.info("=" * 60)
-            print(bbcode)
-            logger.info("=" * 60)
-            logger.info("  运行时不带 --dry-run 将会上传图片并发布帖子。")
-            logger.info("=" * 60)
             return {
                 "platform": "nga",
                 "status": "dry_run",
