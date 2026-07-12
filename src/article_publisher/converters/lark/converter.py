@@ -342,7 +342,8 @@ class LarkDocxConverter(Converter):
             image = await self._client.download_media(token)
             # 存到项目内临时目录
             TEMP_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-            filename = image.filename or f"{token}.png"
+            # 用 token 前缀确保文件名唯一，避免同名文件覆盖
+            filename = f"{token}_{image.filename}" if image.filename else f"{token}.png"
             tmp_path = TEMP_IMAGES_DIR / filename
             tmp_path.write_bytes(image.buffer)
             logger.info(f"  → 下载完成: {tmp_path}")
