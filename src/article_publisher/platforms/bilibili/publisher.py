@@ -28,6 +28,8 @@ from article_publisher.document import (
     UnorderedList,
 )
 from article_publisher.document import Paragraph as IRParagraph
+from article_publisher.platforms.bilibili._wbi import BILI_API_BASE
+from article_publisher.platforms.bilibili.client import BiliApiError
 from article_publisher.platforms.bilibili.opus import (
     make_blockquote_paragraph,
     make_code_paragraph,
@@ -60,6 +62,11 @@ class BiliPublishConfig:
 
     category_id: int = 15
     article_id: int | None = None
+    """草稿 ID（更新已有草稿时传入）"""
+    edit_article_id: int | None = None
+    """已发布文章 ID（编辑已发布文章时传入）"""
+    edit_dyn_id_str: str | None = None
+    """已发布文章的动态 ID（编辑时可选，内部自动获取）"""
     private_pub: int = 2
     reprint: int = 1
     original: int = 1
@@ -138,10 +145,47 @@ class BiliPublisher:
             self.config.image_urls = [image_info["url"]]
             logger.info(f"  → {image_info['url']}")
 
+    async def _get_article_detail(self, article_id: int) -> dict[str, Any]:
+        """获取已发布文章的详情（用于编辑模式）。"""
+        from urllib.parse import urlencode
+
+        url = f"{BILI_API_BASE}/x/article/creative/article/view"
+        params = await self.client.sign({"id": article_id, "csrf": self.client.csrf})
+        query = urlencode(params)
+        resp = await self.client.request("GET", f"{url}?{query}")
+        result = await resp.json()
+        if result.get("code") != 0:
+            raise BiliApiError(
+                result.get("code", -1),
+                result.get("message", "获取文章详情失败"),
+                result,
+            )
+        return result["data"]
+
     async def publish(self, doc: Document, *, dry_run: bool = False) -> dict[str, Any]:
-        """将 IR Document 发布到 B站 草稿箱。"""
+        """将 IR Document 发布到 B站 草稿箱或编辑已发布文章。"""
         self._dry_run = dry_run
         config = self.config
+        is_edit = config.edit_article_id is not None
+
+        if is_edit:
+            logger.info(f"编辑模式: article_id={config.edit_article_id}")
+
+            if dry_run:
+                dyn_id_str = "DRY_RUN_DYN_ID"
+                mid = "0"
+            else:
+                # 获取文章详情以获取 dyn_id_str
+                article_detail = await self._get_article_detail(config.edit_article_id)
+                dyn_id_str = article_detail.get("dyn_id_str", "")
+                logger.info(f"  动态 ID: {dyn_id_str}")
+
+                # 获取用户 mid 用于生成 upload_id
+                nav_resp = await self.client.request(
+                    "GET", f"{BILI_API_BASE}/x/web-interface/nav"
+                )
+                nav_data = await nav_resp.json()
+                mid = nav_data.get("data", {}).get("mid", "0")
 
         # 处理封面图
         await self._handle_cover(doc)
@@ -155,53 +199,101 @@ class BiliPublisher:
         logger.info(f"标题: {title}")
         logger.info(f"摘要: {summary}")
 
-        arg: ArgPayload = {
-            "type": 4,
-            "template_id": 1,
-            "category_id": config.category_id,
-            "title": title,
-            "private_pub": config.private_pub,
-            "reprint": config.reprint,
-            "original": config.original,
-            "list_id": config.list_id,
-            "comment_selected": config.comment_selected,
-            "up_closed_reply": config.up_closed_reply,
-            "timer_pub_time": config.timer_pub_time,
-            "only_fans_level": 0,
-            "only_fans_dnd": 0,
-            "summary": summary,
-            "opus": {
+        if is_edit:
+            # ---- 编辑已发布文章 ----
+            timestamp = int(time.time() * 1000)
+            upload_id = f"{mid}_{timestamp}_{timestamp % 10000}"
+
+            # 构建 opus 内容体（与草稿格式一致）
+            opus_body: dict[str, Any] = {
                 "opus_source": 2,
                 "title": title,
                 "content": {"paragraphs": paragraphs},
-                "pub_info": {"editor_version": "eva3-3.0.0"},
-                "attachments": {"is_aigc": config.is_aigc},
-            },
-        }
-        if config.article_id is not None:
-            arg["article_id"] = config.article_id
-        if config.image_urls:
-            arg["image_urls"] = config.image_urls
-        if config.hashtag_ids:
-            arg["hashtag_ids"] = config.hashtag_ids
+                "pub_info": {"editor_version": "eva3-4.0.0"},
+                "article": {
+                    "category_id": config.category_id,
+                    "list_id": config.list_id,
+                    "originality": config.original,
+                    "reproduced": 2 if config.reprint == 1 else 1,
+                    "cover": (
+                        [{"url": url} for url in (config.image_urls or [])]
+                        if config.image_urls
+                        else []
+                    ),
+                },
+            }
 
-        payload: Payload = {"arg": arg}
+            # 处理话题
+            topic = None
+            if config.hashtag_ids:
+                topic_parts: list[dict[str, Any]] = []
+                # 简化处理：默认使用第一个话题
+                topic = {"id": config.hashtag_ids[0], "name": ""}
 
-        logger.info("Payload: ")
-        payload_json = json.dumps(payload, ensure_ascii=False, indent=2)
-        print(payload_json)
+            logger.info("正在编辑已发布文章 ...")
+            result = await self.client.edit_opus(
+                dyn_id_str=dyn_id_str,
+                upload_id=upload_id,
+                opus=opus_body,
+                option={
+                    "aigc": config.is_aigc,
+                    "close_comment": config.up_closed_reply,
+                    "up_choose_comment": config.comment_selected,
+                },
+                topic=topic,
+            )
+            dyn_id = result["data"]["dyn_id_str"]
+            logger.info(f"✅ 编辑成功！动态 ID: {dyn_id}")
+            return result
+        else:
+            # ---- 保存到草稿箱 ----
+            arg: ArgPayload = {
+                "type": 4,
+                "template_id": 1,
+                "category_id": config.category_id,
+                "title": title,
+                "private_pub": config.private_pub,
+                "reprint": config.reprint,
+                "original": config.original,
+                "list_id": config.list_id,
+                "comment_selected": config.comment_selected,
+                "up_closed_reply": config.up_closed_reply,
+                "timer_pub_time": config.timer_pub_time,
+                "only_fans_level": 0,
+                "only_fans_dnd": 0,
+                "summary": summary,
+                "opus": {
+                    "opus_source": 2,
+                    "title": title,
+                    "content": {"paragraphs": paragraphs},
+                    "pub_info": {"editor_version": "eva3-3.0.0"},
+                    "attachments": {"is_aigc": config.is_aigc},
+                },
+            }
+            if config.article_id is not None:
+                arg["article_id"] = config.article_id
+            if config.image_urls:
+                arg["image_urls"] = config.image_urls
+            if config.hashtag_ids:
+                arg["hashtag_ids"] = config.hashtag_ids
 
-        if dry_run:
-            return {}
+            payload: Payload = {"arg": arg}
 
-        logger.info("正在保存到草稿箱 ...")
-        result = await self.client.save_draft(payload)
-        aid = result["data"]["article_id"]
-        logger.info(f"✅ 成功！草稿 ID: {aid}")
-        logger.info(
-            f"可在创作中心查看: https://member.bilibili.com/platform/upload/text/new-edit?aid={aid}"
-        )
-        return result
+            logger.info("Payload: ")
+            payload_json = json.dumps(payload, ensure_ascii=False, indent=2)
+            print(payload_json)
+
+            if dry_run:
+                return {}
+
+            logger.info("正在保存到草稿箱 ...")
+            result = await self.client.save_draft(payload)
+            aid = result["data"]["article_id"]
+            logger.info(f"✅ 成功！草稿 ID: {aid}")
+            logger.info(
+                f"可在创作中心查看: https://member.bilibili.com/platform/upload/text/new-edit?aid={aid}"
+            )
+            return result
 
     async def _convert_document(self, doc: Document) -> list[Paragraph]:
         """将 IR Document 的 blocks 转换为 B站 Opus paragraphs 列表。"""

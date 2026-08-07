@@ -331,3 +331,28 @@ class SklandClient(ClientSessionWithLog):
             size=file_size,
             image_id=sts_body["x:image_id"],
         )
+
+    # ==================================================================
+    # 文章详情与编辑
+    # ==================================================================
+
+    async def get_item_detail(self, item_id: str) -> dict[str, Any]:
+        """获取已发布文章的详情，包含 tags、document 等。"""
+        data = await self._request_with_sign(
+            "GET", f"/web/v2/item", params={"id": item_id}
+        )
+        return data["data"]
+
+    async def update_item(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """
+        更新已发布的文章（编辑模式）。
+
+        参数 payload 需要包含:
+            id, volumeId, title, gameId, cateId, viewKind, origin,
+            tags, document, downloadEnable, coverImageId, imageList,
+            videoList, tagIds, cover
+        """
+        data = await self._request_with_sign(
+            "POST", "/web/v2/item/upd", json_body=payload
+        )
+        return data["data"]

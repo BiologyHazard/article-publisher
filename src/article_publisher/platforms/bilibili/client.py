@@ -185,3 +185,54 @@ class BiliClient(ClientSessionWithLog):
                 result.get("code", -1), result.get("message", "保存草稿失败"), result
             )
         return result
+
+    # ------------------------------------------------------------------
+    # 编辑已发布文章
+    # ------------------------------------------------------------------
+
+    async def edit_opus(
+        self,
+        dyn_id_str: str,
+        upload_id: str,
+        opus: dict[str, Any],
+        *,
+        scene: int = 12,
+        option: dict[str, Any] | None = None,
+        meta: dict[str, Any] | None = None,
+        topic: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """
+        编辑已发布的 Opus 专栏文章。
+
+        参数:
+            dyn_id_str: 文章的动态 ID（从 article/view 接口获取的 dyn_id_str）
+            upload_id: 上传会话 ID，格式 ``{mid}_{timestamp}_{random}``
+            opus: Opus 内容体（与 save_draft 的 opus 字段结构一致）
+            scene: 场景值，默认 12（编辑）
+            option: 附加选项（aigc、评论等）
+            meta: 元信息（app_meta 等）
+            topic: 话题信息
+        """
+        url = f"{BILI_API_BASE}/x/dynamic/feed/edit/opus"
+        params = await self.sign({"csrf": self.csrf})
+
+        opus_req: dict[str, Any] = {
+            "upload_id": upload_id,
+            "opus": opus,
+            "scene": scene,
+            "meta": meta
+            or {"app_meta": {"from": "edit.creative.h5", "mobi_app": "web"}},
+            "option": option or {"aigc": 2, "close_comment": 0, "up_choose_comment": 0},
+        }
+        if topic:
+            opus_req["topic"] = topic
+
+        body = {"raw_content": "", "opus_req": opus_req, "dyn_id_str": dyn_id_str}
+
+        resp = await self.request("POST", url, params=params, json=body)
+        result = await resp.json()
+        if result.get("code") != 0:
+            raise BiliApiError(
+                result.get("code", -1), result.get("message", "编辑文章失败"), result
+            )
+        return result

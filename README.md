@@ -48,22 +48,35 @@ uv run python -m article_publisher bilibili markdown articles/article1
 ### B站
 
 ```bash
+```bash
+# 发布到草稿箱
 uv run -m article_publisher bilibili markdown articles/article1
 uv run -m article_publisher bilibili lark <document_id>
+
+# 编辑已发布文章
+uv run -m article_publisher bilibili --edit <文章ID> markdown articles/article1
 ```
 
 ### 森空岛
 
 ```bash
+# 生成草稿（输出浏览器控制台脚本到 localStorage）
 uv run -m article_publisher skland markdown articles/article1
 uv run -m article_publisher skland lark <document_id>
+
+# 编辑已发布文章
+uv run -m article_publisher skland --item-id <文章ID> markdown articles/article1
 ```
 
 ### NGA
 
 ```bash
+# 发布新帖
 uv run -m article_publisher nga markdown articles/article1 --fid 516
 uv run -m article_publisher nga lark <document_id> --fid 516
+
+# 编辑已有帖子
+uv run -m article_publisher nga --tid <帖子ID> markdown articles/article1 --fid 516
 ```
 
 ### 输出示例
@@ -116,6 +129,7 @@ uv run -m article_publisher nga lark <document_id> --fid 516
 - [x] **图片上传**（双通道）— 首选 `upload_bfs`，失败自动回退 `upcover`
 - [x] **多图片支持** — 一篇文章任意数量图片
 - [x] **保存草稿** — 新建/更新草稿
+- [x] **编辑已发布文章** — B站 (`--edit <文章ID>`)、森空岛 (`--item-id <文章ID>`)、NGA (`--tid <帖子ID>`)
 - [x] **标题格式** — 使用 `para_type: 9` + `heading_type` 的正确格式
 - [x] **`pub_info`** / **`attachments`** — 编辑器版本标识和 AI 声明
 - [x] **payload 导出** — 每次保存时导出 `payload.json` 用于调试
@@ -164,12 +178,24 @@ uv run -m article_publisher nga lark <document_id> --fid 516
 ### 命令行选项
 
 ```bash
-uv run python main.py articles/article1              # Markdown 模式
-uv run python main.py --lark <doc_id>                 # 飞书云文档模式
-uv run python main.py --lark <doc_id> --category 4    # 指定分区
-uv run python main.py --lark <doc_id> --private       # 仅自己可见
-uv run python -m article_publisher --update 350908 md articles/article1  # 更新已有草稿
+uv run python main.py articles/article1                           # Markdown 模式
+uv run python main.py --lark <doc_id>                              # 飞书云文档模式
+uv run python main.py --lark <doc_id> --category 4                 # 指定分区
+uv run python main.py --lark <doc_id> --private                    # 仅自己可见
+uv run -m article_publisher --update 350908 md articles/article1   # 更新已有草稿
+uv run -m article_publisher --edit 51387979 md articles/article1   # 编辑已发布 B站 文章
+uv run -m article_publisher --item-id 5988027 md articles/article1 # 编辑已发布森空岛文章
 ```
+
+### 编辑已发布文章
+
+各平台均支持编辑已发布的内容：
+
+| 平台 | 参数 | 说明 |
+|------|------|------|
+| B站 | `--edit <文章ID>` | 通过 `edit/opus` API 直接更新已发布文章 |
+| 森空岛 | `--item-id <文章ID>` | 通过 `item/upd` API 更新（保留标签、合集等元数据） |
+| NGA | `--tid <帖子ID>` | 先删旧附件再重新提交（原有功能） |
 
 ### 指定分区
 
@@ -197,6 +223,20 @@ doc = converter.convert()
 config = BiliPublishConfig(article_id=350791)
 publisher = BiliPublisher(client, config=config)
 result = publisher.publish(doc)
+```
+
+### 编辑已发布文章（通过 Python API）
+
+```python
+# B站
+config = BiliPublishConfig(edit_article_id=51387979)
+publisher = BiliPublisher(client, config=config)
+result = await publisher.publish(doc)
+
+# 森空岛
+config = SklandPublishConfig(item_id="5988027")
+publisher = SklandPublisher(client, config=config)
+result = await publisher.publish(doc)
 ```
 
 ---
@@ -270,3 +310,9 @@ result = publisher.publish(doc)
 - 请遵守 [Bilibili 用户协议](https://www.bilibili.com/protocal/licence.html)
 - 请勿用于发布违规内容
 - 使用者需自行承担相关责任
+
+## TODO
+
+- [ ] 森空岛不支持预设颜色以外的自定义颜色
+- [ ] NGA 不支持预设颜色以外的自定义颜色
+- [ ] NGA 自动回退全角标点

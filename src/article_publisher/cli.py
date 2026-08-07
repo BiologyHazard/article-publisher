@@ -176,6 +176,9 @@ def _add_bilibili_options(parser: ArgumentParser) -> None:
     parser.add_argument(
         "--update", type=int, default=None, help="更新已有草稿（传入草稿 ID）"
     )
+    parser.add_argument(
+        "--edit", type=int, default=None, help="编辑已发布文章（传入文章 ID）"
+    )
 
 
 def _add_skland_options(parser: ArgumentParser) -> None:
@@ -189,6 +192,9 @@ def _add_skland_options(parser: ArgumentParser) -> None:
     parser.add_argument("--cover", type=str, default=None, help="自定义封面图片路径")
     parser.add_argument("--publish-time", type=str, default=None, help="定时发布时间戳")
     parser.add_argument("--dry-run", action="store_true", help="仅转换不发布")
+    parser.add_argument(
+        "--item-id", type=str, default=None, help="编辑已发布文章（传入文章 ID）"
+    )
 
 
 def _add_nga_options(parser: ArgumentParser) -> None:
@@ -275,9 +281,15 @@ async def _run_bilibili(doc: Document, args: Namespace) -> None:
         raise CliError()
 
     # 构建配置
+    # 检查编辑模式
+    if args.edit and args.update:
+        logger.error("错误：--edit 和 --update 不能同时使用")
+        raise CliError()
+
     config = BiliPublishConfig(
         category_id=args.category,
         article_id=args.update,
+        edit_article_id=args.edit,
         private_pub=1 if args.private else 2,
         reprint=1,
         original=1 if args.original else 0,
@@ -315,6 +327,7 @@ async def _run_skland(doc: Document, args: Namespace) -> None:
         cate_id=args.cate_id,
         cover_path=Path(args.cover).resolve() if args.cover else None,
         publish_time=args.publish_time,
+        item_id=args.item_id,
     )
 
     async with SklandClient(cfg["HYPERGRYPH_TOKEN"]) as client:
