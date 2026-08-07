@@ -7,48 +7,57 @@
 ## 目录
 
 - [森空岛（skland.com）文章格式与 API 文档](#森空岛sklandcom文章格式与-api-文档)
-    - [目录](#目录)
-    - [1. API 基础](#1-api-基础)
-        - [前端框架](#前端框架)
-    - [2. 认证方式](#2-认证方式)
-        - [Token 存储](#token-存储)
-        - [认证流程](#认证流程)
-        - [API 请求示例](#api-请求示例)
-        - [Cookie](#cookie)
-    - [3. 草稿存储机制](#3-草稿存储机制)
-        - [Key 格式](#key-格式)
-        - [草稿列表格式](#草稿列表格式)
-        - [草稿 ID](#草稿-id)
-    - [4. Draft 顶层数据结构](#4-draft-顶层数据结构)
-        - [完整的 Draft JSON 结构](#完整的-draft-json-结构)
-    - [5. 文档元素（document）](#5-文档元素document)
-        - [5.1 标题（header）](#51-标题header)
-        - [5.2 正文段落（paragraph）](#52-正文段落paragraph)
-        - [5.3 引用块（quote）](#53-引用块quote)
-        - [5.4 有序列表（ordered-list）](#54-有序列表ordered-list)
-        - [5.5 无序列表（unordered-list）](#55-无序列表unordered-list)
-        - [5.6 分隔线（dividing-line）](#56-分隔线dividing-line)
-        - [5.7 图片区域（image-wrapper）](#57-图片区域image-wrapper)
-        - [5.8 内嵌B站视频（external-video）](#58-内嵌b站视频external-video)
-        - [5.9 表情（emoji）](#59-表情emoji)
-        - [5.10 贴纸（sticker）](#510-贴纸sticker)
-        - [5.11 @提及（mention）](#511-提及mention)
-        - [5.12 超链接（link）](#512-超链接link)
-    - [6. Model 元数据字段详解](#6-model-元数据字段详解)
-        - [字段说明](#字段说明)
-        - [Tag 对象完整结构](#tag-对象完整结构)
-    - [7. 图片上传流程（基于实际抓包）](#7-图片上传流程基于实际抓包)
-        - [完整时序图](#完整时序图)
-        - [Step 1: 获取 OSS STS 凭证](#step-1-获取-oss-sts-凭证)
-        - [Step 2: 上传文件到 OSS（FormData + POST）](#step-2-上传文件到-ossformdata--post)
-        - [Step 3: 引用图片](#step-3-引用图片)
-        - [图片 CDN URL 格式](#图片-cdn-url-格式)
-        - [与源码对照](#与源码对照)
-        - [安全/签名注意事项](#安全签名注意事项)
-            - [Sign 算法（已验证 ✅）](#sign-算法已验证-)
-            - [完整示例（已验证通过 ✅）](#完整示例已验证通过-)
-        - [文档部分元素类型概览](#文档部分元素类型概览)
-    - [参考资料](#参考资料)
+  - [目录](#目录)
+  - [1. API 基础](#1-api-基础)
+    - [前端框架](#前端框架)
+  - [2. 认证方式](#2-认证方式)
+    - [Token 存储](#token-存储)
+    - [认证流程](#认证流程)
+    - [API 请求示例](#api-请求示例)
+    - [Cookie](#cookie)
+  - [3. 草稿存储机制](#3-草稿存储机制)
+    - [Key 格式](#key-格式)
+    - [草稿列表格式](#草稿列表格式)
+    - [草稿 ID](#草稿-id)
+  - [4. Draft 顶层数据结构](#4-draft-顶层数据结构)
+    - [完整的 Draft JSON 结构](#完整的-draft-json-结构)
+  - [5. 文档元素（document）](#5-文档元素document)
+    - [5.1 标题（header）](#51-标题header)
+    - [5.2 正文段落（paragraph）](#52-正文段落paragraph)
+    - [5.3 引用块（quote）](#53-引用块quote)
+    - [5.4 有序列表（ordered-list）](#54-有序列表ordered-list)
+    - [5.5 无序列表（unordered-list）](#55-无序列表unordered-list)
+    - [5.6 分隔线（dividing-line）](#56-分隔线dividing-line)
+    - [5.7 图片区域（image-wrapper）](#57-图片区域image-wrapper)
+    - [5.8 内嵌B站视频（external-video）](#58-内嵌b站视频external-video)
+    - [5.9 表情（emoji）](#59-表情emoji)
+    - [5.10 贴纸（sticker）](#510-贴纸sticker)
+    - [5.11 @提及（mention）](#511-提及mention)
+    - [5.12 超链接（link）](#512-超链接link)
+  - [6. Model 元数据字段详解](#6-model-元数据字段详解)
+    - [字段说明](#字段说明)
+    - [Tag 对象完整结构](#tag-对象完整结构)
+  - [7. 图片上传流程（基于实际抓包）](#7-图片上传流程基于实际抓包)
+    - [完整时序图](#完整时序图)
+    - [Step 1: 获取 OSS STS 凭证](#step-1-获取-oss-sts-凭证)
+    - [Step 2: 上传文件到 OSS（FormData + POST）](#step-2-上传文件到-ossformdata--post)
+    - [Step 3: 引用图片](#step-3-引用图片)
+    - [图片 CDN URL 格式](#图片-cdn-url-格式)
+    - [与源码对照](#与源码对照)
+    - [安全/签名注意事项](#安全签名注意事项)
+      - [Sign 算法（已验证 ✅）](#sign-算法已验证-)
+      - [完整示例（已验证通过 ✅）](#完整示例已验证通过-)
+    - [文档部分元素类型概览](#文档部分元素类型概览)
+  - [8. 编辑已发布文章 API](#8-编辑已发布文章-api)
+    - [8.1 获取文章详情](#81-获取文章详情)
+    - [8.2 更新文章](#82-更新文章)
+    - [8.3 Block 格式详解（与草稿的 document 不同）](#83-block-格式详解与草稿的-document-不同)
+      - [Text Block（文本块）](#text-block文本块)
+      - [Image Block（图片块）](#image-block图片块)
+      - [HorizontalLine Block（分隔线）](#horizontalline-block分隔线)
+    - [8.4 编辑流程](#84-编辑流程)
+    - [8.5 已发布文章列表](#85-已发布文章列表)
+  - [参考资料](#参考资料)
 
 ---
 
@@ -1127,6 +1136,180 @@ sign = compute_sign(
 
 ---
 
+## 8. 编辑已发布文章 API
+
+森空岛提供 API **直接更新已发布文章的内容**，无需经过本地草稿箱。
+
+### 8.1 获取文章详情
+
+```
+GET https://zonai.skland.com/web/v2/item?id={itemId}
+```
+
+**认证：** 需要签名（与草稿 API 相同）
+
+**响应结构：**
+```json
+{
+  "code": 0,
+  "data": {
+    "item": {
+      "id": "5988027",
+      "title": "文章标题",
+      "gameId": 1,
+      "cateId": 4,
+      "viewKind": 3,
+      "origin": 1,
+      "coverImageId": "6a527be1...",
+      "volumeId": "2009530918364078080",
+      "downloadEnable": 1,
+      "document": {
+        "id": "wRHhxsMFx42R",
+        "version": "1.0.0",
+        "blockIds": ["..."],
+        "blockMap": { "...": { ... } },
+        "authorMap": { "...": "..." }
+      },
+      "imageList": [],
+      "videoList": [],
+      "tagIds": [1485, 1506, 474],
+      "status": 1,
+      "auditStatus": 2
+    },
+    "tags": [
+      { "id": 1485, "name": "丛林症结创作者应援", ... },
+      { "id": 474, "name": "明日方舟", ... }
+    ]
+  }
+}
+```
+
+### 8.2 更新文章
+
+```
+POST https://zonai.skland.com/web/v2/item/upd
+```
+
+**认证：** 需要签名
+
+**请求体结构：**
+```json
+{
+  "id": "5988027",
+  "volumeId": "2009530918364078080",
+  "title": "新标题",
+  "gameId": 1,
+  "cateId": 4,
+  "viewKind": 3,
+  "origin": 1,
+  "tags": [ ... ],
+  "tagIds": [1485, 1506, 474],
+  "document": {
+    "id": "新文档ID",
+    "version": "1.0.0",
+    "blockIds": ["block1", "block2", ...],
+    "blockMap": {
+      "block1": { ... },
+      "block2": { ... }
+    }
+  },
+  "downloadEnable": 1,
+  "coverImageId": "封面图片ID",
+  "cover": { "id": "封面图片ID" },
+  "imageList": [],
+  "videoList": [],
+  "prePublishOn": false,
+  "isAIGCStatementOn": false
+}
+```
+
+### 8.3 Block 格式详解（与草稿的 document 不同）
+
+编辑模式使用 **Block 格式**（`blockIds` + `blockMap`），而不是草稿的扁平元素数组。
+
+#### Text Block（文本块）
+
+```json
+{
+  "kind": "text",
+  "id": "唯一ID",
+  "parentId": "文档根ID",
+  "align": "left",
+  "text": {
+    "inlineElements": [
+      { "kind": "text", "text": { "text": "正文内容" } }
+    ],
+    "kind": "body"
+  }
+}
+```
+
+`text.kind` 取值：
+| 值 | 对应 |
+|------|------|
+| `body` | 普通段落 |
+| `heading1` | 一级标题 |
+| `heading2` | 二级标题 |
+| `heading3` | 三级标题 |
+
+#### Image Block（图片块）
+
+```json
+{
+  "kind": "image",
+  "id": "唯一ID",
+  "parentId": "文档根ID",
+  "align": "left",
+  "image": {
+    "id": "图片ID",
+    "url": "https://bbs.hycdn.cn/image/.../xxx.webp",
+    "width": 3840,
+    "height": 2160,
+    "format": "webp",
+    "size": 138860,
+    "description": "图片描述",
+    "isAIGC": false
+  }
+}
+```
+
+#### HorizontalLine Block（分隔线）
+
+```json
+{
+  "kind": "horizontalLine",
+  "id": "唯一ID",
+  "parentId": "文档根ID",
+  "align": "left",
+  "horizontalLine": { "kind": "4" }
+}
+```
+
+### 8.4 编辑流程
+
+```mermaid
+sequenceDiagram
+    participant Tool as 发布工具
+    participant API as zonai.skland.com
+
+    Tool->>API: GET /web/v2/item?id={itemId}
+    API-->>Tool: 文章详情（tags、volumeId、document 等）
+    Tool->>Tool: 转换 IR Document 为 Block 格式
+    Tool->>Tool: 上传新图片（如有）
+    Tool->>API: POST /web/v2/item/upd
+    API-->>Tool: 更新后的文章数据
+```
+
+### 8.5 已发布文章列表
+
+```
+GET /web/v2/creation/item/web-list?viewKind=3&pageNumber=1&pageSize=10&auditStatus=2&sortType=2
+```
+
+用于获取用户已发布的所有文章列表，从中找到需要编辑的文章 ID。
+
+---
+
 ## 参考资料
 
 - 前端 JS Bundle: `https://bbs.hycdn.cn/skland-fe-static/skland-bbs/main.a67220ef.js`
@@ -1134,3 +1317,6 @@ sign = compute_sign(
 - OSS STS API: `POST https://zonai.skland.com/web/v1/oss/sts`
 - 编辑器地址: `https://www.skland.com/editor/article?draftId={draftId}`
 - 发布管理: `https://www.skland.com/publish-manager?viewKind=3&postKind=100`
+- 文章编辑 API: `POST https://zonai.skland.com/web/v2/item/upd`
+- 文章详情 API: `GET https://zonai.skland.com/web/v2/item?id={itemId}`
+- 文章列表 API: `GET /web/v2/creation/item/web-list`

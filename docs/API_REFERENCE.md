@@ -124,6 +124,9 @@ def sign_wbi_params(params: dict, mixin_key: str) -> dict:
 | `/x/web-interface/nav` | GET | 获取 WBI 签名密钥 + 用户信息 | ❌ |
 | `/x/dynamic/feed/draw/upload_bfs` | POST | **Opus 图片上传**（首选） | **✅** |
 | `/x/dynamic/feed/article/draft/add` | POST | **保存/更新专栏草稿** | **✅** |
+| `/x/dynamic/feed/edit/opus` | POST | **编辑已发布专栏文章** | **✅** |
+| `/x/article/creative/article/view` | GET | 获取已发布文章详情 | ✅ |
+| `/x/article/edit_times` | GET | 查询文章可编辑次数 | ✅ |
 | `/x/article/creative/article/upcover` | POST | 图片上传（备用方案） | ❌ |
 
 ### 3.2 已验证但未使用的接口
@@ -667,7 +670,27 @@ GET https://api.bilibili.com/x/article/creative/draft/list
 └──────────────────────┬──────────────────────────────┘
                        ↓
 ┌─────────────────────────────────────────────────────┐
-│ 6. 在浏览器中查看                                     │
+│ 6. 编辑已发布文章                                     │
+│    POST /x/dynamic/feed/edit/opus                   │
+│    + WBI 签名                                        │
+│    Body: { raw_content, opus_req, dyn_id_str }       │
+│    → dyn_id_str, dyn_type, dyn_rid                   │
+│                                                      │
+│    opus_req 字段:                                    │
+│    - upload_id: "{mid}_{timestamp}_{random}"         │
+│    - opus: 与草稿相同的 Opus 内容体                   │
+│    - scene: 12                                       │
+│    - meta: {"app_meta": {"from": "edit.creative.h5", │
+│              "mobi_app": "web"}}                     │
+│    - option: {"aigc":2, "close_comment":0,           │
+│               "up_choose_comment":0}                 │
+│    - topic: { id, name } (可选)                      │
+│    opus.article: { category_id, list_id,             │
+│                    originality, reproduced, cover }   │
+└──────────────────────┬──────────────────────────────┘
+                       ↓
+┌─────────────────────────────────────────────────────┐
+│ 7. 在浏览器中查看                                     │
 │    https://member.bilibili.com/platform/upload/      │
 │    text/new-edit?aid={article_id}                    │
 └─────────────────────────────────────────────────────┘
@@ -677,4 +700,4 @@ GET https://api.bilibili.com/x/article/creative/draft/list
 
 > 本文档基于对 B站 创作中心 Web 版（EVA3 编辑器）的实际抓包分析编写，
 > 接口和行为可能随 B站 前端更新而变化。
-> 最后更新：2026-06-02
+> 最后更新：2026-07-12
