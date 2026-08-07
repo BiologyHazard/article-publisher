@@ -46,6 +46,21 @@ _HEADING_SIZE: dict[int, str] = {1: "150%", 2: "130%", 3: "120%"}
 _INLINE_CODE_COLOR = "#c7254e"
 """NGA 行内代码颜色"""
 
+_MINUS_SIGN = "\u2212"
+"""U+2212 减号（MINUS SIGN，−），NGA 不支持，需替换为普通连字符。"""
+
+_HYPHEN_MINUS = "-"
+"""U+002D 普通连字符（HYPHEN-MINUS，-）。"""
+
+
+def _sanitize_text(text: str) -> str:
+    """清理 NGA 不支持的字符。
+
+    NGA 不支持某些特殊文本，需要人工替换：
+    遇到“−”（U+2212 MINUS SIGN）时替换为“-”（U+002D HYPHEN-MINUS）。
+    """
+    return text.replace(_MINUS_SIGN, _HYPHEN_MINUS)
+
 
 @dataclass
 class NgaPublishConfig:
@@ -105,7 +120,7 @@ class NgaPublisher(Publisher):
         )
         logger.info(f"转换完成，共 {len(bbcode)} 字符")
 
-        title = doc.title
+        title = _sanitize_text(doc.title)
         logger.info(f"标题: {title}")
 
         logger.info("=" * 60)
@@ -312,7 +327,7 @@ class NgaPublisher(Publisher):
 
     def _textrun_to_bbcode(self, run: TextRun) -> str:
         """将 IR TextRun 转换为 NGA BBCode 字符串。"""
-        text = run.text
+        text = _sanitize_text(run.text)
 
         if run.link_url is not None:
             return f"[url={run.link_url}]{text}[/url]"
@@ -359,7 +374,7 @@ class NgaPublisher(Publisher):
         if img_path.name in self._uploaded_images:
             return self._uploaded_images[img_path.name].bbcode
 
-        caption = block.caption or ""
+        caption = _sanitize_text(block.caption or "")
 
         if dry_run:
             logger.info(f"[dry-run] 跳过上传: {img_path.name}")
