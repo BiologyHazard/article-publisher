@@ -94,7 +94,7 @@ class UploadedImage:
 
 
 def _build_sign_headers(
-    method: str, url: str, sign_token: str, *, body: str | None = None
+    method: str, url: str, sign_token: str, did: str, *, body: str | None = None
 ) -> dict[str, str]:
     """
     计算森空岛 API 请求签名头。
@@ -112,7 +112,7 @@ def _build_sign_headers(
     header_dict = {
         "platform": "3",
         "timestamp": timestamp,
-        "dId": "",
+        "dId": did,
         "vName": "1.21.0",
     }
 
@@ -142,8 +142,9 @@ SKLAND_APP_CODE = "4ca99fa6b56cc2ba"
 class SklandClient(ClientSessionWithLog):
     """封装与森空岛后端交互的异步 HTTP 客户端。"""
 
-    def __init__(self, hypergryph_token: str) -> None:
+    def __init__(self, hypergryph_token: str, did: str) -> None:
         self._hypergryph_token = hypergryph_token
+        self._did = did
         self._cred: str | None = None
         self._sign_token: str | None = None
 
@@ -191,6 +192,7 @@ class SklandClient(ClientSessionWithLog):
             "POST",
             f"{API_BASE}/web/v1/user/auth/generate_cred_by_code",
             json={"code": grant_code, "kind": 1},
+            headers={"dId": self._did},
         )
         data = await self._check_response(resp)
         self._cred = data["data"]["cred"]
@@ -246,7 +248,9 @@ class SklandClient(ClientSessionWithLog):
         body_str = json.dumps(json_body, separators=(",", ":")) if json_body else None
 
         # 计算签名头
-        sign_headers = _build_sign_headers(method, url, self._sign_token, body=body_str)
+        sign_headers = _build_sign_headers(
+            method, url, self._sign_token, self._did, body=body_str
+        )
         # cred 是独立请求头，不参与签名计算
         sign_headers["cred"] = self._cred
 
@@ -339,7 +343,7 @@ class SklandClient(ClientSessionWithLog):
     async def get_item_detail(self, item_id: str) -> dict[str, Any]:
         """获取已发布文章的详情，包含 tags、document 等。"""
         data = await self._request_with_sign(
-            "GET", f"/web/v2/item", params={"id": item_id}
+            "GET", "/web/v2/item", params={"id": item_id}
         )
         return data["data"]
 

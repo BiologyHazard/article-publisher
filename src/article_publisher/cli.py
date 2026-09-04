@@ -330,7 +330,7 @@ async def _run_skland(doc: Document, args: Namespace) -> None:
         item_id=args.item_id,
     )
 
-    async with SklandClient(cfg["HYPERGRYPH_TOKEN"]) as client:
+    async with SklandClient(cfg["HYPERGRYPH_TOKEN"], cfg["SKLAND_DID"]) as client:
         publisher = SklandPublisher(client, config=config)
         await publisher.publish(doc, dry_run=args.dry_run)
 
