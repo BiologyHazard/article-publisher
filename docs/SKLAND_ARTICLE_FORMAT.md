@@ -1217,8 +1217,8 @@ POST https://zonai.skland.com/web/v2/item/upd
     }
   },
   "downloadEnable": 1,
-  "coverImageId": "封面图片ID",
-  "cover": { "id": "封面图片ID" },
+  "coverImageId": "封面原图ID",
+  "cover": { "id": "封面裁剪结果ID（未裁剪时可与原图相同）" },
   "imageList": [],
   "videoList": [],
   "prePublishOn": false,
@@ -1226,9 +1226,55 @@ POST https://zonai.skland.com/web/v2/item/upd
 }
 ```
 
+`coverImageId` 与 `cover.id` 不保证相同：前者表示封面原图，后者可能是裁剪后
+生成的封面图片。2026-10-23 的实际更新失败日志中，旧文章详情的这两个 ID 不同，
+而更新请求把 `cover.id` 改成了 `coverImageId`，服务端返回 `[10001] 封面校验失败`。
+仅当旧封面原图仍存在于新正文时才能分别沿用两个 ID，不能仅根据原图 ID 重建 `cover`。
+没有有效裁剪结果时发送 `cover: {}`，不能假定原图 ID 就是裁剪结果 ID。
+
+官方 `checkImageCover` 从当前正文图片中查找原 `imageCoverIndex`，找不到时改选第一张
+正文图片，并通过 `setImageCover(newId)` 清空 `coverId`。因此，全量重新上传正文图片后，
+不能继续保留旧的 `coverImageId` 和裁剪 ID。没有正文图片时省略 `coverImageId`。
+发布器显式指定 `--cover` 时将该图加入正文开头，确保封面源图存在于提交文档中。
+2026-10-23 18:41 的失败请求已清空媒体列表、移除空合集字段，但旧封面原图仍不在正文中；
+这一封面联动规则此前未实现，现已补齐。经用户授权，复用同一份正文和已上传图片，
+仅将 `coverImageId` 改为正文首图、将 `cover` 改为 `{}` 后，更新接口返回成功。
+随后 GET 回读确认 43 个顶层块、70 个总块（52 文本、9 图片、8 列表、1 分隔线）均保留；
+文字、样式、颜色、对齐、列表层级、图片 ID/尺寸/描述与提交内容一致。
+服务端会把图片转为 WebP 并补充 CDN 信息，回读时不能以原始图片 URL、格式和文件大小
+是否完全相等来判断正文丢失。
+
+**提交字段与详情字段的区别（2026-10-23 核对）：**
+
+- 图文文章（`viewKind=3`）提交 `imageList: []`，图片由 `document.blockMap`
+  中的 image 块表达。不能把 GET 详情返回的聚合图片列表原样回传；这些旧图片及
+  `infos`、字符串宽高等展示字段不是本次正文的提交数据。
+- 当前发布器的图文正文没有原生视频输入，因此同时提交 `videoList: []`，
+  不沿用旧正文的聚合视频列表。
+- 只有存在有效合集 ID 时才发送 `volumeId`；无合集时省略该字段，不发送空字符串。
+
+以上图片列表和合集字段规则由官方前端
+[`main.6cf71f2a.js`](https://bbs.hycdn.cn/skland-fe-static/skland-bbs/main.6cf71f2a.js)
+的实际提交代码确认：`createItem` 在调用更新接口前执行
+`i===r.HI.ARTICLE&&(L=[])`，随后传入 `imageList:L`；`updateItem` 使用
+`r?{volumeId:r.id}:{}` 按需添加合集字段。此次是普通文件静态检查，未执行官方页面提交。
+下载文件 SHA-256：`61161a84e4521c1914895660b8760d975d997324a9ee92bec28d3560800735db`。
+
+本次 `[10001] 参数错误` 的失败请求带了 10 张旧图片的 `imageList` 和 `volumeId: ""`，
+正文则引用 9 张新图片。离线重放修正了这两处差异，保留全部 70 个正文块和裁剪封面。
+仅修正这两个字段后仍返回参数错误；补齐上述封面联动规则后线上更新成功。
+因此不能将这次错误单独归因于媒体列表或空合集字段。
+
 ### 8.3 Block 格式详解（与草稿的 document 不同）
 
-编辑模式使用 **Block 格式**（`blockIds` + `blockMap`），而不是草稿的扁平元素数组。
+编辑模式使用 **Block 格式**（`blockIds` + `blockMap`），而不是浏览器草稿的元素数组。
+`skland_发布文章_example.json` 与 `skland_编辑已发布文章_example.json` 表明：
+**新建请求与编辑请求的正文协议相同**，不同的是 `skland_草稿箱文章_example.json`
+中的本地草稿结构。发布器的新发布流程目前仍生成浏览器草稿。
+
+`document.blockIds` 只包含文档顶层块，`blockMap` 包含全部块（包括引用、列表的后代）。
+顶层块的 `parentId` 必须等于 `document.id`；引用子块的 `parentId` 为引用块 ID；
+列表项内块的 `parentId` 为列表项 ID，而不是列表块 ID。
 
 #### Text Block（文本块）
 
@@ -1255,6 +1301,23 @@ POST https://zonai.skland.com/web/v2/item/upd
 
 编辑模式与草稿使用相同的 6 色调色板和最近色算法。
 
+文字样式同样写在 `inlineElements` 节点顶层，可以与颜色叠加：
+
+```json
+{
+  "kind": "text",
+  "text": { "text": "组合样式" },
+  "bold": true,
+  "italic": true,
+  "underline": true,
+  "strikeThrough": true,
+  "color": "#90C208"
+}
+```
+
+注意删除线字段为 `strikeThrough`，草稿格式中的对应字段为 `del`。
+块级 `align` 使用 `left`、`center`、`right`，草稿的 `alignment` 则使用数值。
+
 `text.kind` 取值：
 | 值 | 对应 |
 |------|------|
@@ -1262,6 +1325,46 @@ POST https://zonai.skland.com/web/v2/item/upd
 | `heading1` | 一级标题 |
 | `heading2` | 二级标题 |
 | `heading3` | 三级标题 |
+
+#### Quote Block（引用块）
+
+```json
+{
+  "kind": "quote",
+  "id": "quote1",
+  "parentId": "document1",
+  "align": "left",
+  "quote": { "childIds": ["paragraph1", "paragraph2"] }
+}
+```
+
+子段落存放在同一份 `document.blockMap`，其 `parentId` 为 `quote1`。
+发布器将直接嵌套的引用展平到同一个引用块内，按原顺序保留内容。
+
+#### List Block（列表块）
+
+```json
+{
+  "kind": "list",
+  "id": "list1",
+  "parentId": "document1",
+  "align": "left",
+  "list": {
+    "id": "list1",
+    "kind": "ordered",
+    "itemIds": ["item1"],
+    "itemMap": {
+      "item1": { "id": "item1", "childIds": ["paragraph1", "nestedList1"] }
+    }
+  }
+}
+```
+
+`list.kind` 为 `ordered` 或 `unordered`。列表项仅放入该列表的 `itemMap`，
+不作为独立块写入 `document.blockMap`。列表项中的段落和嵌套列表均放入
+`document.blockMap`，`parentId` 指向列表项 ID（上例为 `item1`）。
+`childIds` 保留一个列表项中的多个段落和嵌套列表的先后顺序；
+有序、无序列表可以任意混合嵌套。
 
 #### Image Block（图片块）
 
@@ -1297,6 +1400,17 @@ POST https://zonai.skland.com/web/v2/item/upd
 ```
 
 ### 8.4 编辑流程
+
+发布器根据输入整体重建正文，并保留旧文章的标签、合集等元数据。
+封面按当前正文中的图片重新校验：原图仍在时保留，移除后改选首图并清除旧裁剪引用。
+未指定 `game_id` / `cate_id` 时沿用原分区，显式传入时覆盖；新草稿默认仍为 1 / 4。
+生成文档根 ID 后再转换正文，确保所有父子引用一致。图片缺失、上传失败或遇到未知
+输入节点时停止更新，避免默默丢掉正文内容。
+
+当前通用输入模型之外的原生表情、贴纸、@用户、视频不在转换范围内。
+没有对应原生协议映射的代码块和公式保留为文本，链接保留显示文字及样式，均输出提示。
+`--dry-run` 输出完整 JSON，不读取旧文章或提交更新，图片使用文本占位；
+此预览中的元数据不代表旧文章的真实设置。
 
 ```mermaid
 sequenceDiagram

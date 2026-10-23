@@ -1,0 +1,969 @@
+{
+  "title": "突然想到阿米娅的三个升变重复计算了",
+  "gameId": 100,
+  "cateId": 6,
+  "viewKind": 3,
+  "origin": 2,
+  "tags": [
+    {
+      "id": 306,
+      "name": "每日水帖",
+      "description": "畅所欲言，聊个痛快！",
+      "status": 1,
+      "cover": "https://bbs.hycdn.cn/image/2023/07/06/1305a0fa8cda4bf06d490b122f4e7705.png",
+      "publishAtTs": 1687752841,
+      "createdAtTs": 1687752841,
+      "updatedAtTs": 1707204154,
+      "kind": 1,
+      "bulletinStatus": 0,
+      "isGameEvent": false,
+      "defaultViewKind": 3,
+      "systemAssigned": true
+    }
+  ],
+  "document": {
+    "id": "6JDzBZd0xjaJ",
+    "version": "1.0.0",
+    "blockIds": [
+      "r5vsuEpnRIzY",
+      "Cioxb6cum28p",
+      "iDmuQfjrmDyq",
+      "eY3TiFwRXDS3",
+      "WF7EEORb8ZdE",
+      "76tJSRVKvX79",
+      "a00PYOC2181t",
+      "r7fTPwmyrWVm",
+      "M4BBH6HgsLrq",
+      "BQP9T4pA8Pxv",
+      "BUlPPmx5AwXb",
+      "X5uENQkwqIit",
+      "OUbx87c0EFWI",
+      "rBNYXKaSaPO8",
+      "iljyLzMhnQa1",
+      "bGP5HuJm1xnv",
+      "VbyXqfJ6dkbL",
+      "hynnMjDBe1Ou",
+      "uiJDk1XxXB5y",
+      "80pmb2MdfuWj",
+      "dFWVVWnSQu5L",
+      "0LFeS9aiM1hf",
+      "5xHmtIVdUbJJ",
+      "6mwwaEI2QVgc",
+      "GLuIUtahDfEq",
+      "LnSEVsVOKStp"
+    ],
+    "blockMap": {
+      "r5vsuEpnRIzY": {
+        "kind": "text",
+        "id": "r5vsuEpnRIzY",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "突然想到阿米娅的三个升变重复计算了"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "Cioxb6cum28p": {
+        "kind": "text",
+        "id": "Cioxb6cum28p",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "正文"
+              }
+            },
+            {
+              "kind": "emoji",
+              "emoji": {
+                "id": "skland_emoji__Wupa_plus1",
+                "text": "+1"
+              }
+            },
+            {
+              "kind": "emoji",
+              "emoji": {
+                "id": "skland_emoji__Wupa_kiss",
+                "text": "比心"
+              }
+            },
+            {
+              "kind": "emoji",
+              "emoji": {
+                "id": "skland_emoji__Wow_love",
+                "text": "爱你"
+              }
+            },
+            {
+              "kind": "sticker",
+              "sticker": {
+                "id": "amiya-1__amiya_smile",
+                "text": "微笑"
+              }
+            },
+            {
+              "kind": "sticker",
+              "sticker": {
+                "id": "Uppa-2__Uppa_happy",
+                "text": "开心"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "iDmuQfjrmDyq": {
+        "kind": "image",
+        "id": "iDmuQfjrmDyq",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "image": {
+          "id": "6adb31d95377d41922982d67",
+          "url": "https://bbs.hycdn.cn/image/common/20261023/3589941/6adb31d95377d41922982d67_6ad0f152.jpg",
+          "width": 4400,
+          "height": 2475,
+          "format": "",
+          "size": 790542,
+          "description": "为图片添加描述，不超过30个字"
+        }
+      },
+      "eY3TiFwRXDS3": {
+        "kind": "externalVideo",
+        "id": "eY3TiFwRXDS3",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "externalVideo": {
+          "kind": "bilibili",
+          "id": "BV1LYdDYUE2E"
+        }
+      },
+      "WF7EEORb8ZdE": {
+        "kind": "text",
+        "id": "WF7EEORb8ZdE",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "at",
+              "at": {
+                "id": "3737967211133",
+                "text": "明日方舟终末地"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "76tJSRVKvX79": {
+        "kind": "horizontalLine",
+        "id": "76tJSRVKvX79",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "horizontalLine": {
+          "kind": "0"
+        }
+      },
+      "a00PYOC2181t": {
+        "kind": "horizontalLine",
+        "id": "a00PYOC2181t",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "horizontalLine": {
+          "kind": "1"
+        }
+      },
+      "r7fTPwmyrWVm": {
+        "kind": "horizontalLine",
+        "id": "r7fTPwmyrWVm",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "horizontalLine": {
+          "kind": "2"
+        }
+      },
+      "M4BBH6HgsLrq": {
+        "kind": "horizontalLine",
+        "id": "M4BBH6HgsLrq",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "horizontalLine": {
+          "kind": "3"
+        }
+      },
+      "BQP9T4pA8Pxv": {
+        "kind": "horizontalLine",
+        "id": "BQP9T4pA8Pxv",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "horizontalLine": {
+          "kind": "4"
+        }
+      },
+      "BUlPPmx5AwXb": {
+        "kind": "text",
+        "id": "BUlPPmx5AwXb",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "bold": true,
+              "kind": "text",
+              "text": {
+                "text": "粗体"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "X5uENQkwqIit": {
+        "kind": "text",
+        "id": "X5uENQkwqIit",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "italic": true,
+              "kind": "text",
+              "text": {
+                "text": "斜体"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "OUbx87c0EFWI": {
+        "kind": "text",
+        "id": "OUbx87c0EFWI",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "bold": true,
+              "italic": true,
+              "kind": "text",
+              "text": {
+                "text": "粗斜体"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "rBNYXKaSaPO8": {
+        "kind": "text",
+        "id": "rBNYXKaSaPO8",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "underline": true,
+              "kind": "text",
+              "text": {
+                "text": "下划线"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "iljyLzMhnQa1": {
+        "kind": "text",
+        "id": "iljyLzMhnQa1",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "strikeThrough": true,
+              "kind": "text",
+              "text": {
+                "text": "删除线"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "bGP5HuJm1xnv": {
+        "kind": "text",
+        "id": "bGP5HuJm1xnv",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "无"
+              }
+            },
+            {
+              "color": "#222222",
+              "kind": "text",
+              "text": {
+                "text": "黑"
+              }
+            },
+            {
+              "color": "#90C208",
+              "kind": "text",
+              "text": {
+                "text": "绿"
+              }
+            },
+            {
+              "color": "#46AAFA",
+              "kind": "text",
+              "text": {
+                "text": "蓝"
+              }
+            },
+            {
+              "color": "#FA6E5A",
+              "kind": "text",
+              "text": {
+                "text": "红"
+              }
+            },
+            {
+              "color": "#FAB446",
+              "kind": "text",
+              "text": {
+                "text": "橙"
+              }
+            },
+            {
+              "color": "#826EFF",
+              "kind": "text",
+              "text": {
+                "text": "紫"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "VbyXqfJ6dkbL": {
+        "kind": "text",
+        "id": "VbyXqfJ6dkbL",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "color": "#222222",
+              "kind": "text",
+              "text": {
+                "text": "H1"
+              }
+            }
+          ],
+          "kind": "heading1"
+        }
+      },
+      "hynnMjDBe1Ou": {
+        "kind": "text",
+        "id": "hynnMjDBe1Ou",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "color": "#222222",
+              "kind": "text",
+              "text": {
+                "text": "H2"
+              }
+            }
+          ],
+          "kind": "heading2"
+        }
+      },
+      "uiJDk1XxXB5y": {
+        "kind": "text",
+        "id": "uiJDk1XxXB5y",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "color": "#222222",
+              "kind": "text",
+              "text": {
+                "text": "H3"
+              }
+            }
+          ],
+          "kind": "heading3"
+        }
+      },
+      "uxXzYBA61KKz": {
+        "kind": "text",
+        "id": "uxXzYBA61KKz",
+        "parentId": "80pmb2MdfuWj",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "引用"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "WOuOUsdIcSfM": {
+        "kind": "text",
+        "id": "WOuOUsdIcSfM",
+        "parentId": "80pmb2MdfuWj",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "与上一行属于同一个引用"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "80pmb2MdfuWj": {
+        "kind": "quote",
+        "id": "80pmb2MdfuWj",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "quote": {
+          "childIds": [
+            "uxXzYBA61KKz",
+            "WOuOUsdIcSfM"
+          ]
+        }
+      },
+      "9wt8dkExVhWD": {
+        "kind": "text",
+        "id": "9wt8dkExVhWD",
+        "parentId": "dFWVVWnSQu5L",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "与上一行属于不同引用"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "dFWVVWnSQu5L": {
+        "kind": "quote",
+        "id": "dFWVVWnSQu5L",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "quote": {
+          "childIds": [
+            "9wt8dkExVhWD"
+          ]
+        }
+      },
+      "0LFeS9aiM1hf": {
+        "kind": "text",
+        "id": "0LFeS9aiM1hf",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "左对齐"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "5xHmtIVdUbJJ": {
+        "kind": "text",
+        "id": "5xHmtIVdUbJJ",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "center",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "居中对齐"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "6mwwaEI2QVgc": {
+        "kind": "text",
+        "id": "6mwwaEI2QVgc",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "right",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "右对齐"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "lu7ja0AmoZj0": {
+        "kind": "text",
+        "id": "lu7ja0AmoZj0",
+        "parentId": "3CxAkMNHGsrT",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "1"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "pvksBJkAgHiZ": {
+        "kind": "text",
+        "id": "pvksBJkAgHiZ",
+        "parentId": "S39I28hR6hSM",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "2"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "S7WeXFPek4Nt": {
+        "kind": "text",
+        "id": "S7WeXFPek4Nt",
+        "parentId": "LNALl69DHBsL",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "2.a"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "nyCxnJ6wuhgL": {
+        "kind": "text",
+        "id": "nyCxnJ6wuhgL",
+        "parentId": "rxRgozM76Yi6",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "2.b"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "bcYpmZqK5Fkm": {
+        "kind": "text",
+        "id": "bcYpmZqK5Fkm",
+        "parentId": "U8DmHJIXiyZL",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "2.b.i"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "RMqsfnlSZ4OK": {
+        "kind": "text",
+        "id": "RMqsfnlSZ4OK",
+        "parentId": "eWDBHBnsMDy1",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "2.b.ii"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "ebvtFyVqWC01": {
+        "kind": "list",
+        "id": "ebvtFyVqWC01",
+        "parentId": "rxRgozM76Yi6",
+        "align": "left",
+        "list": {
+          "id": "ebvtFyVqWC01",
+          "itemIds": [
+            "U8DmHJIXiyZL",
+            "eWDBHBnsMDy1"
+          ],
+          "itemMap": {
+            "U8DmHJIXiyZL": {
+              "id": "U8DmHJIXiyZL",
+              "childIds": [
+                "bcYpmZqK5Fkm"
+              ]
+            },
+            "eWDBHBnsMDy1": {
+              "id": "eWDBHBnsMDy1",
+              "childIds": [
+                "RMqsfnlSZ4OK"
+              ]
+            }
+          },
+          "kind": "ordered"
+        }
+      },
+      "s9rVOCTBWjkJ": {
+        "kind": "text",
+        "id": "s9rVOCTBWjkJ",
+        "parentId": "CEdcoCdxJ4DQ",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "2.c"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "hJSNDHJijxbc": {
+        "kind": "text",
+        "id": "hJSNDHJijxbc",
+        "parentId": "6DT12BmRlzQy",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "无序列表"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "DKHkcJndmXAY": {
+        "kind": "list",
+        "id": "DKHkcJndmXAY",
+        "parentId": "CEdcoCdxJ4DQ",
+        "align": "left",
+        "list": {
+          "id": "DKHkcJndmXAY",
+          "itemIds": [
+            "6DT12BmRlzQy"
+          ],
+          "itemMap": {
+            "6DT12BmRlzQy": {
+              "id": "6DT12BmRlzQy",
+              "childIds": [
+                "hJSNDHJijxbc"
+              ]
+            }
+          },
+          "kind": "unordered"
+        }
+      },
+      "PezbjeI9Lg2j": {
+        "kind": "list",
+        "id": "PezbjeI9Lg2j",
+        "parentId": "S39I28hR6hSM",
+        "align": "left",
+        "list": {
+          "id": "PezbjeI9Lg2j",
+          "itemIds": [
+            "LNALl69DHBsL",
+            "rxRgozM76Yi6",
+            "CEdcoCdxJ4DQ"
+          ],
+          "itemMap": {
+            "LNALl69DHBsL": {
+              "id": "LNALl69DHBsL",
+              "childIds": [
+                "S7WeXFPek4Nt"
+              ]
+            },
+            "rxRgozM76Yi6": {
+              "id": "rxRgozM76Yi6",
+              "childIds": [
+                "nyCxnJ6wuhgL",
+                "ebvtFyVqWC01"
+              ]
+            },
+            "CEdcoCdxJ4DQ": {
+              "id": "CEdcoCdxJ4DQ",
+              "childIds": [
+                "s9rVOCTBWjkJ",
+                "DKHkcJndmXAY"
+              ]
+            }
+          },
+          "kind": "ordered"
+        }
+      },
+      "GLuIUtahDfEq": {
+        "kind": "list",
+        "id": "GLuIUtahDfEq",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "list": {
+          "id": "GLuIUtahDfEq",
+          "itemIds": [
+            "3CxAkMNHGsrT",
+            "S39I28hR6hSM"
+          ],
+          "itemMap": {
+            "3CxAkMNHGsrT": {
+              "id": "3CxAkMNHGsrT",
+              "childIds": [
+                "lu7ja0AmoZj0"
+              ]
+            },
+            "S39I28hR6hSM": {
+              "id": "S39I28hR6hSM",
+              "childIds": [
+                "pvksBJkAgHiZ",
+                "PezbjeI9Lg2j"
+              ]
+            }
+          },
+          "kind": "ordered"
+        }
+      },
+      "XnREaAiYWe7h": {
+        "kind": "text",
+        "id": "XnREaAiYWe7h",
+        "parentId": "Dw4L0zONAYPo",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "1"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "Vzkh7Ktnerpi": {
+        "kind": "text",
+        "id": "Vzkh7Ktnerpi",
+        "parentId": "GDO2C4pyCrQY",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "2"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "OC8G0q0Vh3mH": {
+        "kind": "text",
+        "id": "OC8G0q0Vh3mH",
+        "parentId": "uwBNBg2N0IP4",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "2.a"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "N1GncGojwr0r": {
+        "kind": "text",
+        "id": "N1GncGojwr0r",
+        "parentId": "WrjfigSC9Qcu",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "2.b"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "Yt6L7NlcofJe": {
+        "kind": "text",
+        "id": "Yt6L7NlcofJe",
+        "parentId": "9KMJn7EMtjUF",
+        "align": "left",
+        "text": {
+          "inlineElements": [
+            {
+              "kind": "text",
+              "text": {
+                "text": "2.b.i"
+              }
+            }
+          ],
+          "kind": "body"
+        }
+      },
+      "wwmOVrxyLVhH": {
+        "kind": "list",
+        "id": "wwmOVrxyLVhH",
+        "parentId": "WrjfigSC9Qcu",
+        "align": "left",
+        "list": {
+          "id": "wwmOVrxyLVhH",
+          "itemIds": [
+            "9KMJn7EMtjUF"
+          ],
+          "itemMap": {
+            "9KMJn7EMtjUF": {
+              "id": "9KMJn7EMtjUF",
+              "childIds": [
+                "Yt6L7NlcofJe"
+              ]
+            }
+          },
+          "kind": "unordered"
+        }
+      },
+      "PqgGTnUqXoCw": {
+        "kind": "list",
+        "id": "PqgGTnUqXoCw",
+        "parentId": "GDO2C4pyCrQY",
+        "align": "left",
+        "list": {
+          "id": "PqgGTnUqXoCw",
+          "itemIds": [
+            "uwBNBg2N0IP4",
+            "WrjfigSC9Qcu"
+          ],
+          "itemMap": {
+            "uwBNBg2N0IP4": {
+              "id": "uwBNBg2N0IP4",
+              "childIds": [
+                "OC8G0q0Vh3mH"
+              ]
+            },
+            "WrjfigSC9Qcu": {
+              "id": "WrjfigSC9Qcu",
+              "childIds": [
+                "N1GncGojwr0r",
+                "wwmOVrxyLVhH"
+              ]
+            }
+          },
+          "kind": "ordered"
+        }
+      },
+      "LnSEVsVOKStp": {
+        "kind": "list",
+        "id": "LnSEVsVOKStp",
+        "parentId": "6JDzBZd0xjaJ",
+        "align": "left",
+        "list": {
+          "id": "LnSEVsVOKStp",
+          "itemIds": [
+            "Dw4L0zONAYPo",
+            "GDO2C4pyCrQY"
+          ],
+          "itemMap": {
+            "Dw4L0zONAYPo": {
+              "id": "Dw4L0zONAYPo",
+              "childIds": [
+                "XnREaAiYWe7h"
+              ]
+            },
+            "GDO2C4pyCrQY": {
+              "id": "GDO2C4pyCrQY",
+              "childIds": [
+                "Vzkh7Ktnerpi",
+                "PqgGTnUqXoCw"
+              ]
+            }
+          },
+          "kind": "unordered"
+        }
+      }
+    }
+  },
+  "downloadEnable": 1,
+  "coverImageId": "6adb31d95377d41922982d67",
+  "imageList": [],
+  "videoList": [],
+  "prePublishOn": false,
+  "isAIGCStatementOn": false,
+  "cover": {},
+  "tagIds": [
+    306
+  ]
+}

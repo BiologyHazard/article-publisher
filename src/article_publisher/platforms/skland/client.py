@@ -352,9 +352,11 @@ class SklandClient(ClientSessionWithLog):
         更新已发布的文章（编辑模式）。
 
         参数 payload 需要包含:
-            id, volumeId, title, gameId, cateId, viewKind, origin,
+            id, title, gameId, cateId, viewKind, origin,
             tags, document, downloadEnable, coverImageId, imageList,
             videoList, tagIds, cover
+
+        volumeId 仅在存在合集时传入；图文文章的 imageList 为空，图片在 document 中。
         """
         data = await self._request_with_sign(
             "POST", "/web/v2/item/upd", json_body=payload

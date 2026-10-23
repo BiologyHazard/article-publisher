@@ -27,6 +27,7 @@ from article_publisher.document import (
     CodeBlock,
     Divider,
     Document,
+    Formula,
     Heading,
     ImageBlock,
     InlineElement,
@@ -67,11 +68,11 @@ _ELEMENT_ID_CHARS = string.ascii_letters + string.digits
 class SklandPublishConfig:
     """森空岛发布配置参数。"""
 
-    game_id: int = 1
-    """游戏分区，默认 1 = 明日方舟"""
+    game_id: int | None = None
+    """游戏分区；新草稿默认 1 = 明日方舟，编辑时默认保留原值。"""
 
-    cate_id: int = 4
-    """子分区，默认 4 = 攻略"""
+    cate_id: int | None = None
+    """子分区；新草稿默认 4 = 攻略，编辑时默认保留原值。"""
 
     cover_path: Path | None = None
     """可选封面图路径"""
@@ -166,8 +167,8 @@ class SklandPublisher(Publisher):
             "tags": [],
             "imageCoverIndex": cover_id,
             "imageList": [],
-            "gameId": self._config.game_id,
-            "cateId": self._config.cate_id,
+            "gameId": self._config.game_id if self._config.game_id is not None else 1,
+            "cateId": self._config.cate_id if self._config.cate_id is not None else 4,
         }
 
         if self._config.publish_time:
@@ -594,46 +595,57 @@ window.open(`https://www.skland.com/editor/article?draftId=${{draftId}}`, '_blan
         existing_item = detail.get("item", {})
         existing_tags = detail.get("tags", [])
 
-        # 上传封面图
-        cover_image_id = existing_item.get("coverImageId", "")
-        if config.cover_path:
-            cover_path = config.cover_path
-            if cover_path.is_file():
-                if dry_run:
-                    logger.info(f"[dry-run] 跳过封面上传: {cover_path}")
-                else:
-                    logger.info(f"上传封面图: {cover_path}")
-                    uploaded = await self._client.upload_image(cover_path)
-                    cover_image_id = uploaded.image_id
-            else:
-                logger.warning(f"封面文件不存在，忽略: {cover_path}")
+        # 文档根 ID 必须与所有顶层 block 的 parentId 一致。
+        doc_id = existing_item.get("document", {}).get("id") or _generate_element_id()
 
         # 转换文档内容为森空岛 block 格式
         logger.info("正在将 IR 转换为森空岛 block 格式 ...")
-        blocks = await self._convert_to_blocks(doc, dry_run=dry_run)
+        blocks = await self._convert_to_blocks(doc, parent_id=doc_id, dry_run=dry_run)
         logger.info(f"转换完成，共 {len(blocks)} 个 block")
 
-        # 生成文档 ID（复用现有或生成新 ID）
-        doc_id = existing_item.get("document", {}).get("id", _generate_element_id())
+        # 独立封面也必须是正文图片。显式 --cover 时将其放在正文开头，
+        # 让服务器生成裁剪结果，不能把任意原图 ID 当作已裁剪的 cover.id。
+        preferred_cover_id = existing_item.get("coverImageId")
+        cropped_cover_id = (existing_item.get("cover") or {}).get("id")
+        if config.cover_path:
+            cover_blocks: list[dict[str, Any]] = []
+            await self._handle_image_block_to_block(
+                ImageBlock(config.cover_path), cover_blocks, doc_id, dry_run=dry_run
+            )
+            blocks[0:0] = cover_blocks
+            preferred_cover_id = cover_blocks[0]["image"]["id"] if not dry_run else None
+            cropped_cover_id = None
+        cover_fields = self._resolve_edit_cover(
+            blocks, preferred_cover_id, cropped_cover_id
+        )
 
         # 构建 blockMap
         block_map: dict[str, dict[str, Any]] = {}
         block_ids: list[str] = []
         for block in blocks:
             bid = block["id"]
-            block_ids.append(bid)
+            if block["parentId"] == doc_id:
+                block_ids.append(bid)
             block_map[bid] = block
 
         # 构建更新负载
         tag_ids = [t.get("id") for t in existing_tags if t.get("id")]
+        view_kind = existing_item.get("viewKind", 3)
 
         update_payload: dict[str, Any] = {
             "id": config.item_id,
-            "volumeId": existing_item.get("volumeId", ""),
             "title": doc.title,
-            "gameId": config.game_id,
-            "cateId": config.cate_id,
-            "viewKind": existing_item.get("viewKind", 3),
+            "gameId": (
+                config.game_id
+                if config.game_id is not None
+                else existing_item.get("gameId", 1)
+            ),
+            "cateId": (
+                config.cate_id
+                if config.cate_id is not None
+                else existing_item.get("cateId", 4)
+            ),
+            "viewKind": view_kind,
             "origin": existing_item.get("origin", 1),
             "tags": existing_tags,
             "tagIds": tag_ids,
@@ -644,13 +656,21 @@ window.open(`https://www.skland.com/editor/article?draftId=${{draftId}}`, '_blan
                 "blockMap": block_map,
             },
             "downloadEnable": existing_item.get("downloadEnable", 1),
-            "coverImageId": cover_image_id,
-            "cover": {"id": cover_image_id},
-            "imageList": existing_item.get("imageList", []),
-            "videoList": existing_item.get("videoList", []),
+            **cover_fields,
+            # 详情中的媒体列表是服务端聚合结果，不是图文文章的提交字段。
+            # 与官方编辑器一致：图文的图片从 document 中读取，顶层列表为空。
+            "imageList": [] if view_kind == 3 else existing_item.get("imageList", []),
+            "videoList": [] if view_kind == 3 else existing_item.get("videoList", []),
             "prePublishOn": existing_item.get("prePublishOn", False),
             "isAIGCStatementOn": existing_item.get("isAIGCStatementOn", False),
         }
+
+        # 无合集时应省略字段，不能提交 volumeId=""。
+        if existing_item.get("volumeId"):
+            update_payload["volumeId"] = existing_item["volumeId"]
+
+        if existing_item.get("prePublishOn") and "publishedAtTs" in existing_item:
+            update_payload["publishedAtTs"] = existing_item["publishedAtTs"]
 
         if config.publish_time:
             update_payload["prePublishOn"] = True
@@ -660,7 +680,7 @@ window.open(`https://www.skland.com/editor/article?draftId=${{draftId}}`, '_blan
             logger.info("=" * 60)
             logger.info("  [dry-run] 编辑 Payload 预览：")
             logger.info("=" * 60)
-            print(json.dumps(update_payload, ensure_ascii=False, indent=2)[:3000])
+            print(json.dumps(update_payload, ensure_ascii=False, indent=2))
             logger.info("=" * 60)
             return {
                 "platform": "skland",
@@ -686,20 +706,72 @@ window.open(`https://www.skland.com/editor/article?draftId=${{draftId}}`, '_blan
     # IR → 森空岛 Block 格式（用于编辑模式）
     # ==================================================================
 
-    async def _convert_to_blocks(
-        self, doc: Document, *, dry_run: bool = False
-    ) -> list[dict[str, Any]]:
-        """将 IR Document 转换为森空岛 block 列表（item/upd 格式）。"""
-        blocks: list[dict[str, Any]] = []
-        # 使用一个固定的 parentId（文档根 ID）
-        parent_id = _generate_element_id()
+    @staticmethod
+    def _resolve_edit_cover(
+        blocks: list[dict[str, Any]], preferred_id: str | None, cropped_id: str | None
+    ) -> dict[str, Any]:
+        """遵循官方 checkImageCover：封面原图必须存在于当前正文。"""
+        image_ids = [
+            block["image"]["id"] for block in blocks if block["kind"] == "image"
+        ]
+        if preferred_id and preferred_id in image_ids:
+            return {
+                "coverImageId": preferred_id,
+                "cover": {"id": cropped_id} if cropped_id else {},
+            }
+        if preferred_id:
+            logger.warning("原封面图片已不在新正文中，将重新选择封面并清除旧裁剪引用")
+        if image_ids:
+            return {"coverImageId": image_ids[0], "cover": {}}
+        return {"cover": {}}
 
+    async def _convert_to_blocks(
+        self, doc: Document, *, parent_id: str | None = None, dry_run: bool = False
+    ) -> list[dict[str, Any]]:
+        """转换为包含所有后代的 block 列表；顶层块使用同一个文档根 ID。"""
+        blocks: list[dict[str, Any]] = []
+        parent_id = parent_id or _generate_element_id()
         for block in doc.blocks:
             await self._convert_block_to_block(
                 block, blocks, parent_id, dry_run=dry_run
             )
-
         return blocks
+
+    @staticmethod
+    def _make_api_block(
+        kind: str,
+        parent_id: str,
+        content: dict[str, Any],
+        *,
+        align: Alignment = Alignment.LEFT,
+    ) -> dict[str, Any]:
+        return {
+            "kind": kind,
+            "id": _generate_element_id(),
+            "parentId": parent_id,
+            "align": align.name.lower(),
+            kind: content,
+        }
+
+    def _make_text_block(
+        self,
+        paragraph: IRParagraph,
+        parent_id: str,
+        *,
+        kind: str = "body",
+        force_bold: bool = False,
+    ) -> dict[str, Any]:
+        inline = self._convert_inline_to_block_elements(paragraph.children)
+        if not inline:
+            inline = [{"kind": "text", "text": {"text": ""}}]
+        if force_bold:
+            inline = [{**element, "bold": True} for element in inline]
+        return self._make_api_block(
+            "text",
+            parent_id,
+            {"inlineElements": inline, "kind": kind},
+            align=paragraph.align,
+        )
 
     async def _convert_block_to_block(
         self,
@@ -708,164 +780,92 @@ window.open(`https://www.skland.com/editor/article?draftId=${{draftId}}`, '_blan
         parent_id: str,
         *,
         dry_run: bool = False,
-    ) -> None:
-        """将单个 IR Block 转换为森空岛 block。"""
+    ) -> list[str]:
+        """追加当前块和后代，返回当前层的 ID（不包含后代 ID）。"""
         if isinstance(block, Heading):
-            heading_map = {1: "heading1", 2: "heading2", 3: "heading3"}
-            kind = heading_map.get(block.level, "heading3")
-            inline = self._convert_inline_to_block_elements(list(block.text.children))
-            blocks.append(
-                {
-                    "kind": "text",
-                    "id": _generate_element_id(),
-                    "parentId": parent_id,
-                    "align": "left",
-                    "text": {"inlineElements": inline, "kind": kind},
-                }
+            converted = self._make_text_block(
+                block.text,
+                parent_id,
+                kind=f"heading{block.level}" if 1 <= block.level <= 3 else "body",
+                force_bold=block.level > 3,
             )
-
         elif isinstance(block, IRParagraph):
-            inline = self._convert_inline_to_block_elements(list(block.children))
-            blocks.append(
-                {
-                    "kind": "text",
-                    "id": _generate_element_id(),
-                    "parentId": parent_id,
-                    "align": "left",
-                    "text": {"inlineElements": inline, "kind": "body"},
-                }
-            )
-
+            converted = self._make_text_block(block, parent_id)
         elif isinstance(block, ImageBlock):
             await self._handle_image_block_to_block(
                 block, blocks, parent_id, dry_run=dry_run
             )
-
+            return [blocks[-1]["id"]]
         elif isinstance(block, CodeBlock):
-            # 代码块回退为文本段落
-            lines = block.content.split("\n")
-            for i, line in enumerate(lines):
-                prefix = f"```{block.language}" if i == 0 else ""
-                text = f"{prefix}{line}" if prefix else line
-                blocks.append(
-                    {
-                        "kind": "text",
-                        "id": _generate_element_id(),
-                        "parentId": parent_id,
-                        "align": "left",
-                        "text": {
-                            "inlineElements": [
-                                {"kind": "text", "text": {"text": text}}
-                            ],
-                            "kind": "body",
-                        },
-                    }
+            # API 示例未提供代码块类型，使用完整围栏保留语言、换行及空行。
+            logger.warning("森空岛编辑模式将代码块转换为带围栏的文本段落")
+            fence = "```"
+            while fence in block.content:
+                fence += "`"
+            lines = [f"{fence}{block.language}", *block.content.split("\n"), fence]
+            ids = []
+            for line in lines:
+                text_block = self._make_text_block(
+                    IRParagraph([TextRun(line)]), parent_id
                 )
-
+                blocks.append(text_block)
+                ids.append(text_block["id"])
+            return ids
         elif isinstance(block, Blockquote):
-            # 引用块回退为文本段落
-            self._convert_blockquote_to_block(block, blocks, parent_id)
-
-        elif isinstance(block, (OrderedList, UnorderedList)):
-            # 列表回退为文本段落
-            for item in block.items:
-                self._convert_list_item_to_block(item, blocks, parent_id)
-
-        elif isinstance(block, Divider):
-            blocks.append(
-                {
-                    "kind": "horizontalLine",
-                    "id": _generate_element_id(),
-                    "parentId": parent_id,
-                    "align": "left",
-                    "horizontalLine": {"kind": "4"},
-                }
-            )
-
-    def _convert_blockquote_to_block(
-        self, block: Blockquote, blocks: list[dict[str, Any]], parent_id: str
-    ) -> None:
-        """将引用块转换为文本 blocks。"""
-        for child in block.children:
-            if isinstance(child, IRParagraph):
-                inline = self._convert_inline_to_block_elements(list(child.children))
-                blocks.append(
-                    {
-                        "kind": "text",
-                        "id": _generate_element_id(),
-                        "parentId": parent_id,
-                        "align": "left",
-                        "text": {"inlineElements": inline, "kind": "body"},
-                    }
-                )
-            elif isinstance(child, Heading):
-                heading_map = {1: "heading1", 2: "heading2", 3: "heading3"}
-                kind = heading_map.get(child.level, "heading3")
-                inline = self._convert_inline_to_block_elements(
-                    list(child.text.children)
-                )
-                blocks.append(
-                    {
-                        "kind": "text",
-                        "id": _generate_element_id(),
-                        "parentId": parent_id,
-                        "align": "left",
-                        "text": {"inlineElements": inline, "kind": kind},
-                    }
-                )
-            elif isinstance(child, ImageBlock):
-                blocks.append(
-                    {
-                        "kind": "text",
-                        "id": _generate_element_id(),
-                        "parentId": parent_id,
-                        "align": "left",
-                        "text": {
-                            "inlineElements": [
-                                {
-                                    "kind": "text",
-                                    "text": {
-                                        "text": f"[图片: {child.alt_text or child.source}]"
-                                    },
-                                }
-                            ],
-                            "kind": "body",
-                        },
-                    }
-                )
-
-    def _convert_list_item_to_block(
-        self, item: ListItem, blocks: list[dict[str, Any]], parent_id: str
-    ) -> None:
-        """将列表项转换为文本 block。"""
-        for child in item.blocks:
-            if isinstance(child, IRParagraph):
-                inline = self._convert_inline_to_block_elements(list(child.children))
-                if inline:
-                    blocks.append(
-                        {
-                            "kind": "text",
-                            "id": _generate_element_id(),
-                            "parentId": parent_id,
-                            "align": "left",
-                            "text": {"inlineElements": inline, "kind": "body"},
-                        }
+            converted = self._make_api_block("quote", parent_id, {"childIds": []})
+            child_ids = converted["quote"]["childIds"]
+            for child in self._flatten_edit_quote(block):
+                child_ids.extend(
+                    await self._convert_block_to_block(
+                        child, blocks, converted["id"], dry_run=dry_run
                     )
-            elif isinstance(child, Heading):
-                heading_map = {1: "heading1", 2: "heading2", 3: "heading3"}
-                kind = heading_map.get(child.level, "heading3")
-                inline = self._convert_inline_to_block_elements(
-                    list(child.text.children)
                 )
-                blocks.append(
-                    {
-                        "kind": "text",
-                        "id": _generate_element_id(),
-                        "parentId": parent_id,
-                        "align": "left",
-                        "text": {"inlineElements": inline, "kind": kind},
-                    }
-                )
+            if not child_ids:
+                empty = self._make_text_block(IRParagraph([]), converted["id"])
+                blocks.append(empty)
+                child_ids.append(empty["id"])
+        elif isinstance(block, (OrderedList, UnorderedList)):
+            converted = self._make_api_block("list", parent_id, {})
+            item_ids: list[str] = []
+            item_map: dict[str, Any] = {}
+            for item in block.items:
+                item_id = _generate_element_id()
+                child_ids = []
+                for child in item.blocks:
+                    child_ids.extend(
+                        await self._convert_block_to_block(
+                            child, blocks, item_id, dry_run=dry_run
+                        )
+                    )
+                if not child_ids:
+                    empty = self._make_text_block(IRParagraph([]), item_id)
+                    blocks.append(empty)
+                    child_ids.append(empty["id"])
+                item_ids.append(item_id)
+                item_map[item_id] = {"id": item_id, "childIds": child_ids}
+            converted["list"] = {
+                "id": converted["id"],
+                "kind": "ordered" if isinstance(block, OrderedList) else "unordered",
+                "itemIds": item_ids,
+                "itemMap": item_map,
+            }
+        elif isinstance(block, Divider):
+            converted = self._make_api_block("horizontalLine", parent_id, {"kind": "4"})
+        else:
+            raise ValueError(f"森空岛编辑模式不支持块类型: {type(block).__name__}")
+        blocks.append(converted)
+        return [converted["id"]]
+
+    @staticmethod
+    def _flatten_edit_quote(block: Blockquote) -> list[Block]:
+        """与草稿一致，将嵌套引用展平，保留内容和先后顺序。"""
+        children: list[Block] = []
+        for child in block.children:
+            if isinstance(child, Blockquote):
+                children.extend(SklandPublisher._flatten_edit_quote(child))
+            else:
+                children.append(child)
+        return children
 
     async def _handle_image_block_to_block(
         self,
@@ -878,8 +878,7 @@ window.open(`https://www.skland.com/editor/article?draftId=${{draftId}}`, '_blan
         """上传图片并构建 image block。"""
         img_path = Path(block.source)
         if not img_path.is_file():
-            logger.warning(f"图片文件不存在，跳过: {img_path}")
-            return
+            raise FileNotFoundError(f"图片文件不存在，取消文章更新: {img_path}")
 
         if dry_run:
             blocks.append(
@@ -925,6 +924,7 @@ window.open(`https://www.skland.com/editor/article?draftId=${{draftId}}`, '_blan
             logger.info(f"  → 上传成功: {uploaded.url}")
         except Exception as e:
             logger.error(f"  [错误] 图片上传失败: {e}")
+            raise
 
     @staticmethod
     def _convert_inline_to_block_elements(
@@ -938,9 +938,28 @@ window.open(`https://www.skland.com/editor/article?draftId=${{draftId}}`, '_blan
                 if not text:
                     continue
                 node: dict[str, Any] = {"kind": "text", "text": {"text": text}}
+                for attribute, key in (
+                    (child.bold, "bold"),
+                    (child.italic, "italic"),
+                    (child.underline, "underline"),
+                    (child.strikethrough, "strikeThrough"),
+                ):
+                    if attribute:
+                        node[key] = True
                 color = child.color or ("#c7254e" if child.inline_code else "")
                 matched_color = nearest_text_color(color, SKLAND_TEXT_COLORS)
                 if matched_color:
                     node["color"] = matched_color.value
+                if child.link_url is not None:
+                    logger.warning(
+                        "森空岛编辑模式尚无链接协议示例，仅保留链接文字和样式"
+                    )
                 elements.append(node)
+            elif isinstance(child, Formula):
+                logger.warning("森空岛编辑模式将公式保留为 LaTeX 文本")
+                elements.append({"kind": "text", "text": {"text": child.latex}})
+            else:
+                raise ValueError(
+                    f"森空岛编辑模式不支持行内类型: {type(child).__name__}"
+                )
         return elements

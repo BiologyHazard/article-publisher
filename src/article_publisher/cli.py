@@ -184,10 +184,16 @@ def _add_bilibili_options(parser: ArgumentParser) -> None:
 def _add_skland_options(parser: ArgumentParser) -> None:
     """添加森空岛发布专属选项。"""
     parser.add_argument(
-        "--game-id", type=int, default=1, help="游戏分区（默认 1 = 明日方舟）"
+        "--game-id",
+        type=int,
+        default=None,
+        help="游戏分区（新草稿默认 1 = 明日方舟；编辑时默认保留原分区）",
     )
     parser.add_argument(
-        "--cate-id", type=int, default=4, help="子分区（默认 4 = 攻略）"
+        "--cate-id",
+        type=int,
+        default=None,
+        help="子分区（新草稿默认 4 = 攻略；编辑时默认保留原分区）",
     )
     parser.add_argument("--cover", type=str, default=None, help="自定义封面图片路径")
     parser.add_argument("--publish-time", type=str, default=None, help="定时发布时间戳")
