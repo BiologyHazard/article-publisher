@@ -4,13 +4,10 @@ Publisher 抽象基类。
 所有目标平台的 Publisher 均应继承此类。
 """
 
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:
-    from article_publisher.document import Document
+lazy from article_publisher.document import Document
 
 
 class Publisher(ABC):

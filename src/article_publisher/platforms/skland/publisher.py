@@ -8,14 +8,13 @@
 使用 API `/web/v2/item/upd` 直接更新文章内容。
 """
 
-from __future__ import annotations
-
 import json
 import random
 import string
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
+lazy from collections.abc import Sequence
 
 from loguru import logger
 
@@ -38,6 +37,7 @@ from article_publisher.document import (
 )
 from article_publisher.document import Paragraph as IRParagraph
 from article_publisher.platforms.base import Publisher
+lazy from article_publisher.platforms.skland.client import SklandClient
 
 # 森空岛 API 对齐值: 1=左对齐, 2=居中, 3=右对齐
 _ALIGN_TO_SKLAND: dict[Alignment, int] = {
@@ -45,12 +45,6 @@ _ALIGN_TO_SKLAND: dict[Alignment, int] = {
     Alignment.CENTER: 2,
     Alignment.RIGHT: 3,
 }
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-    from article_publisher.platforms.skland.client import SklandClient
-
 
 # =============================================================================
 # 常量

@@ -7,15 +7,14 @@
 - 用户信息查询
 """
 
-from __future__ import annotations
-
 import hashlib
 import hmac
 import json
 import time
 import urllib.parse
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import Any
+lazy from pathlib import Path
 
 import aiohttp
 from aiohttp.hdrs import CONTENT_DISPOSITION
@@ -24,9 +23,6 @@ from PIL import Image
 
 from article_publisher.http_client import ClientSessionWithLog
 from article_publisher.log import logger
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def gen_oss_compatible_formdata(form_data: aiohttp.FormData) -> aiohttp.MultipartWriter:

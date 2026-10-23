@@ -7,21 +7,17 @@ NGA API 客户端。
 - 图片上传到 NGA 图床
 """
 
-from __future__ import annotations
-
 import re
 import urllib.parse
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
+from typing import Any, Literal, TypedDict, cast
+lazy from pathlib import Path
 
 import aiohttp
 import json5
 
 from article_publisher.http_client import ClientSessionWithLog
 from article_publisher.log import logger
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 NGA_BASE = "https://bbs.nga.cn"
 ATTACH_UPLOAD_URL = "https://img8.nga.cn/attach.php"

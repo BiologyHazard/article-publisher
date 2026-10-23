@@ -2,13 +2,12 @@
 B站 Publisher — 将 IR Document 发布到 B站 Opus 专栏草稿箱。
 """
 
-from __future__ import annotations
-
 import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
+lazy from collections.abc import Sequence
 
 from loguru import logger
 
@@ -43,17 +42,13 @@ from article_publisher.platforms.bilibili.opus import (
     make_text_paragraph,
     make_unordered_list_paragraph,
 )
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-    from article_publisher.platforms.bilibili.client import BiliClient
-    from article_publisher.platforms.bilibili.models import (
-        ArgPayload,
-        InlineNode,
-        Paragraph,
-        Payload,
-    )
+lazy from article_publisher.platforms.bilibili.client import BiliClient
+lazy from article_publisher.platforms.bilibili.models import (
+    ArgPayload,
+    InlineNode,
+    Paragraph,
+    Payload,
+)
 
 
 @dataclass

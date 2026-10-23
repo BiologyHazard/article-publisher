@@ -7,12 +7,8 @@ B站 API 客户端封装。
 - 保存草稿
 """
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from typing import Any
+lazy from pathlib import Path
 
 import aiohttp
 from PIL import Image
@@ -25,9 +21,7 @@ from article_publisher.platforms.bilibili._wbi import (
     get_mixin_key,
     sign_wbi_params,
 )
-
-if TYPE_CHECKING:
-    from article_publisher.platforms.bilibili.models import Payload, UploadedImage
+lazy from article_publisher.platforms.bilibili.models import Payload, UploadedImage
 
 
 class BiliApiError(Exception):

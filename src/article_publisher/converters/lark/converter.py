@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import shutil
 import urllib.parse
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 from article_publisher.converters.base import Converter
 from article_publisher.document import (
@@ -34,15 +32,11 @@ from .consts import (
     TEXT_COLOR_MAP,
     BlockType,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from .models import Block as LarkBlock
-    from .models import Document as LarkDocument
-    from .models import Text as LarkText
-    from .models import TextElement as LarkTextElement
-    from .models import TextRun as LarkTextRun
+lazy from .models import Block as LarkBlock
+lazy from .models import Document as LarkDocument
+lazy from .models import Text as LarkText
+lazy from .models import TextElement as LarkTextElement
+lazy from .models import TextRun as LarkTextRun
 
 
 class LarkDocxConverter(Converter):

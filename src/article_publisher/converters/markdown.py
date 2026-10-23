@@ -5,11 +5,10 @@ Markdown → IR Document 转换器。
 平台无关的 IR Document。图片仅记录本地路径，上传由 Publisher 负责。
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import Any, ClassVar, cast
+lazy from collections.abc import Sequence
 
 import mistune
 
@@ -29,9 +28,6 @@ from article_publisher.document import (
     UnorderedList,
 )
 from article_publisher.log import logger
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
 
 # mistune AST token 类型
 _Token = dict[str, Any]

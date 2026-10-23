@@ -5,8 +5,6 @@ B站 Opus 专栏保存草稿 Payload 的数据模型（TypedDict）。
 使用 TypedDict 提供类型提示和 IDE 补全，无运行时开销。
 """
 
-from __future__ import annotations
-
 from typing import NotRequired, TypedDict
 
 # =============================================================================

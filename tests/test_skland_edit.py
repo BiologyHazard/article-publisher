@@ -1,7 +1,5 @@
 """Regression checks against captured Skland requests, without network writes."""
 
-from __future__ import annotations
-
 import io
 import json
 import tempfile

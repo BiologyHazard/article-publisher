@@ -4,15 +4,10 @@
 从 .env 文件或系统环境变量加载认证信息。
 """
 
-from __future__ import annotations
-
 import os
-from typing import TYPE_CHECKING
+lazy from collections.abc import Iterable
 
 from dotenv import find_dotenv, load_dotenv
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable
 
 load_dotenv(find_dotenv(usecwd=True))
 

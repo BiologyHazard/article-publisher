@@ -5,13 +5,9 @@
 输出统一为平台无关的 IR Document。
 """
 
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from article_publisher.document import Document
+lazy from article_publisher.document import Document
 
 
 class Converter(ABC):

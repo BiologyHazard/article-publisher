@@ -5,11 +5,26 @@ B站 Opus 格式数据构建器。
 段落 (paragraph) 和内联节点 (node) 数据结构。
 """
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, TypedDict
+from typing import TypedDict
 
 from article_publisher.document import Alignment
+lazy from article_publisher.platforms.bilibili.models import (
+    BlockquoteParagraph,
+    CodeParagraph,
+    DividerParagraph,
+    EmoteNode,
+    FormulaNode,
+    HeadingParagraph,
+    ImageParagraph,
+    ImagePic,
+    InlineNode,
+    LinkNode,
+    OrderedListParagraph,
+    TextNode,
+    TextParagraph,
+    TextStyle,
+    UnorderedListParagraph,
+)
 
 # B站 Opus API 对齐值: 0=左对齐, 1=居中, 2=右对齐
 _ALIGN_TO_OPUS: dict[Alignment, int] = {
@@ -17,25 +32,6 @@ _ALIGN_TO_OPUS: dict[Alignment, int] = {
     Alignment.CENTER: 1,
     Alignment.RIGHT: 2,
 }
-
-if TYPE_CHECKING:
-    from article_publisher.platforms.bilibili.models import (
-        BlockquoteParagraph,
-        CodeParagraph,
-        DividerParagraph,
-        EmoteNode,
-        FormulaNode,
-        HeadingParagraph,
-        ImageParagraph,
-        ImagePic,
-        InlineNode,
-        LinkNode,
-        OrderedListParagraph,
-        TextNode,
-        TextParagraph,
-        TextStyle,
-        UnorderedListParagraph,
-    )
 
 # =============================================================================
 # 文本节点常量

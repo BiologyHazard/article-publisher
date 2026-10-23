@@ -5,16 +5,12 @@
 自动记录请求和响应的 debug 日志（参考 NGA 客户端的日志模式）。
 """
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, Any, Self
+from typing import Any, Self
 
 import aiohttp
+lazy from aiohttp.typedefs import StrOrURL
 
 from article_publisher.log import logger
-
-if TYPE_CHECKING:
-    from aiohttp.typedefs import StrOrURL
 
 
 class ClientSessionWithLog(aiohttp.ClientSession):
@@ -40,11 +36,9 @@ class ClientSessionWithLog(aiohttp.ClientSession):
                 return "Bilibili"
     """
 
-    if TYPE_CHECKING:
-        # aiohttp.ClientSession 定义了 __aenter__ 和 __aexit__，但标注的返回类型为 ClientSession，
-        # 这里重新标注为 Self，以便在子类中使用 async with 时正确推断类型。
-        async def __aenter__(self) -> Self:
-            return self
+    async def __aenter__(self) -> Self:
+        await super().__aenter__()
+        return self
 
     async def _request(
         self, method: str, str_or_url: StrOrURL, **kwargs: Any

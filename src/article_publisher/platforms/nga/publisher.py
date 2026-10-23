@@ -8,11 +8,10 @@ NGA Publisher — 将 IR Document 发布到 NGA 论坛。
 4. 同时保存 BBCode 到文件供检查
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
+lazy from collections.abc import Sequence
 
 from loguru import logger
 
@@ -34,12 +33,7 @@ from article_publisher.document import (
 )
 from article_publisher.document import Paragraph as IRParagraph
 from article_publisher.platforms.base import Publisher
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-    from article_publisher.platforms.nga.client import NgaClient, UploadedImage
-
+lazy from article_publisher.platforms.nga.client import NgaClient, UploadedImage
 
 _HEADING_SIZE: dict[int, str] = {1: "150%", 2: "130%", 3: "120%"}
 """NGA 标题字号映射，H1~H3 使用不同字号，H4+ 回退为纯粗体。"""
