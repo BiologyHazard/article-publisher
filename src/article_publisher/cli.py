@@ -39,7 +39,6 @@ from article_publisher.converters.lark.converter import (
     cleanup_temp_images,
 )
 from article_publisher.converters.markdown import MarkdownConverter
-from article_publisher.document import Document
 from article_publisher.log import logger
 from article_publisher.platforms.bilibili import (
     BiliClient,
@@ -52,6 +51,7 @@ from article_publisher.platforms.skland.publisher import (
     SklandPublishConfig,
     SklandPublisher,
 )
+lazy from article_publisher.document import Document
 
 AUTH_HELP = """错误：缺少必要的环境变量
 

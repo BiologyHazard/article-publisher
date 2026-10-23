@@ -108,11 +108,13 @@ ngacn0comInfoCheckTime=2000000000                                # 校验时间�
 import requests
 
 session = requests.Session()
-session.headers.update({
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    "Referer": "https://bbs.nga.cn/",
-    "Origin": "https://bbs.nga.cn",
-})
+session.headers.update(
+    {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer": "https://bbs.nga.cn/",
+        "Origin": "https://bbs.nga.cn",
+    }
+)
 
 # 解析 Cookie 字符串并设置（domain 设为 .nga.cn 以覆盖所有子域）
 for pair in cookie_str.split(";"):
@@ -153,17 +155,19 @@ var __U = {
 ```python
 import re
 
-resp = session.get("https://bbs.nga.cn/post.php", params={
-    "action": "new", "_newui": "", "fid": -34587507
-})
+resp = session.get(
+    "https://bbs.nga.cn/post.php",
+    params={"action": "new", "_newui": "", "fid": -34587507},
+)
 
 # 检查是否被重定向到登录页
 if "login" in resp.url.lower():
     raise Exception("Cookie 已过期")
 
 # 提取 auth token
-match = re.search(r'"auth"\s*:\s*"([a-f0-9]+)"',
-                  resp.text.replace("\n", " ").replace("\r", ""))
+match = re.search(
+    r'"auth"\s*:\s*"([a-f0-9]+)"', resp.text.replace("\n", " ").replace("\r", "")
+)
 auth_token = match.group(1)
 ```
 
@@ -309,10 +313,12 @@ def upload_image(self, file_path: Path) -> UploadedImage:
             "v2": (None, "1"),
             "origin_domain": (None, "bbs.nga.cn"),
             "__output": (None, "1"),
-            "auth": (None, auth),                          # 关键：auth token
-            "fid": (None, str(self.fid)),                  # 关键：版块 ID
-            "attachment_file1_url_utf8_name": (None,
-                requests.utils.quote(file_name, safe="")),
+            "auth": (None, auth),  # 关键：auth token
+            "fid": (None, str(self.fid)),  # 关键：版块 ID
+            "attachment_file1_url_utf8_name": (
+                None,
+                requests.utils.quote(file_name, safe=""),
+            ),
             "attachment_file1": (file_name, f, "application/octet-stream"),
         }
         resp = self._session.post(ATTACH_UPLOAD_URL, files=files)
@@ -433,9 +439,11 @@ for key, value in data.items():
     body_parts.append(f"{k_enc}={v_enc}".encode("gbk"))
 
 body = b"&".join(body_parts)
-resp = session.post("https://bbs.nga.cn/post.php",
-                     data=body,
-                     headers={"Content-Type": "application/x-www-form-urlencoded"})
+resp = session.post(
+    "https://bbs.nga.cn/post.php",
+    data=body,
+    headers={"Content-Type": "application/x-www-form-urlencoded"},
+)
 ```
 
 ### 5.7 响应格式
@@ -481,14 +489,15 @@ window.script_muti_get_var_store = {
 ```python
 def _parse_post_response(text: str) -> dict:
     match = re.search(
-        r"window\.script_muti_get_var_store\s*=\s*(\{.+?\})",
-        text, re.DOTALL
+        r"window\.script_muti_get_var_store\s*=\s*(\{.+?\})", text, re.DOTALL
     )
     if not match:
         return {"error": {"0": f"无法解析响应: {text[:200]}"}}
 
     import json
+
     return json.loads(match.group(1))
+
 
 # 判断成功/失败
 result = _parse_post_response(text)
@@ -905,7 +914,7 @@ ATTACH_UPLOAD_URL = "https://img8.nga.cn/attach.php"
 ATTACH_VIEW_BASE = "https://img.nga.178.com/attachments"
 
 # 正文长度限制
-CONTENT_MIN_BYTES = 6    # GBK 编码后至少 6 字节
+CONTENT_MIN_BYTES = 6  # GBK 编码后至少 6 字节
 CONTENT_MAX_BYTES = 65530  # GBK 编码后最多 65530 字节
 
 # 图片限制

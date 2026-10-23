@@ -1,16 +1,19 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import aiohttp
+lazy import aiohttp
 
-from article_publisher.converters.lark.models.block import (
-    Block,
-    ListDocumentBlockResponse,
-)
 from article_publisher.http_client import ClientSessionWithLog
 
 from .consts import LARK_API_BASE
-from .models import GetDocumentData, GetDocumentResponse
 from .models.download_media import DownloadMediaResult
+
+if TYPE_CHECKING:
+    from article_publisher.converters.lark.models.block import (
+        Block,
+        ListDocumentBlockResponse,
+    )
+
+    from .models import GetDocumentData, GetDocumentResponse
 
 
 class LarkClient(ClientSessionWithLog):

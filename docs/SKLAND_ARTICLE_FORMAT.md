@@ -935,8 +935,8 @@ s = path + body/query + timestamp + JSON.stringify(headers)
 **Step 2：双层哈希**
 
 ```python
-hex_s = HMAC-SHA256(s, BearerToken).hexdigest()   # 第一步：SHA256
-sign  = MD5(hex_s).hexdigest()                     # 第二步：对 hex 字符串做 MD5
+hex_s = HMAC - SHA256(s, BearerToken).hexdigest()  # 第一步：SHA256
+sign = MD5(hex_s).hexdigest()  # 第二步：对 hex 字符串做 MD5
 ```
 
 注意：**不是**直接 HMAC-MD5！关键步骤是对 HMAC-SHA256 输出的 hex 字符串再做 MD5。
@@ -969,23 +969,26 @@ import hmac
 import hashlib
 import json
 
-def compute_sign(path: str, body_or_query: str,
-                 timestamp: str, dId: str, platform: str,
-                 vName: str, token: str) -> str:
+
+def compute_sign(
+    path: str,
+    body_or_query: str,
+    timestamp: str,
+    dId: str,
+    platform: str,
+    vName: str,
+    token: str,
+) -> str:
     """计算森空岛 API 的 sign 头 (MD5(HMAC-SHA256(s, token)))"""
     # 1. headers dict 顺序固定：platform → timestamp → dId → vName
-    headers = {
-        "platform": platform,
-        "timestamp": timestamp,
-        "dId": dId,
-        "vName": vName,
-    }
+    headers = {"platform": platform, "timestamp": timestamp, "dId": dId, "vName": vName}
     # 2. 构建签名串（path + body/query + timestamp + JSON.stringify(headers)）
     s = path + body_or_query + timestamp + json.dumps(headers, separators=(",", ":"))
 
     # 3. 双层哈希：HMAC-SHA256 → hex → MD5
     hex_s = hmac.new(token.encode(), s.encode(), hashlib.sha256).hexdigest()
     return hashlib.md5(hex_s.encode()).hexdigest()
+
 
 # 使用示例（已验证）
 sign = compute_sign(

@@ -248,7 +248,12 @@ uv run python main.py articles/article1 --private
 
 ```python
 from pathlib import Path
-from article_publisher import BiliClient, MarkdownConverter, BiliPublisher, BiliPublishConfig
+from article_publisher import (
+    BiliClient,
+    MarkdownConverter,
+    BiliPublisher,
+    BiliPublishConfig,
+)
 from article_publisher._auth import load_bilibili_auth
 
 # 在异步函数中调用

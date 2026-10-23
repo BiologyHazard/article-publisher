@@ -484,7 +484,7 @@ class NgaClient(ClientSessionWithLog):
 
         try:
             obj = cast("dict[str, Any]", json5.loads(json_str))
-        except (ValueError, UnicodeDecodeError):
+        except ValueError, UnicodeDecodeError:
             raise NgaApiError(
                 f"无法解析 window.script_muti_get_var_store: {text[:256]}"
             ) from None

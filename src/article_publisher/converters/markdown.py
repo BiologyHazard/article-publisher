@@ -77,7 +77,7 @@ class MarkdownConverter(Converter):
 
     def __init__(self, markdown_file_path: Path):
         self.base_dir = markdown_file_path.resolve().parent
-        with open(markdown_file_path, "r", encoding="utf-8") as f:
+        with open(markdown_file_path, encoding="utf-8") as f:
             self._md = f.read()
         parser = mistune.create_markdown(renderer=None, plugins=_MISTUNE_PLUGINS)
         self._parsed = cast("list[dict[str, Any]]", parser(self._md))

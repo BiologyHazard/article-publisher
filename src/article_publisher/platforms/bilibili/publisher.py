@@ -226,7 +226,6 @@ class BiliPublisher:
             # 处理话题
             topic = None
             if config.hashtag_ids:
-                topic_parts: list[dict[str, Any]] = []
                 # 简化处理：默认使用第一个话题
                 topic = {"id": config.hashtag_ids[0], "name": ""}
 
