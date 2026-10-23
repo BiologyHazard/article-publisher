@@ -24,6 +24,7 @@ SKLAND_TEXT_COLORS = tuple(
     for color in ("#222222", "#90C208", "#46AAFA", "#FA6E5A", "#FAB446", "#826EFF")
 )
 
+# B 站编辑器预设色，仅保留作参考；发布支持任意颜色，不使用此表匹配。
 BILIBILI_TEXT_COLORS = tuple(
     TextColor(color, color, dark_color, theme)
     for color, dark_color, theme in (
