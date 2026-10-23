@@ -685,8 +685,8 @@ publisher.publish(doc)  # → 先删旧附件，再上传新图，最后 submit_
 | `TextRun.italic` | `[i]text[/i]` | 注意长度限制 |
 | `TextRun.underline` | `[u]text[/u]` | |
 | `TextRun.strikethrough` | `[del]text[/del]` | |
-| `TextRun.color` | `[color=#xxx]text[/color]` | |
-| `TextRun.inline_code` | `[color=#c7254e]text[/color]` | 用颜色模拟 |
+| `TextRun.color` | `[color=预设颜色名称]text[/color]` | 按 Oklab 距离匹配 24 种支持色 |
+| `TextRun.inline_code` | `[color=crimson]text[/color]` | 默认来源色 `#c7254e` 映射后的结果 |
 | `TextRun.link_url` | `[url=url]text[/url]` | |
 | `ImageBlock` | `[img]./mon_xxx/...[/img]` | 先上传，后引用 |
 | `CodeBlock` | `[code]\ncontent\n[/code]` | |
@@ -715,7 +715,7 @@ publisher.publish(doc)  # → 先删旧附件，再上传新图，最后 submit_
 ```
 [size=150%][b]一级标题[/b][/size]
 
-[b]粗体[/b] [i]斜体[/i] [color=#c7254e]行内代码[/color]
+[b]粗体[/b] [i]斜体[/i] [color=crimson]行内代码[/color]
 
 [quote]
 引用内容
@@ -732,6 +732,9 @@ publisher.publish(doc)  # → 先删旧附件，再上传新图，最后 submit_
 样式从外到内应用（BBCode 解析从外到内）：
 
 ```python
+from article_publisher.colors import NGA_TEXT_COLORS, nearest_text_color
+
+
 def _textrun_to_bbcode(self, run: TextRun) -> str:
     text = run.text
 
@@ -748,9 +751,10 @@ def _textrun_to_bbcode(self, run: TextRun) -> str:
     if run.bold:
         text = f"[b]{text}[/b]"
 
-    color = _INLINE_CODE_COLOR if run.inline_code else run.color
-    if color:
-        text = f"[color={color}]{text}[/color]"
+    color = run.color or (_INLINE_CODE_COLOR if run.inline_code else "")
+    matched_color = nearest_text_color(color, NGA_TEXT_COLORS)
+    if matched_color:
+        text = f"[color={matched_color.value}]{text}[/color]"
 
     return text
 ```

@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
+from article_publisher.colors import SKLAND_TEXT_COLORS, nearest_text_color
 from article_publisher.document import (
     Alignment,
     Block,
@@ -489,8 +490,10 @@ class SklandPublisher(Publisher):
                     node["underline"] = True
                 if child.strikethrough:
                     node["del"] = True
-                if child.color:
-                    node["color"] = child.color
+                color = child.color or ("#c7254e" if child.inline_code else "")
+                matched_color = nearest_text_color(color, SKLAND_TEXT_COLORS)
+                if matched_color:
+                    node["color"] = matched_color.value
 
                 result.append(node)
 
@@ -832,7 +835,7 @@ window.open(`https://www.skland.com/editor/article?draftId=${{draftId}}`, '_blan
                 )
 
     def _convert_list_item_to_block(
-        self, item: "ListItem", blocks: list[dict[str, Any]], parent_id: str
+        self, item: ListItem, blocks: list[dict[str, Any]], parent_id: str
     ) -> None:
         """将列表项转换为文本 block。"""
         for child in item.blocks:
@@ -925,17 +928,19 @@ window.open(`https://www.skland.com/editor/article?draftId=${{draftId}}`, '_blan
 
     @staticmethod
     def _convert_inline_to_block_elements(
-        children: Sequence["InlineElement"],
+        children: Sequence[InlineElement],
     ) -> list[dict[str, Any]]:
         """将 IR InlineElement 列表转换为森空岛 block inlineElements。"""
         elements: list[dict[str, Any]] = []
         for child in children:
-            from article_publisher.document import TextRun
-
             if isinstance(child, TextRun):
                 text = child.text
                 if not text:
                     continue
-                # 森空岛 block 格式暂不支持复杂的 inline 样式
-                elements.append({"kind": "text", "text": {"text": text}})
+                node: dict[str, Any] = {"kind": "text", "text": {"text": text}}
+                color = child.color or ("#c7254e" if child.inline_code else "")
+                matched_color = nearest_text_color(color, SKLAND_TEXT_COLORS)
+                if matched_color:
+                    node["color"] = matched_color.value
+                elements.append(node)
         return elements

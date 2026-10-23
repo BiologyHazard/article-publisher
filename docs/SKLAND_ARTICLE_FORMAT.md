@@ -247,6 +247,9 @@ interface DraftData {
 
 **段落支持彩色文字：**
 
+支持色为 `#222222`、`#90C208`、`#46AAFA`、`#FA6E5A`、`#FAB446`、`#826EFF`。
+发布器按 Oklab 距离映射到最近的预设色；未设置颜色时保持平台默认样式。
+
 ```json
 {
   "elementId": "EiM88nFp7tJi",
@@ -1243,6 +1246,14 @@ POST https://zonai.skland.com/web/v2/item/upd
   }
 }
 ```
+
+编辑模式的颜色写在 `inlineElements` 节点顶层，与 `kind`、`text` 同级：
+
+```json
+{ "color": "#90C208", "kind": "text", "text": { "text": "绿色文字" } }
+```
+
+编辑模式与草稿使用相同的 6 色调色板和最近色算法。
 
 `text.kind` 取值：
 | 值 | 对应 |

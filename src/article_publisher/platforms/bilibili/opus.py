@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict
 
+from article_publisher.colors import BILIBILI_TEXT_COLORS, nearest_text_color
 from article_publisher.document import Alignment
 
 # B站 Opus API 对齐值: 0=左对齐, 1=居中, 2=右对齐
@@ -64,7 +65,10 @@ def make_text_node(
     color: str = "",
     dark_color: str = "",
 ) -> TextNode:
-    """构造一个 Opus 文本节点 (node_type=1)。"""
+    """构造文本节点；按浅色匹配预设色，深色值由该预设统一决定。"""
+    matched_color = nearest_text_color(color, BILIBILI_TEXT_COLORS)
+    color = matched_color.value if matched_color else ""
+    dark_color = matched_color.dark_color if matched_color else ""
     style: TextStyle = {}
     if bold:
         style["bold"] = True
@@ -86,6 +90,8 @@ def make_text_node(
             "font_level": font_level,
         },
     }
+    if matched_color:
+        node["word"]["bili_theme"] = matched_color.bili_theme
     return node
 
 

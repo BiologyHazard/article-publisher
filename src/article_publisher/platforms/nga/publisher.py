@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
+from article_publisher.colors import NGA_TEXT_COLORS, nearest_text_color
 from article_publisher.document import (
     Alignment,
     Block,
@@ -343,9 +344,10 @@ class NgaPublisher(Publisher):
             text = f"[b]{text}[/b]"
 
         # 颜色（包括行内代码的特殊颜色）
-        color = _INLINE_CODE_COLOR if run.inline_code else run.color
-        if color:
-            text = f"[color={color}]{text}[/color]"
+        color = run.color or (_INLINE_CODE_COLOR if run.inline_code else "")
+        matched_color = nearest_text_color(color, NGA_TEXT_COLORS)
+        if matched_color:
+            text = f"[color={matched_color.value}]{text}[/color]"
 
         return text
 

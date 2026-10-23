@@ -148,6 +148,11 @@
 | `bili_theme` | string | B站 主题色标识（如 `"Re7"`=红色） |
 | `bg_style` | object | 背景色样式（见下文） |
 
+发布器按 Oklab 距离，从 25 种浅色模式文字预设色中选择最近色，并将该预设的
+`color`、`dark_color`、`bili_theme` 一并写入。不会独立匹配深色值。
+完整配对见 `src/article_publisher/colors.py` 中的 `BILIBILI_TEXT_COLORS`。
+未设置或无效的来源颜色输出空 `color` / `dark_color`，不指定 `bili_theme`。
+
 #### 背景色 (`bg_style`)
 
 ```json
