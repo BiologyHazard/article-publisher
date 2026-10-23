@@ -685,7 +685,7 @@ publisher.publish(doc)  # → 先删旧附件，再上传新图，最后 submit_
 | `TextRun.italic` | `[i]text[/i]` | 注意长度限制 |
 | `TextRun.underline` | `[u]text[/u]` | |
 | `TextRun.strikethrough` | `[del]text[/del]` | |
-| `TextRun.color` | `[color=预设颜色名称]text[/color]` | 按 Oklab 距离匹配 24 种支持色 |
+| `TextRun.color` | `[color=预设颜色名称]text[/color]` | 所有来源颜色统一优先保持色相，再比较 Oklab 距离 |
 | `TextRun.inline_code` | `[color=crimson]text[/color]` | 默认来源色 `#c7254e` 映射后的结果 |
 | `TextRun.link_url` | `[url=url]text[/url]` | |
 | `ImageBlock` | `[img]./mon_xxx/...[/img]` | 先上传，后引用 |

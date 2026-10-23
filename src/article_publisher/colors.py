@@ -1,4 +1,4 @@
-"""平台字体调色板与最近色匹配（sRGB → Oklab 欧氏距离）。
+"""字体调色板与最近色匹配：优先保持色相，再比较 Oklab 距离。
 
 只在发布边界转换颜色，保留文档模型中的来源颜色。空值或非法颜色不
 强制指定颜色，以便平台使用默认文字色；距离相同时按调色板顺序选择。
@@ -7,6 +7,14 @@
 import re
 from dataclasses import dataclass
 from functools import lru_cache
+from math import atan2, degrees, hypot
+
+# Oklch 彩度低于此值视为中性色，不能依赖其数值不稳定的色相角。
+_NEUTRAL_CHROMA = 0.02
+# 避免鲜艳文字映射为过淡的颜色（例如橙色映射成 burlywood）。
+_MIN_CHROMA_RATIO = 0.6
+# 最近色相附近允许少量偏差，以便兼顾亮度；角度按 360° 环形计算。
+_HUE_TOLERANCE_DEGREES = 15.0
 
 
 @dataclass(frozen=True)
@@ -107,6 +115,7 @@ def _hex_to_oklab(color: str) -> tuple[float, float, float]:
 def nearest_text_color(source: str, palette: tuple[TextColor, ...]) -> TextColor | None:
     """匹配 #RGB / #RRGGBB 或调色板输出名；非法输入返回 None。
 
+    所有来源统一按彩度和色相筛选候选，再比较感知色差。
     匹配使用浅色模式的 color，深色值与主题标识仅随选中的颜色输出。
     """
     source = source.strip().lower()
@@ -120,9 +129,50 @@ def nearest_text_color(source: str, palette: tuple[TextColor, ...]) -> TextColor
     if len(source) == 4:
         source = "#" + "".join(c * 2 for c in source[1:])
     lab = _hex_to_oklab(source)
+    palette = _hue_preserving_candidates(lab, palette)
     return min(
         palette,
         key=lambda entry: sum(
             (a - b) ** 2 for a, b in zip(lab, _hex_to_oklab(entry.color), strict=True)
         ),
     )
+
+
+def _hue_preserving_candidates(
+    lab: tuple[float, float, float], palette: tuple[TextColor, ...]
+) -> tuple[TextColor, ...]:
+    """在 Oklch 中筛选同色系候选，调色板不足时逐级放宽彩度限制。"""
+    _, a, b = lab
+    chroma = hypot(a, b)
+    if chroma < _NEUTRAL_CHROMA:
+        neutral = tuple(
+            entry
+            for entry in palette
+            if hypot(*_hex_to_oklab(entry.color)[1:]) < _NEUTRAL_CHROMA
+        )
+        return neutral or palette
+
+    colorful = tuple(
+        entry
+        for entry in palette
+        if hypot(*_hex_to_oklab(entry.color)[1:]) >= _NEUTRAL_CHROMA
+    )
+    if not colorful:
+        return palette
+    candidates = (
+        tuple(
+            entry
+            for entry in colorful
+            if hypot(*_hex_to_oklab(entry.color)[1:]) >= chroma * _MIN_CHROMA_RATIO
+        )
+        or colorful
+    )
+    hue = degrees(atan2(b, a))
+
+    def hue_distance(entry: TextColor) -> float:
+        _, target_a, target_b = _hex_to_oklab(entry.color)
+        delta = abs(hue - degrees(atan2(target_b, target_a)))
+        return min(delta, 360 - delta)
+
+    limit = min(map(hue_distance, candidates)) + _HUE_TOLERANCE_DEGREES
+    return tuple(entry for entry in candidates if hue_distance(entry) <= limit)
