@@ -10,7 +10,7 @@ uv sync
 
 # 2. 配置认证（编辑 .env 文件）
 cp .env.example .env
-# 然后从浏览器 Cookie 中复制 SESSDATA、bili_jct、buvid3 填入 .env
+# 然后从浏览器请求头复制完整 Cookie，填入 .env 的 BILIBILI_COOKIE
 
 # 3. 运行
 uv run python -m article_publisher bilibili markdown articles/article1
@@ -24,11 +24,19 @@ uv run python -m article_publisher bilibili markdown articles/article1
 
 ### B站 认证
 
-| 变量 | 对应 Cookie | 获取方式 |
+| 变量 | 说明 | 获取方式 |
 |------|------------|----------|
-| `SESSDATA` | 登录会话令牌 | F12 → Application → Cookies → bilibili.com |
-| `bili_jct` | CSRF 令牌 | 同上 |
-| `buvid3` | 设备标识 | 同上 |
+| `BILIBILI_COOKIE` | 浏览器请求头中的完整 Cookie 字符串 | F12 → Network → Request Headers → Cookie |
+
+登录 B站并打开创作中心，按 F12 打开 **Network（网络）** 面板后刷新页面，选择发送到 `api.bilibili.com` 的已登录请求，在 **Request Headers（请求标头）** 中复制 `Cookie` 的完整值，填入 `.env`：
+
+```dotenv
+BILIBILI_COOKIE="粘贴浏览器请求头中的完整 Cookie 值"
+```
+
+仅复制值，不包含 `Cookie:` 前缀，保留所有 `name=value` 字段及分号分隔符。程序会发送完整 Cookie，并自动从中提取 `bili_jct` 作为 CSRF 令牌；缺少或留空 `SESSDATA`、`bili_jct` 时会报错。不要使用 `document.cookie` 获取，因为它无法读取 HttpOnly 的 `SESSDATA`。
+
+Cookie 过期后需重新登录并更新 `BILIBILI_COOKIE`。
 
 ### 飞书认证（飞书云文档模式需要）
 
@@ -37,7 +45,7 @@ uv run python -m article_publisher bilibili markdown articles/article1
 | `LARK_APP_ID` | 飞书应用 App ID | [飞书开放平台](https://open.feishu.cn/app) 创建应用后获取 |
 | `LARK_APP_SECRET` | 飞书应用 App Secret | 同上 |
 
-> ⚠️ `SESSDATA` 和 `bili_jct` 泄露等同账号被盗，`.env` 已加入 `.gitignore`
+> ⚠️ `BILIBILI_COOKIE` 包含登录凭据，泄露等同账号被盗，`.env` 已加入 `.gitignore`
 
 ---
 
@@ -216,13 +224,15 @@ uv run python main.py articles/article1 --private
 ```python
 from pathlib import Path
 from article_publisher import BiliClient, MarkdownConverter, BiliPublisher, BiliPublishConfig
+from article_publisher._auth import load_bilibili_auth
 
-client = BiliClient(sessdata, bili_jct, buvid3)
-converter = MarkdownConverter(Path("articles/article1/main.md"))
-doc = converter.convert()
-config = BiliPublishConfig(article_id=350791)
-publisher = BiliPublisher(client, config=config)
-result = publisher.publish(doc)
+# 在异步函数中调用
+async with BiliClient(cookie_str=load_bilibili_auth()["BILIBILI_COOKIE"]) as client:
+    converter = MarkdownConverter(Path("articles/article1/main.md"))
+    doc = await converter.convert()
+    config = BiliPublishConfig(article_id=350791)
+    publisher = BiliPublisher(client, config=config)
+    result = await publisher.publish(doc)
 ```
 
 ### 编辑已发布文章（通过 Python API）

@@ -56,17 +56,17 @@ from article_publisher.platforms.skland.publisher import (
 AUTH_HELP = """错误：缺少必要的环境变量
 
 请在项目根目录创建 .env 文件，内容如下：
-    SESSDATA=你的 SESSDATA 值
-    bili_jct=你的 bili_jct 值
-    buvid3=你的 buvid3 值
+    BILIBILI_COOKIE="你的完整 Cookie 字符串"
 
 飞书模式还需额外配置：
     LARK_APP_ID=你的飞书应用 App ID
     LARK_APP_SECRET=你的飞书应用 App Secret
 
 获取方式：浏览器登录 B站后
-  按 F12 打开开发者工具 → Application（应用程序） → Cookie → https://*.bilibili.com
-  复制 SESSDATA、bili_jct、buvid3 三个字段的值
+  打开创作中心，按 F12 → Network（网络），刷新页面
+  选择发送到 api.bilibili.com 的已登录请求 → Request Headers（请求标头）
+  复制 Cookie 的完整值（不含 Cookie: 前缀），保留所有字段
+  不要使用 document.cookie，它无法读取 HttpOnly 的 SESSDATA
 
 飞书应用需在 https://open.feishu.cn/app 创建并获取凭据。"""
 
@@ -306,9 +306,13 @@ async def _run_bilibili(doc: Document, args: Namespace) -> None:
         cover_path=Path(args.cover).resolve() if args.cover else None,
     )
 
-    async with BiliClient(
-        sessdata=cfg["SESSDATA"], bili_jct=cfg["bili_jct"], buvid3=cfg["buvid3"]
-    ) as client:
+    try:
+        client = BiliClient(cookie_str=cfg["BILIBILI_COOKIE"])
+    except ValueError as exc:
+        logger.error(str(exc))
+        raise CliError() from exc
+
+    async with client:
         publisher = BiliPublisher(client, config=config)
         await publisher.publish(doc, dry_run=args.dry_run)
 

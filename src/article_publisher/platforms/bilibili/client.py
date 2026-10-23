@@ -43,15 +43,28 @@ class BiliApiError(Exception):
 class BiliClient(ClientSessionWithLog):
     """封装与 B站后端交互的通用 HTTP 客户端。"""
 
-    def __init__(self, sessdata: str, bili_jct: str, buvid3: str):
-        self.csrf = bili_jct
+    def __init__(self, cookie_str: str):
+        """使用浏览器请求头中的完整 Cookie，并提取 bili_jct 用于 CSRF 校验。"""
+        cookie_str = cookie_str.strip()
+        cookies: dict[str, str] = {}
+        for pair in cookie_str.split(";"):
+            key, separator, value = pair.strip().partition("=")
+            if separator:
+                cookies[key.strip()] = value.strip()
+        missing = [key for key in ("SESSDATA", "bili_jct") if not cookies.get(key)]
+        if missing:
+            raise ValueError(
+                f"BILIBILI_COOKIE 缺少必要字段：{', '.join(missing)}；"
+                "请从浏览器请求头复制完整的 Cookie 值。"
+            )
+        self.csrf = cookies["bili_jct"]
         super().__init__(
             headers={
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36 Edg/149.0.0.0",
                 "Referer": "https://member.bilibili.com/",
                 "Origin": "https://member.bilibili.com",
-            },
-            cookies={"SESSDATA": sessdata, "bili_jct": bili_jct, "buvid3": buvid3},
+                "Cookie": cookie_str,
+            }
         )
         self._mixin_key: str | None = None
 

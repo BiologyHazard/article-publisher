@@ -21,7 +21,7 @@
 
 ### 1.1 Cookie 认证
 
-B站 Web API 使用 Cookie 进行身份认证，需要以下三个字段：
+B站 Web API 使用 Cookie 进行身份认证。本工具通过 `BILIBILI_COOKIE` 环境变量读取并发送浏览器请求头中的**完整 Cookie**。以下是其中的关键字段，实际配置时需保留浏览器发送的所有字段：
 
 | Cookie 字段 | 说明 | HttpOnly | 获取方式 |
 |-------------|------|----------|----------|
@@ -30,7 +30,9 @@ B站 Web API 使用 Cookie 进行身份认证，需要以下三个字段：
 | `buvid3` | 浏览器唯一标识符 | 否 | 同上 |
 
 > ⚠️ `SESSDATA` 是 HttpOnly 的，无法通过 `document.cookie` 读取。
-> 必须通过浏览器 DevTools 的 Application 面板或抓取网络请求头获取。
+> 请登录创作中心，打开 DevTools → Network 并刷新页面，选择发送到 `api.bilibili.com` 的已登录请求，在 Request Headers 中复制 Cookie 的完整值（不含 `Cookie:` 前缀）。
+
+在 `.env` 中配置 `BILIBILI_COOKIE="粘贴浏览器请求头中的完整 Cookie 值"`。
 
 ### 1.2 请求头
 
@@ -38,13 +40,13 @@ B站 Web API 使用 Cookie 进行身份认证，需要以下三个字段：
 User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) ...
 Referer: https://member.bilibili.com/platform/upload/text/new-edit
 Origin: https://member.bilibili.com
-Cookie: SESSDATA=xxx; bili_jct=xxx; buvid3=xxx
+Cookie: <BILIBILI_COOKIE 中保存的完整 Cookie 值>
 ```
 
 ### 1.3 CSRF 令牌
 
 所有写操作（POST/PUT/DELETE）需要在请求参数中附带 `csrf` 参数，
-值即为 Cookie 中的 `bili_jct` 字段。
+值即为 Cookie 中的 `bili_jct` 字段。客户端会自动从 `BILIBILI_COOKIE` 中提取该值；缺少或留空 `SESSDATA`、`bili_jct` 时会在发送请求前报错。
 
 ---
 
@@ -633,7 +635,7 @@ GET https://api.bilibili.com/x/article/creative/draft/list
 ```
 ┌─────────────────────────────────────────────────────┐
 │ 1. 从浏览器获取 Cookie                              │
-│    SESSDATA + bili_jct(csrf) + buvid3                │
+│    完整 Cookie → BILIBILI_COOKIE                    │
 └──────────────────────┬──────────────────────────────┘
                        ↓
 ┌─────────────────────────────────────────────────────┐
