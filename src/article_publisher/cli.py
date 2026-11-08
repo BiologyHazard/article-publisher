@@ -136,8 +136,6 @@ def _run_cache(args: Namespace) -> None:
                 print(f"已清理缓存: {CACHE_DIR}")
             else:
                 print(f"缓存目录不存在，无需清理: {CACHE_DIR}")
-        case _:
-            raise CliError(f"未知缓存操作: {args.cache_action}")
 
 
 def _create_converter(args: Namespace) -> Converter:
@@ -149,7 +147,7 @@ def _create_converter(args: Namespace) -> Converter:
         logger.info(f"📄 Markdown 文件: {path}")
         return MarkdownConverter(path)
 
-    if args.source == "lark":
+    elif args.source == "lark":
         cfg = require_auth(LARK_REQUIRED_ENV_KEYS, LARK_AUTH_HELP)
         logger.info(f"📄 飞书云文档: {args.doc_id}")
         return LarkDocxConverter(
@@ -158,7 +156,8 @@ def _create_converter(args: Namespace) -> Converter:
             document_id=args.doc_id,
         )
 
-    raise CliError(f"未知输入源: {args.source}")
+    else:
+        raise CliError(f"未知输入源: {args.source}")
 
 
 def _print_document_preview(doc: Document) -> None:

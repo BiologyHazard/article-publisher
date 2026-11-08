@@ -214,14 +214,14 @@ class NgaPublisher(Publisher):
         parts: list[str] = []
 
         for block in doc.blocks:
-            result = await self._convert_block(
-                block,
-                dry_run=dry_run,
-                attachment_strings=attachment_strings,
-                attachment_checks=attachment_checks,
+            parts.append(
+                await self._convert_block(
+                    block,
+                    dry_run=dry_run,
+                    attachment_strings=attachment_strings,
+                    attachment_checks=attachment_checks,
+                )
             )
-            if result is not None:
-                parts.append(result)
 
         return "\n".join(parts)
 
@@ -232,7 +232,7 @@ class NgaPublisher(Publisher):
         dry_run: bool = False,
         attachment_strings: list[str] | None = None,
         attachment_checks: list[str] | None = None,
-    ) -> str | None:
+    ) -> str:
         """将单个 IR Block 转换为 NGA BBS 代码字符串。"""
         if isinstance(block, Heading):
             return self._convert_heading(block)
@@ -272,7 +272,8 @@ class NgaPublisher(Publisher):
             )
         elif isinstance(block, Divider):
             return "[h][/h]"
-        return None
+        else:
+            raise ValueError(f"NGA 不支持块类型: {type(block).__name__}")
 
     # ==================================================================
     # Heading
@@ -285,11 +286,9 @@ class NgaPublisher(Publisher):
         H1~H3 使用不同字号，H4+ 回退为纯粗体。
         """
         inline = self._convert_inline(list(block.text.children))
-        if block.level <= 3:
-            size = _HEADING_SIZE.get(block.level, "120%")
-            return f"[size={size}][b]{inline}[/b][/size]"
-        else:
-            return f"[b]{inline}[/b]"
+        if block.level in _HEADING_SIZE:
+            return f"[size={_HEADING_SIZE[block.level]}][b]{inline}[/b][/size]"
+        return f"[b]{inline}[/b]"
 
     # ==================================================================
     # Paragraph
@@ -418,16 +417,15 @@ class NgaPublisher(Publisher):
         attachment_checks: list[str] | None = None,
     ) -> str:
         """将引用块转换为 [quote] BBCode（支持嵌套）。"""
-        children_bbcode: list[str] = []
-        for child in block.children:
-            result = await self._convert_block(
+        children_bbcode = [
+            await self._convert_block(
                 child,
                 dry_run=dry_run,
                 attachment_strings=attachment_strings,
                 attachment_checks=attachment_checks,
             )
-            if result is not None:
-                children_bbcode.append(result)
+            for child in block.children
+        ]
 
         if not children_bbcode:
             return ""

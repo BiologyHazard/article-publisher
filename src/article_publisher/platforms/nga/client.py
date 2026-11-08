@@ -169,60 +169,12 @@ class NgaClient(ClientSessionWithLog):
     # ==================================================================
 
     def get_auth_token(self) -> str:
-        """
-        获取图片上传所需的 auth token。
-
-        通过访问发帖页面，从页面内嵌的 ``__U.auth`` 中提取。
-        结果会缓存。
-        """
+        """返回已缓存的 auth token；需先调用 ``get_post_php()`` 从发帖页面提取。"""
         if not self._auth_token:
             raise NgaApiError(
                 "auth token 未获取，请先调用 get_post_php() 获取发帖页面以提取 auth token。"
             )
         return self._auth_token
-
-        # if self._auth_token:
-        #     return self._auth_token
-
-        # url = f"{NGA_BASE}/post.php"
-        # params = {"action": "new", "_newui": "", "fid": self.fid}
-        # logger.info(f"获取 auth token (fid={self.fid}) ...")
-
-        # self._log_request("GET", url, params=params)
-        # resp = self._session.get(url, params=params)
-        # self._log_response(resp)
-        # resp.raise_for_status()
-
-        # # NGA 返回 GBK 编码，检查编码
-        # text = resp.text
-        # logger.debug(f"响应长度: {len(text)} 字节")
-        # logger.debug(f"响应 URL: {resp.url}")
-
-        # # 如果被重定向到登录页，resp.url 会变化
-        # if "login" in resp.url.lower() or "account" in resp.url.lower():
-        #     raise NgaApiError(
-        #         "Cookie 无效或已过期，页面被重定向到登录页。请重新登录 NGA 后更新 Cookie。"
-        #     )
-
-        # # 从 HTML 中提取 __U.auth — 支持多行 JSON 格式
-        # # 尝试多种匹配模式
-        # match = re.search(
-        #     r'"auth"\s*:\s*"([a-f0-9]+)"', text.replace("\n", " ").replace("\r", "")
-        # )
-        # if not match:
-        #     # 尝试 __U = { ... } 格式
-        #     match = re.search(
-        #         r'__U\s*[=:]\s*\{.*?"auth"\s*:\s*"([^"]+)"',
-        #         text.replace("\n", " "),
-        #         re.DOTALL,
-        #     )
-        # if not match:
-        #     logger.debug(f"页面片段 (500 字符): {text[:500]}")
-        #     raise NgaApiError("无法从发帖页面提取 auth token，请检查 Cookie 是否有效。")
-
-        # self._auth_token = cast("str", match.group(1))
-        # logger.info("  → auth token 获取成功")
-        # return self._auth_token
 
     # ==================================================================
     # 图片上传

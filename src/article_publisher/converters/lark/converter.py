@@ -70,7 +70,7 @@ class LarkDocxConverter(Converter):
 
         await self._load_blocks()
         blocks: list[Block] = []
-        await self._walk_block(self._root_block_id, blocks, depth=0)
+        await self._walk_block(self._root_block_id, blocks)
         title = await self.get_title()
         cover_path = await self._download_cover()
         return Document(title=title, blocks=blocks, cover=cover_path)
@@ -117,7 +117,7 @@ class LarkDocxConverter(Converter):
         logger.info(f"  已加载 {len(self._blocks)} 个块")
 
     async def _walk_block(
-        self, block_id: str, blocks: list[Block], depth: int = 0, indent_level: int = 0
+        self, block_id: str, blocks: list[Block], indent_level: int = 0
     ) -> None:
         """深度优先遍历单个块，然后处理其子块（含列表分组）。"""
 
@@ -131,7 +131,7 @@ class LarkDocxConverter(Converter):
         # quote_container：子块需要被包裹为 Blockquote
         if block_type is BlockType.QuoteContainer:
             quote_children: list[Block] = []
-            await self._walk_children(children, quote_children, depth + 1, indent_level)
+            await self._walk_children(children, quote_children, indent_level)
             if quote_children:
                 blocks.append(Blockquote(children=quote_children))
             return
@@ -163,14 +163,10 @@ class LarkDocxConverter(Converter):
             child_indent = indent_level
 
         # 递归处理子块（自动分组连续列表项）
-        await self._walk_children(children, blocks, depth + 1, child_indent)
+        await self._walk_children(children, blocks, child_indent)
 
     async def _walk_children(
-        self,
-        child_ids: list[str],
-        blocks: list[Block],
-        depth: int,
-        indent_level: int = 0,
+        self, child_ids: list[str], blocks: list[Block], indent_level: int = 0
     ) -> None:
         """处理子块列表，连续的同类型列表项自动分组为 OrderedList / UnorderedList。"""
 
@@ -213,7 +209,7 @@ class LarkDocxConverter(Converter):
 
                     # 递归处理子块（嵌套列表等）
                     await self._walk_children(
-                        gblock.get("children", []), item_blocks, depth + 1, indent_level
+                        gblock.get("children", []), item_blocks, indent_level
                     )
                     items.append(ListItem(blocks=item_blocks))
 
@@ -222,7 +218,7 @@ class LarkDocxConverter(Converter):
                 else:
                     blocks.append(UnorderedList(items=items))
             else:
-                await self._walk_block(child_id, blocks, depth + 1, indent_level)
+                await self._walk_block(child_id, blocks, indent_level)
                 i += 1
 
     async def _convert_single(
@@ -417,21 +413,6 @@ class LarkDocxConverter(Converter):
             lark_align = s.get("align", 1)
             return LARK_TO_ALIGNMENT.get(lark_align, Alignment.LEFT)
         return Alignment.LEFT
-
-    @staticmethod
-    def _elements_to_plain_text(elements: list[LarkTextElement]) -> str:
-        """将 Lark TextElement 列表拼接为纯文本。"""
-        if not elements:
-            return ""
-        parts: list[str] = []
-        for elem in elements:
-            text_run = elem.get("text_run")
-            if text_run and text_run.get("content"):
-                parts.append(text_run["content"])
-            equation = elem.get("equation")
-            if equation and equation.get("content"):
-                parts.append(equation["content"])
-        return "".join(parts)
 
     async def close(self) -> None:
         await self._client.close()
