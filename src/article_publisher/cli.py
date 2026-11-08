@@ -226,7 +226,7 @@ def _parse_publish_time(text: str) -> int:
     return int(dt.timestamp())
 
 
-async def main() -> None:
+async def cli() -> None:
     parser = _build_parser()
     args = parser.parse_args()
 

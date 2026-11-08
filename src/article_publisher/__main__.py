@@ -10,7 +10,12 @@
 
 import asyncio
 
-from article_publisher.cli import main
+from article_publisher.cli import cli
+
+
+def main() -> None:
+    asyncio.run(cli())
+
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
