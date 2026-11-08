@@ -14,3 +14,6 @@ wheels/
 
 # Log files
 logs/
+
+# Downloaded images and other cache files
+cache/

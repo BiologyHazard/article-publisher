@@ -23,11 +23,11 @@
 
 B站 Web API 使用 Cookie 进行身份认证。本工具通过 `BILIBILI_COOKIE` 环境变量读取并发送浏览器请求头中的**完整 Cookie**。以下是其中的关键字段，实际配置时需保留浏览器发送的所有字段：
 
-| Cookie 字段 | 说明 | HttpOnly | 获取方式 |
-|-------------|------|----------|----------|
-| `SESSDATA` | 登录会话令牌 | **是** | 浏览器 DevTools → Application → Cookies |
-| `bili_jct` | CSRF 防护令牌（表单提交用） | 否 | 同上 |
-| `buvid3` | 浏览器唯一标识符 | 否 | 同上 |
+| Cookie 字段 | 说明                        | HttpOnly | 获取方式                                |
+| ----------- | --------------------------- | -------- | --------------------------------------- |
+| `SESSDATA`  | 登录会话令牌                | **是**   | 浏览器 DevTools → Application → Cookies |
+| `bili_jct`  | CSRF 防护令牌（表单提交用） | 否       | 同上                                    |
+| `buvid3`    | 浏览器唯一标识符            | 否       | 同上                                    |
 
 > ⚠️ `SESSDATA` 是 HttpOnly 的，无法通过 `document.cookie` 读取。
 > 请登录创作中心，打开 DevTools → Network 并刷新页面，选择发送到 `api.bilibili.com` 的已登录请求，在 Request Headers 中复制 Cookie 的完整值（不含 `Cookie:` 前缀）。
@@ -180,33 +180,33 @@ def sign_wbi_params(params: dict, mixin_key: str) -> dict:
 
 ### 3.1 使用中的接口（最终方案）
 
-| 接口 | 方法 | 用途 | 是否需要 WBI |
-|------|------|------|-------------|
-| `/x/web-interface/nav` | GET | 获取 WBI 签名密钥 + 用户信息 | ❌ |
-| `/x/dynamic/feed/draw/upload_bfs` | POST | **Opus 图片上传**（首选） | **✅** |
-| `/x/dynamic/feed/article/draft/add` | POST | **保存/更新专栏草稿** | **✅** |
-| `/x/dynamic/feed/edit/opus` | POST | **编辑已发布专栏文章** | **✅** |
-| `/x/article/creative/article/view` | GET | 获取已发布文章详情 | ✅ |
-| `/x/article/edit_times` | GET | 查询文章可编辑次数 | ✅ |
-| `/x/article/creative/article/upcover` | POST | 图片上传（备用方案） | ❌ |
+| 接口                                  | 方法 | 用途                         | 是否需要 WBI |
+| ------------------------------------- | ---- | ---------------------------- | ------------ |
+| `/x/web-interface/nav`                | GET  | 获取 WBI 签名密钥 + 用户信息 | ❌            |
+| `/x/dynamic/feed/draw/upload_bfs`     | POST | **Opus 图片上传**（首选）    | **✅**        |
+| `/x/dynamic/feed/article/draft/add`   | POST | **保存/更新专栏草稿**        | **✅**        |
+| `/x/dynamic/feed/edit/opus`           | POST | **编辑已发布专栏文章**       | **✅**        |
+| `/x/article/creative/article/view`    | GET  | 获取已发布文章详情           | ✅            |
+| `/x/article/edit_times`               | GET  | 查询文章可编辑次数           | ✅            |
+| `/x/article/creative/article/upcover` | POST | 图片上传（备用方案）         | ❌            |
 
 ### 3.2 已验证但未使用的接口
 
-| 接口 | 方法 | 用途 | 备注 |
-|------|------|------|------|
-| `/x/dynamic/feed/draw/transfer_image` | POST | 从外部 URL 搬运图片到 B站图床 | 可用于网络图片转存 |
-| `/x/dynamic/feed/create/opus_init_check` | GET | 获取 Opus 发布权限和配置 | 可获取最大标题长度(50)、最大正文(10万)、最大图片数(100)等 |
-| `/x/article/creative/draft/list` | GET | 获取草稿列表 | 可列出所有草稿 |
-| `/x/kv-frontend/namespace/data` | GET | 获取 KV 存储配置 | 编辑器内部使用 |
-| `/x/web-frontend/risk/config` | GET | 获取风控配置 | 获取验证码 SDK 地址 |
+| 接口                                     | 方法 | 用途                          | 备注                                                      |
+| ---------------------------------------- | ---- | ----------------------------- | --------------------------------------------------------- |
+| `/x/dynamic/feed/draw/transfer_image`    | POST | 从外部 URL 搬运图片到 B站图床 | 可用于网络图片转存                                        |
+| `/x/dynamic/feed/create/opus_init_check` | GET  | 获取 Opus 发布权限和配置      | 可获取最大标题长度(50)、最大正文(10万)、最大图片数(100)等 |
+| `/x/article/creative/draft/list`         | GET  | 获取草稿列表                  | 可列出所有草稿                                            |
+| `/x/kv-frontend/namespace/data`          | GET  | 获取 KV 存储配置              | 编辑器内部使用                                            |
+| `/x/web-frontend/risk/config`            | GET  | 获取风控配置                  | 获取验证码 SDK 地址                                       |
 
 ### 3.3 其他发现的接口
 
-| 接口 | 方法 | 用途 | 来源 |
-|------|------|------|------|
-| `/x/v2/dynamic/sunflower/parse` | POST | 解析文本中的链接/卡片 | 编辑器 JS 源码 |
-| `//member.bilibili.com/x/web/white` | GET | 白名单检查 | 编辑器启动时调用 |
-| `//member.bilibili.com/platform/upload-manager/opus` | - | Opus 上传管理器页面 | 编辑器 JS 中引用的路径 |
+| 接口                                                 | 方法 | 用途                  | 来源                   |
+| ---------------------------------------------------- | ---- | --------------------- | ---------------------- |
+| `/x/v2/dynamic/sunflower/parse`                      | POST | 解析文本中的链接/卡片 | 编辑器 JS 源码         |
+| `//member.bilibili.com/x/web/white`                  | GET  | 白名单检查            | 编辑器启动时调用       |
+| `//member.bilibili.com/platform/upload-manager/opus` | -    | Opus 上传管理器页面   | 编辑器 JS 中引用的路径 |
 
 ---
 
@@ -239,35 +239,35 @@ def sign_wbi_params(params: dict, mixin_key: str) -> dict:
 
 ### 4.2 段落类型一览
 
-| `para_type` | 类型 | 说明 |
-|:---:|------|------|
-| `1` | 文本段落 | 普通正文（含内联节点） |
-| `2` | 图片段落 | `pic.pics[]` 数组 |
-| `3` | 分隔线 | `line.line_type=1` |
-| `4` | 引用段落 | 块引用，同组共享 `combine_hash` |
-| `5` | 有序列表 | `list_format.theme`: arabic_num / lower_letter / roman_num |
-| `6` | 无序列表 | `list_format.theme`: dot / square / circle |
-| `8` | 代码块 | `code.lang` + `code.content` |
-| `9` | 标题段落 | `heading_type: 1/2/3` |
+| `para_type` | 类型     | 说明                                                       |
+| :---------: | -------- | ---------------------------------------------------------- |
+|     `1`     | 文本段落 | 普通正文（含内联节点）                                     |
+|     `2`     | 图片段落 | `pic.pics[]` 数组                                          |
+|     `3`     | 分隔线   | `line.line_type=1`                                         |
+|     `4`     | 引用段落 | 块引用，同组共享 `combine_hash`                            |
+|     `5`     | 有序列表 | `list_format.theme`: arabic_num / lower_letter / roman_num |
+|     `6`     | 无序列表 | `list_format.theme`: dot / square / circle                 |
+|     `8`     | 代码块   | `code.lang` + `code.content`                               |
+|     `9`     | 标题段落 | `heading_type: 1/2/3`                                      |
 
 ### 4.3 节点类型一览
 
-| `node_type` | 类型 | 说明 |
-|:---:|------|------|
-| `1` | 文本节点 | `word` 包含文字和样式 |
-| `2` | 表情 | `emote.raw_text`，如 `[doge_金箍]` |
-| `4` | 超链接 | `link` 包含 URL 和展示文字 |
-| `5` | 公式 | `formula.latex_content` |
+| `node_type` | 类型     | 说明                               |
+| :---------: | -------- | ---------------------------------- |
+|     `1`     | 文本节点 | `word` 包含文字和样式              |
+|     `2`     | 表情     | `emote.raw_text`，如 `[doge_金箍]` |
+|     `4`     | 超链接   | `link` 包含 URL 和展示文字         |
+|     `5`     | 公式     | `formula.latex_content`            |
 
 ### 4.4 字体级别
 
-| `font_level` | 用途 | `font_size` |
-|--------------|------|:-----------:|
-| `"xxLarge"` | 一级标题 | `24` |
-| `"xLarge"` | 二级标题 | `22` |
-| `"large"` | 三级标题 | `20` |
-| `"regular"` | 普通正文 | `17` |
-| `"small"` | 极小字号 | `13` |
+| `font_level` | 用途     | `font_size` |
+| ------------ | -------- | :---------: |
+| `"xxLarge"`  | 一级标题 |    `24`     |
+| `"xLarge"`   | 二级标题 |    `22`     |
+| `"large"`    | 三级标题 |    `20`     |
+| `"regular"`  | 普通正文 |    `17`     |
+| `"small"`    | 极小字号 |    `13`     |
 
 ### 4.5 文本样式
 
@@ -299,16 +299,16 @@ def sign_wbi_params(params: dict, mixin_key: str) -> dict:
 
 当 Opus 内容被编辑器渲染后（仅供理解编辑器行为）：
 
-| Opus 段落 | 渲染的 HTML |
-|-----------|-------------|
-| 文本段落 | `<p><span>...</span></p>` |
-| H1 标题 | `<p><span><strong>标题</strong></span></p>` |
-| 图片段落 | `<div class="eva3-enhanced-image-wrapper"><figure><img src="..."></figure></div>` |
-| 分隔线 | `<hr>` |
-| 加粗 | `<strong>` |
-| 斜体 | `<em>` |
-| 删除线 | `<s>` |
-| 行内代码 | `<span style="color: rgb(199, 37, 78);">` |
+| Opus 段落 | 渲染的 HTML                                                                       |
+| --------- | --------------------------------------------------------------------------------- |
+| 文本段落  | `<p><span>...</span></p>`                                                         |
+| H1 标题   | `<p><span><strong>标题</strong></span></p>`                                       |
+| 图片段落  | `<div class="eva3-enhanced-image-wrapper"><figure><img src="..."></figure></div>` |
+| 分隔线    | `<hr>`                                                                            |
+| 加粗      | `<strong>`                                                                        |
+| 斜体      | `<em>`                                                                            |
+| 删除线    | `<s>`                                                                             |
+| 行内代码  | `<span style="color: rgb(199, 37, 78);">`                                         |
 
 ---
 
@@ -330,7 +330,7 @@ GET https://api.bilibili.com/x/web-interface/nav
   "data": {
     "isLogin": true,
     "uname": "用户名",
-    "mid": 1349647254,
+    "mid": 10000000,
     "level_info": {
       "current_level": 3,
       "current_exp": 1605,
@@ -362,21 +362,21 @@ POST https://api.bilibili.com/x/dynamic/feed/draw/upload_bfs
 **认证：** 需要 Cookie + WBI 签名 + CSRF
 
 **查询参数：**
-| 参数 | 值 |
-|------|-----|
-| `csrf` | Cookie 中的 `bili_jct` |
-| `w_rid` | WBI 签名 |
-| `wts` | WBI 时间戳 |
-| `biz` | `"new_dyn"` |
-| `category` | `"daily"` |
+| 参数       | 值                     |
+| ---------- | ---------------------- |
+| `csrf`     | Cookie 中的 `bili_jct` |
+| `w_rid`    | WBI 签名               |
+| `wts`      | WBI 时间戳             |
+| `biz`      | `"new_dyn"`            |
+| `category` | `"daily"`              |
 
 **请求体：** `multipart/form-data`
-| 字段 | 说明 |
-|------|------|
-| `file_up` | 图片文件（支持 jpg/png/gif/webp/bmp） |
-| `biz` | `"new_dyn"` |
-| `category` | `"daily"` |
-| `csrf` | Cookie 中的 `bili_jct` |
+| 字段       | 说明                                  |
+| ---------- | ------------------------------------- |
+| `file_up`  | 图片文件（支持 jpg/png/gif/webp/bmp） |
+| `biz`      | `"new_dyn"`                           |
+| `category` | `"daily"`                             |
+| `csrf`     | Cookie 中的 `bili_jct`                |
 
 **响应：**
 ```json
@@ -418,11 +418,11 @@ POST https://api.bilibili.com/x/article/creative/article/upcover
 **认证：** 需要 Cookie + CSRF（不需要 WBI 签名）
 
 **请求体：** `multipart/form-data`
-| 字段 | 说明 |
-|------|------|
-| `binary` | 图片文件 |
-| `cover` | 留空字符串 `""` |
-| `csrf` | Cookie 中的 `bili_jct` |
+| 字段     | 说明                   |
+| -------- | ---------------------- |
+| `binary` | 图片文件               |
+| `cover`  | 留空字符串 `""`        |
+| `csrf`   | Cookie 中的 `bili_jct` |
 
 **响应：**
 ```json
@@ -487,11 +487,11 @@ POST https://api.bilibili.com/x/dynamic/feed/article/draft/add
 **认证：** 需要 Cookie + WBI 签名 + CSRF
 
 **查询参数：**
-| 参数 | 说明 |
-|------|------|
-| `csrf` | Cookie 中的 `bili_jct` |
-| `w_rid` | WBI 签名 |
-| `wts` | WBI 时间戳 |
+| 参数    | 说明                   |
+| ------- | ---------------------- |
+| `csrf`  | Cookie 中的 `bili_jct` |
+| `w_rid` | WBI 签名               |
+| `wts`   | WBI 时间戳             |
 
 **请求体结构：**
 ```json
@@ -525,24 +525,24 @@ POST https://api.bilibili.com/x/dynamic/feed/article/draft/add
 
 **`arg` 字段详解：**
 
-| 字段 | 类型 | 说明 | 首次创建 | 更新草稿 |
-|------|------|------|:--------:|:--------:|
-| `type` | number | 固定为 `4`（文章类型） | ✅ | ✅ |
-| `template_id` | number | 固定为 `1` | ✅ | ✅ |
-| `category_id` | number | 分区 ID（默认 `15`=生活） | ✅ | ✅ |
-| `article_id` | number | 草稿 ID | ❌ | ✅ |
-| `title` | string | 文章标题（≤50字） | ✅ | ✅ |
-| `private_pub` | number | 可见性：`2`=公开, `1`=仅自己可见 | ✅ | ✅ |
-| `reprint` | number | 转载：`1`=禁止转载, `0`=允许转载 | ✅ | ✅ |
-| `original` | number | 原创声明：`0`=不声明, `1`=声明原创 | ✅ | ✅ |
-| `list_id` | number | 文集 ID（`0`=不加入文集） | ✅ | ✅ |
-| `comment_selected` | number | 精选评论：`0`=关闭, `1`=开启 | ✅ | ✅ |
-| `up_closed_reply` | number | 关闭评论：`0`=允许, `1`=关闭 | ✅ | ✅ |
-| `timer_pub_time` | number | 定时发布时间戳（`0`=立即发布） | ✅ | ✅ |
-| `only_fans_level` | number | 仅粉丝可见等级（`0`=不限） | ✅ | ✅ |
-| `only_fans_dnd` | number | 粉丝可见免打扰 | ✅ | ✅ |
-| `summary` | string | 摘要（纯文本，前 250 字） | ✅ | ✅ |
-| `opus` | object | Opus 内容体（见下文） | ✅ | ✅ |
+| 字段               | 类型   | 说明                               | 首次创建 | 更新草稿 |
+| ------------------ | ------ | ---------------------------------- | :------: | :------: |
+| `type`             | number | 固定为 `4`（文章类型）             |    ✅     |    ✅     |
+| `template_id`      | number | 固定为 `1`                         |    ✅     |    ✅     |
+| `category_id`      | number | 分区 ID（默认 `15`=生活）          |    ✅     |    ✅     |
+| `article_id`       | number | 草稿 ID                            |    ❌     |    ✅     |
+| `title`            | string | 文章标题（≤50字）                  |    ✅     |    ✅     |
+| `private_pub`      | number | 可见性：`2`=公开, `1`=仅自己可见   |    ✅     |    ✅     |
+| `reprint`          | number | 转载：`1`=禁止转载, `0`=允许转载   |    ✅     |    ✅     |
+| `original`         | number | 原创声明：`0`=不声明, `1`=声明原创 |    ✅     |    ✅     |
+| `list_id`          | number | 文集 ID（`0`=不加入文集）          |    ✅     |    ✅     |
+| `comment_selected` | number | 精选评论：`0`=关闭, `1`=开启       |    ✅     |    ✅     |
+| `up_closed_reply`  | number | 关闭评论：`0`=允许, `1`=关闭       |    ✅     |    ✅     |
+| `timer_pub_time`   | number | 定时发布时间戳（`0`=立即发布）     |    ✅     |    ✅     |
+| `only_fans_level`  | number | 仅粉丝可见等级（`0`=不限）         |    ✅     |    ✅     |
+| `only_fans_dnd`    | number | 粉丝可见免打扰                     |    ✅     |    ✅     |
+| `summary`          | string | 摘要（纯文本，前 250 字）          |    ✅     |    ✅     |
+| `opus`             | object | Opus 内容体（见下文）              |    ✅     |    ✅     |
 
 **`opus` 字段详解：**
 
@@ -556,11 +556,11 @@ POST https://api.bilibili.com/x/dynamic/feed/article/draft/add
 }
 ```
 
-| 字段 | 说明 |
-|------|------|
-| `opus_source` | 固定为 `2`（Web 编辑器） |
-| `title` | 与 `arg.title` 相同 |
-| `content.paragraphs` | 段落数组（见第4章） |
+| 字段                 | 说明                     |
+| -------------------- | ------------------------ |
+| `opus_source`        | 固定为 `2`（Web 编辑器） |
+| `title`              | 与 `arg.title` 相同      |
+| `content.paragraphs` | 段落数组（见第4章）      |
 
 **响应：**
 ```json
@@ -589,12 +589,12 @@ GET https://api.bilibili.com/x/dynamic/feed/create/opus_init_check
 ```
 
 **查询参数：**
-| 参数 | 说明 |
-|------|------|
-| `web_location` | `"333.40205"` 或 `"333.1305"` |
-| `editor_version` | `"eva3-3.0.0"`（可选） |
-| `w_rid` | WBI 签名（可选） |
-| `wts` | WBI 时间戳（可选） |
+| 参数             | 说明                          |
+| ---------------- | ----------------------------- |
+| `web_location`   | `"333.40205"` 或 `"333.1305"` |
+| `editor_version` | `"eva3-3.0.0"`（可选）        |
+| `w_rid`          | WBI 签名（可选）              |
+| `wts`            | WBI 时间戳（可选）            |
 
 **响应：**
 ```json
@@ -631,12 +631,12 @@ GET https://api.bilibili.com/x/article/creative/draft/list
 ```
 
 **查询参数：**
-| 参数 | 说明 |
-|------|------|
-| `pn` | 页码（从 1 开始） |
-| `ps` | 每页数量（最大 50） |
-| `keyword` | 搜索关键字 |
-| `web_location` | `"333.40205"` |
+| 参数           | 说明                |
+| -------------- | ------------------- |
+| `pn`           | 页码（从 1 开始）   |
+| `ps`           | 每页数量（最大 50） |
+| `keyword`      | 搜索关键字          |
+| `web_location` | `"333.40205"`       |
 
 **响应：**
 ```json
@@ -660,32 +660,32 @@ GET https://api.bilibili.com/x/article/creative/draft/list
 
 ## 6. 附录：常用分区 ID
 
-| ID | 分区 |
-|:--:|------|
-| `2` | 动画 |
-| `3` | 音乐 |
-| `4` | 游戏 |
-| `5` | 娱乐 |
-| `15` | 生活（默认） |
-| `17` | 单机游戏 |
-| `22` | 影视 |
-| `26` | 时尚 |
-| `36` | 知识 |
-| `72` | 美食 |
+|  ID   | 分区         |
+| :---: | ------------ |
+|  `2`  | 动画         |
+|  `3`  | 音乐         |
+|  `4`  | 游戏         |
+|  `5`  | 娱乐         |
+| `15`  | 生活（默认） |
+| `17`  | 单机游戏     |
+| `22`  | 影视         |
+| `26`  | 时尚         |
+| `36`  | 知识         |
+| `72`  | 美食         |
 
 ---
 
 ## 7. 附录：错误码速查
 
-| 错误码 | 含义 | 处理建议 |
-|:-----:|------|----------|
-| `0` | 成功 | - |
-| `-101` | 账号未登录 | Cookie 无效/过期，重新获取 |
-| `-111` | CSRF 校验失败 | `bili_jct` 不匹配或缺失 |
-| `-304` | 未修改 | 数据相同，无需更新 |
-| `37130` | 内容包含非法图片链接 | 图片 URL 需使用 HTTPS |
-| `47015` | 当前版本较低 | 草稿已在新版本中被编辑，需重新创建 |
-| `47011` | 参数错误 | 检查请求参数字段 |
+| 错误码  | 含义                 | 处理建议                           |
+| :-----: | -------------------- | ---------------------------------- |
+|   `0`   | 成功                 | -                                  |
+| `-101`  | 账号未登录           | Cookie 无效/过期，重新获取         |
+| `-111`  | CSRF 校验失败        | `bili_jct` 不匹配或缺失            |
+| `-304`  | 未修改               | 数据相同，无需更新                 |
+| `37130` | 内容包含非法图片链接 | 图片 URL 需使用 HTTPS              |
+| `47015` | 当前版本较低         | 草稿已在新版本中被编辑，需重新创建 |
+| `47011` | 参数错误             | 检查请求参数字段                   |
 
 ---
 

@@ -17,3 +17,7 @@ class Converter(ABC):
     async def convert(self) -> Document:
         """执行转换，返回平台无关的 IR Document。"""
         ...
+
+    async def close(self) -> None:
+        """释放转换器持有的外部资源（默认无操作）。"""
+        return

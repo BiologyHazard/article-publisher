@@ -12,7 +12,6 @@ lazy from article_publisher.platforms.bilibili.models import (
     BlockquoteParagraph,
     CodeParagraph,
     DividerParagraph,
-    EmoteNode,
     FormulaNode,
     HeadingParagraph,
     ImageParagraph,
@@ -38,9 +37,6 @@ _ALIGN_TO_OPUS: dict[Alignment, int] = {
 # =============================================================================
 
 FONT_SIZE_REGULAR = 17
-FONT_SIZE_H1 = 24
-FONT_SIZE_H2 = 22
-FONT_SIZE_H3 = 20
 
 
 # =============================================================================
@@ -85,23 +81,6 @@ def make_text_node(
     return node
 
 
-def make_heading_node(words: str, level: int) -> TextNode:
-    """构造标题节点。"""
-    cfg = _HEADING_FONT_CFG.get(level, _HEADING_FONT_CFG[3])
-    node: TextNode = {
-        "node_type": 1,
-        "word": {
-            "words": words,
-            "font_size": cfg["font_size"],
-            "color": "",
-            "dark_color": "",
-            "style": {},
-            "font_level": cfg["font_level"],
-        },
-    }
-    return node
-
-
 class _HeadingFontCfg(TypedDict):
     """标题级别字体配置。"""
 
@@ -114,7 +93,7 @@ _HEADING_FONT_CFG: dict[int, _HeadingFontCfg] = {
     2: {"font_size": 22, "font_level": "xLarge"},
     3: {"font_size": 20, "font_level": "large"},
 }
-"""标题级别对应的字体配置。"""
+"""标题级别对应的字体配置；H4+ 已由调用方回退为粗体文本段落，故只包含 1~3。"""
 
 
 def make_link_node(show_text: str, url: str) -> LinkNode:
@@ -148,12 +127,6 @@ def make_formula_node(latex_content: str) -> FormulaNode:
     return node
 
 
-def make_emote_node(raw_text: str) -> EmoteNode:
-    """构造表情节点 (node_type=2)。"""
-    node: EmoteNode = {"node_type": 2, "emote": {"raw_text": raw_text}}
-    return node
-
-
 # =============================================================================
 # 段落构建器
 # =============================================================================
@@ -177,14 +150,12 @@ def make_heading_paragraph(
     nodes: list[InlineNode], level: int, *, align: Alignment = Alignment.LEFT
 ) -> HeadingParagraph:
     """构造标题段落 (para_type=9)，支持富文本内联节点。"""
-    heading_type = {1: 1, 2: 2, 3: 3}.get(level, 3)
-    cfg = _HEADING_FONT_CFG.get(level, _HEADING_FONT_CFG[3])
-    styled_nodes = [_apply_heading_style(n, cfg) for n in nodes]
+    styled_nodes = [_apply_heading_style(n, _HEADING_FONT_CFG[level]) for n in nodes]
     para: HeadingParagraph = {
         "para_type": 9,
         "format": {
             "indent": {"first_line_indent": 0, "indent": 0},
-            "heading_type": heading_type,
+            "heading_type": level,
         },
         "text": {"nodes": styled_nodes},
     }

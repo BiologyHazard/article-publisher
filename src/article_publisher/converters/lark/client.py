@@ -10,7 +10,12 @@ lazy from article_publisher.converters.lark.models.block import (
 
 from .consts import LARK_API_BASE
 from .models.download_media import DownloadMediaResult
-lazy from .models import GetDocumentData, GetDocumentResponse
+lazy from .models import (
+    GetDocumentData,
+    GetDocumentResponse,
+    InternalTenantAccessTokenRequest,
+    InternalTenantAccessTokenResponse,
+)
 
 
 class LarkClient(ClientSessionWithLog):
@@ -29,14 +34,20 @@ class LarkClient(ClientSessionWithLog):
         if self._tenant_token:
             return self._tenant_token
 
+        request: InternalTenantAccessTokenRequest = {
+            "app_id": self._app_id,
+            "app_secret": self._app_secret,
+        }
         resp = await self.request(
             "POST",
             f"{LARK_API_BASE}/auth/v3/tenant_access_token/internal",
-            json={"app_id": self._app_id, "app_secret": self._app_secret},
+            json=request,
         )
-        data = await resp.json()
+        data: InternalTenantAccessTokenResponse = await resp.json()
+        if data["code"] != 0:
+            raise RuntimeError(f"飞书认证失败: [{data['code']}] {data['msg']}")
+
         self._tenant_token = data["tenant_access_token"]
-        assert self._tenant_token is not None
         # _ensure_token 后需设置 Authorization 头部供后续请求使用
         # 使用公开 API headers 修改默认头部
         self.headers["Authorization"] = f"Bearer {self._tenant_token}"

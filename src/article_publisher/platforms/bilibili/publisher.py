@@ -117,16 +117,7 @@ class BiliPublisher:
         self._counter = 0
 
     async def _handle_cover(self, doc: Document) -> None:
-        """处理封面图。
-
-        优先级：
-        1. config.image_urls 已设置（由外部提前上传）
-        2. config.cover_path（CLI --cover 传入）
-        3. doc.cover（由转换器从源文档提取）
-        """
-        if self.config.image_urls:
-            return
-
+        """处理封面图，优先级：``--cover`` 传入的路径 → 转换器提取的 ``doc.cover``。"""
         cover = self.config.cover_path or doc.cover
         if not cover:
             return
