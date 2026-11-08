@@ -12,7 +12,7 @@ uv sync
 # 然后从浏览器请求头复制完整 Cookie，填入 .env 的 BILIBILI_COOKIE
 
 # 3. 运行
-uv run -m article_publisher bilibili markdown articles/article1/main.md
+uv run -m article_publisher publish bilibili markdown articles/article1/main.md
 ```
 
 ---
@@ -50,39 +50,39 @@ Cookie 过期后需重新登录并更新 `BILIBILI_COOKIE`。
 
 ## 运行
 
-平台作为一级子命令，输入源作为二级子命令：
+一级子命令表示能力域（`publish` 发布、`cache` 缓存维护），`publish` 下再按平台、输入源逐级细分；`publish` 可简写为 `p`。平台专属选项写在输入源及其参数之后。
 
 ### B站
 
 ```bash
 # 发布到草稿箱
-uv run -m article_publisher bilibili markdown articles/article1/main.md
-uv run -m article_publisher bilibili lark <document_id>
+uv run -m article_publisher publish bilibili markdown articles/article1/main.md
+uv run -m article_publisher publish bilibili lark <document_id>
 
 # 编辑已发布文章
-uv run -m article_publisher bilibili --edit <文章ID> markdown articles/article1/main.md
+uv run -m article_publisher publish bilibili markdown articles/article1/main.md --edit <文章ID>
 ```
 
 ### 森空岛
 
 ```bash
 # 生成草稿（输出浏览器控制台脚本到 localStorage）
-uv run -m article_publisher skland markdown articles/article1/main.md
-uv run -m article_publisher skland lark <document_id>
+uv run -m article_publisher publish skland markdown articles/article1/main.md
+uv run -m article_publisher publish skland lark <document_id>
 
 # 编辑已发布文章
-uv run -m article_publisher skland --item-id <文章ID> markdown articles/article1/main.md
+uv run -m article_publisher publish skland markdown articles/article1/main.md --item-id <文章ID>
 ```
 
 ### NGA
 
 ```bash
 # 发布新帖
-uv run -m article_publisher nga markdown articles/article1/main.md --fid 516
-uv run -m article_publisher nga lark <document_id> --fid 516
+uv run -m article_publisher publish nga markdown articles/article1/main.md --fid 516
+uv run -m article_publisher publish nga lark <document_id> --fid 516
 
 # 编辑已有帖子
-uv run -m article_publisher nga --tid <帖子ID> markdown articles/article1/main.md --fid 516
+uv run -m article_publisher publish nga markdown articles/article1/main.md --fid 516 --tid <帖子ID>
 ```
 
 ### 缓存管理
@@ -195,13 +195,13 @@ uv run -m article_publisher cache clean   # 删除缓存目录下的全部文件
 ### 命令行选项
 
 ```bash
-uv run -m article_publisher bilibili markdown articles/article1/main.md            # 发布 Markdown
-uv run -m article_publisher bilibili lark <doc_id>                                # 发布飞书云文档
-uv run -m article_publisher bilibili --category 4 lark <doc_id>                   # 指定分区
-uv run -m article_publisher bilibili --private lark <doc_id>                      # 仅自己可见
-uv run -m article_publisher bilibili --update 350908 md articles/article1/main.md # 更新已有草稿
-uv run -m article_publisher bilibili --edit 51387979 md articles/article1/main.md # 编辑已发布 B站 文章
-uv run -m article_publisher skland --item-id 5988027 md articles/article1/main.md # 编辑已发布森空岛文章
+uv run -m article_publisher publish bilibili markdown articles/article1/main.md           # 发布 Markdown
+uv run -m article_publisher publish bilibili lark <doc_id>                                # 发布飞书云文档
+uv run -m article_publisher publish bilibili lark <doc_id> --category 4                   # 指定分区
+uv run -m article_publisher publish bilibili lark <doc_id> --private                      # 仅自己可见
+uv run -m article_publisher publish bilibili md articles/article1/main.md --update 350908 # 更新已有草稿
+uv run -m article_publisher publish bilibili md articles/article1/main.md --edit 51387979 # 编辑已发布 B站 文章
+uv run -m article_publisher publish skland md articles/article1/main.md --item-id 5988027 # 编辑已发布森空岛文章
 ```
 
 ### 编辑已发布文章
@@ -230,10 +230,10 @@ uv run -m article_publisher skland --item-id 5988027 md articles/article1/main.m
 
 ```bash
 # 预览完整更新 JSON，不读取旧文章、不上传图片、不提交更新
-uv run -m article_publisher skland --item-id 5988027 --dry-run markdown articles/article1/main.md
+uv run -m article_publisher publish skland markdown articles/article1/main.md --item-id 5988027 --dry-run
 
 # 更新已有文章，保留原分区
-uv run -m article_publisher skland --item-id 5988027 markdown articles/article1/main.md
+uv run -m article_publisher publish skland markdown articles/article1/main.md --item-id 5988027
 ```
 
 `--dry-run` 使用占位元数据和图片文本占位，因此不能用于验证旧文章元数据或图片上传。
@@ -242,7 +242,7 @@ uv run -m article_publisher skland --item-id 5988027 markdown articles/article1/
 ### 指定分区
 
 ```bash
-uv run -m article_publisher bilibili --category 4 markdown articles/article1/main.md  # 4=游戏
+uv run -m article_publisher publish bilibili markdown articles/article1/main.md --category 4  # 4=游戏
 ```
 
 常用分区：`15`=生活(默认) `4`=游戏 `2`=动画 `3`=音乐 `5`=娱乐 `17`=单机游戏 `36`=知识
@@ -250,7 +250,7 @@ uv run -m article_publisher bilibili --category 4 markdown articles/article1/mai
 ### 设为仅自己可见
 
 ```bash
-uv run -m article_publisher bilibili --private markdown articles/article1/main.md
+uv run -m article_publisher publish bilibili markdown articles/article1/main.md --private
 ```
 
 ### 更新已有草稿（通过 Python API）

@@ -1,14 +1,14 @@
 """
 命令行入口。
 
-平台作为一级子命令，输入源作为二级子命令，平台专属选项各自隔离。
+一级子命令表示能力域：`publish` 负责发布，`cache` 负责本地缓存维护；二级子命令细化到平台、输入源或具体操作。
 
 用法示例:
-  uv run -m article_publisher bilibili markdown articles/article1/main.md
-  uv run -m article_publisher bilibili lark <doc_id>
-  uv run -m article_publisher skland markdown articles/article1/main.md
-  uv run -m article_publisher nga markdown articles/article1/main.md --fid 516
-  uv run -m article_publisher nga lark <doc_id> --fid 516
+  uv run -m article_publisher publish bilibili markdown articles/article1/main.md
+  uv run -m article_publisher publish bilibili lark <doc_id>
+  uv run -m article_publisher publish skland markdown articles/article1/main.md
+  uv run -m article_publisher publish nga markdown articles/article1/main.md --fid 516
+  uv run -m article_publisher publish nga lark <doc_id> --fid 516
   uv run -m article_publisher cache dir
   uv run -m article_publisher cache size
   uv run -m article_publisher cache clean
@@ -22,9 +22,8 @@ from argparse import (
     RawDescriptionHelpFormatter,
     _SubParsersAction,
 )
-from dataclasses import dataclass
 from pathlib import Path
-lazy from collections.abc import Awaitable, Callable
+lazy from collections.abc import Callable
 
 from article_publisher._auth import LARK_REQUIRED_ENV_KEYS, require_auth
 from article_publisher.cache import CACHE_DIR, cache_size, clear_cache, format_size
@@ -45,36 +44,12 @@ LARK_AUTH_HELP = """错误：缺少飞书应用认证配置
 获取方式：在飞书开发者平台 https://open.feishu.cn/app 创建应用后获取。"""
 
 
-@dataclass(frozen=True, slots=True)
-class PlatformCommand:
-    """一个发布平台的命令行适配。"""
-
-    name: str
-    help: str
-    add_options: Callable[[ArgumentParser], None]
-    run: Callable[[Document, Namespace], Awaitable[None]]
-
-
-PLATFORMS: dict[str, PlatformCommand] = {
-    command.name: command
-    for command in (
-        PlatformCommand(
-            "bilibili", "发布到 B站专栏", bilibili_cli.add_options, bilibili_cli.run
-        ),
-        PlatformCommand(
-            "skland", "发布到森空岛", skland_cli.add_options, skland_cli.run
-        ),
-        PlatformCommand("nga", "发布到 NGA", nga_cli.add_options, nga_cli.run),
-    )
+PLATFORM_RUNNERS = {
+    "bilibili": bilibili_cli.run,
+    "skland": skland_cli.run,
+    "nga": nga_cli.run,
 }
-"""全部发布平台，顺序决定帮助信息中的展示顺序。"""
-
-CACHE_ACTION_HELP: dict[str, str] = {
-    "dir": "显示缓存目录路径",
-    "size": "显示缓存文件数量与占用空间",
-    "clean": "删除缓存目录下的全部文件",
-}
-"""缓存子命令及其帮助信息。"""
+"""平台名到发布流程的映射，键需与 `_build_parser` 中的平台子命令保持一致。"""
 
 
 def _build_parser() -> ArgumentParser:
@@ -83,35 +58,86 @@ def _build_parser() -> ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True, title="命令")
 
-    for platform in PLATFORMS.values():
-        platform_parser = subparsers.add_parser(platform.name, help=platform.help)
-        platform.add_options(platform_parser)
-        sources = platform_parser.add_subparsers(
-            dest="source", required=True, title="输入源"
-        )
-        _add_source_parsers(sources)
+    publish = subparsers.add_parser(
+        "publish", aliases=["p"], help="把文章发布到指定平台"
+    )
+    platforms = publish.add_subparsers(dest="platform", required=True, title="发布平台")
+    _add_platform_parser(
+        platforms, "bilibili", "发布到 B站专栏", bilibili_cli.add_options
+    )
+    _add_platform_parser(platforms, "skland", "发布到森空岛", skland_cli.add_options)
+    _add_platform_parser(platforms, "nga", "发布到 NGA", nga_cli.add_options)
 
-    cache = subparsers.add_parser("cache", help="查看或清理已下载图片缓存")
-    cache_subparsers = cache.add_subparsers(
+    cache = subparsers.add_parser("cache", help="查看或清理本地下载缓存")
+    cache_actions = cache.add_subparsers(
         dest="cache_action", required=True, title="缓存操作"
     )
-    for action, help_text in CACHE_ACTION_HELP.items():
-        cache_subparsers.add_parser(action, help=help_text)
+    cache_actions.add_parser("dir", help="显示缓存目录路径")
+    cache_actions.add_parser("size", help="显示缓存文件数量与占用空间")
+    cache_actions.add_parser("clean", help="删除缓存目录下的全部文件")
 
     return parser
 
 
-def _add_source_parsers(subparsers: _SubParsersAction) -> None:
-    """为指定平台创建 markdown 和 lark 两个输入源子命令"""
-    md = subparsers.add_parser(
+def _add_platform_parser(
+    subparsers: _SubParsersAction,
+    name: str,
+    help_text: str,
+    add_options: Callable[[ArgumentParser], None],
+) -> None:
+    """创建平台子命令，平台专属选项挂在输入源子命令上。"""
+    platform = subparsers.add_parser(name, help=help_text)
+    sources = platform.add_subparsers(dest="source", required=True, title="输入源")
+
+    markdown = sources.add_parser(
         "markdown", aliases=["md"], help="从本地 Markdown 文件发布"
     )
-    md.add_argument(
+    add_options(markdown)
+    markdown.add_argument(
         "file", help="Markdown 文件路径（图片路径相对于该文件所在目录解析）"
     )
 
-    lark = subparsers.add_parser("lark", help="从飞书云文档发布")
+    lark = sources.add_parser("lark", help="从飞书云文档发布")
+    add_options(lark)
     lark.add_argument("doc_id", help="飞书云文档 ID")
+
+
+async def _run_publish(args: Namespace) -> None:
+    """执行发布命令：转换输入源，再交由对应平台发布。"""
+    run = PLATFORM_RUNNERS[args.platform]
+    converter = _create_converter(args)
+    try:
+        logger.info("正在转换内容 ...")
+        doc = await converter.convert()
+        logger.info(f"转换完成，共 {len(doc.blocks)} 个段落")
+        logger.info(f"标题: {doc.title}")
+
+        if args.dry_run:
+            _print_document_preview(doc)
+
+        await run(doc, args)
+    finally:
+        # 下载的图片保留在缓存目录中，由 `cache clean` 手动清理
+        await converter.close()
+
+
+def _run_cache(args: Namespace) -> None:
+    """执行缓存命令：按子命令查看或清理缓存。"""
+    match args.cache_action:
+        case "dir":
+            print(CACHE_DIR)
+        case "size":
+            files, total = cache_size()
+            print(f"缓存目录: {CACHE_DIR}")
+            print(f"文件数量: {files}")
+            print(f"占用空间: {format_size(total)}")
+        case "clean":
+            if clear_cache():
+                print(f"已清理缓存: {CACHE_DIR}")
+            else:
+                print(f"缓存目录不存在，无需清理: {CACHE_DIR}")
+        case _:
+            raise CliError(f"未知缓存操作: {args.cache_action}")
 
 
 def _create_converter(args: Namespace) -> Converter:
@@ -147,44 +173,9 @@ def _print_document_preview(doc: Document) -> None:
 
 
 async def cli() -> None:
-    """解析命令行参数并执行对应命令。"""
+    """解析命令行参数并执行对应的一级子命令。"""
     args = _build_parser().parse_args()
-
     if args.command == "cache":
         _run_cache(args)
         return
-
-    platform = PLATFORMS[args.command]
-    converter = _create_converter(args)
-    try:
-        logger.info("正在转换内容 ...")
-        doc = await converter.convert()
-        logger.info(f"转换完成，共 {len(doc.blocks)} 个段落")
-        logger.info(f"标题: {doc.title}")
-
-        if args.dry_run:
-            _print_document_preview(doc)
-
-        await platform.run(doc, args)
-    finally:
-        # 下载的图片保留在缓存目录中，由 `cache clean` 手动清理
-        await converter.close()
-
-
-def _run_cache(args: Namespace) -> None:
-    """执行 cache 子命令：查看或清理缓存。"""
-    match args.cache_action:
-        case "dir":
-            print(CACHE_DIR)
-        case "size":
-            files, total = cache_size()
-            print(f"缓存目录: {CACHE_DIR}")
-            print(f"文件数量: {files}")
-            print(f"占用空间: {format_size(total)}")
-        case "clean":
-            if clear_cache():
-                print(f"已清理缓存: {CACHE_DIR}")
-            else:
-                print(f"缓存目录不存在，无需清理: {CACHE_DIR}")
-        case _:
-            raise CliError(f"未知缓存操作: {args.cache_action}")
+    await _run_publish(args)

@@ -28,15 +28,15 @@ NGA（艾泽拉斯国家地理论坛）是国内最大的游戏社区之一。�
 
 ### 1.2 关键技术点
 
-| 技术点 | 说明 |
-|--------|------|
-| **编码** | NGA 使用 **GBK/GB18030** 编码（`__CHARSET = 'GBK'`） |
-| **发帖接口** | `POST https://bbs.nga.cn/post.php`，application/x-www-form-urlencoded |
-| **图片上传** | `POST https://img8.nga.cn/attach.php?`，multipart/form-data |
-| **API 网关** | `https://bbs.nga.cn/nuke.php?`（用于其他操作） |
-| **图片 CDN** | `https://img.nga.178.com/attachments/` |
-| **认证方式** | Cookie 认证（`ngaPassportCid` + 相关 cookies） |
-| **Auth Token** | 临时上传令牌，从发帖页面 HTML 中提取 |
+| 技术点         | 说明                                                                  |
+| -------------- | --------------------------------------------------------------------- |
+| **编码**       | NGA 使用 **GBK/GB18030** 编码（`__CHARSET = 'GBK'`）                  |
+| **发帖接口**   | `POST https://bbs.nga.cn/post.php`，application/x-www-form-urlencoded |
+| **图片上传**   | `POST https://img8.nga.cn/attach.php?`，multipart/form-data           |
+| **API 网关**   | `https://bbs.nga.cn/nuke.php?`（用于其他操作）                        |
+| **图片 CDN**   | `https://img.nga.178.com/attachments/`                                |
+| **认证方式**   | Cookie 认证（`ngaPassportCid` + 相关 cookies）                        |
+| **Auth Token** | 临时上传令牌，从发帖页面 HTML 中提取                                  |
 
 ---
 
@@ -75,12 +75,12 @@ NGA（艾泽拉斯国家地理论坛）是国内最大的游戏社区之一。�
 
 ### 2.1 核心类
 
-| 类 | 文件 | 职责 |
-|---|------|------|
-| `NgaClient` | `client.py` | HTTP 客户端：Cookie 管理、auth token 获取、图片上传、帖子提交 |
-| `NgaPublisher` | `publisher.py` | IR → BBCode 转换，编排上传和发帖流程 |
-| `NgaPublishConfig` | `publisher.py` | 发布配置（fid、输出路径） |
-| `UploadedImage` | `client.py` | 图片上传结果（URL、attachment 数据） |
+| 类                 | 文件           | 职责                                                          |
+| ------------------ | -------------- | ------------------------------------------------------------- |
+| `NgaClient`        | `client.py`    | HTTP 客户端：Cookie 管理、auth token 获取、图片上传、帖子提交 |
+| `NgaPublisher`     | `publisher.py` | IR → BBCode 转换，编排上传和发帖流程                          |
+| `NgaPublishConfig` | `publisher.py` | 发布配置（fid、输出路径）                                     |
+| `UploadedImage`    | `client.py`    | 图片上传结果（URL、attachment 数据）                          |
 
 ---
 
@@ -187,20 +187,20 @@ auth_token = match.group(1)
 
 **请求字段（按顺序）：**
 
-| 字段名 | 值示例 | 说明 |
-|--------|--------|------|
-| `attachment_file1_dscp` | `(空)` | 图片描述 |
-| `attachment_file1_img` | `1` | 作为图片 |
-| `attachment_file1_auto_size` | `8` | 自动尺寸 |
-| `attachment_file1_watermark` | `(空)` | 水印 |
-| `func` | `upload` | 固定值 |
-| `v2` | `1` | 版本号 |
-| `origin_domain` | `bbs.nga.cn` | 来源域名 |
-| `__output` | `1` | JSON 输出 |
-| `auth` | `03a0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxf8ed` | 认证令牌 |
-| `fid` | `-34587507` | 版块 ID |
-| `attachment_file1_url_utf8_name` | `image%2epng` | URL 编码的原文件名 |
-| `attachment_file1` | `(binary)` | 图片文件 |
+| 字段名                           | 值示例                                    | 说明               |
+| -------------------------------- | ----------------------------------------- | ------------------ |
+| `attachment_file1_dscp`          | `(空)`                                    | 图片描述           |
+| `attachment_file1_img`           | `1`                                       | 作为图片           |
+| `attachment_file1_auto_size`     | `8`                                       | 自动尺寸           |
+| `attachment_file1_watermark`     | `(空)`                                    | 水印               |
+| `func`                           | `upload`                                  | 固定值             |
+| `v2`                             | `1`                                       | 版本号             |
+| `origin_domain`                  | `bbs.nga.cn`                              | 来源域名           |
+| `__output`                       | `1`                                       | JSON 输出          |
+| `auth`                           | `03a0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxf8ed` | 认证令牌           |
+| `fid`                            | `-34587507`                               | 版块 ID            |
+| `attachment_file1_url_utf8_name` | `image%2epng`                             | URL 编码的原文件名 |
+| `attachment_file1`               | `(binary)`                                | 图片文件           |
 
 ### 4.2 完整请求示例
 
@@ -257,11 +257,11 @@ window.script_muti_get_var_store = {
 
 ### 4.4 关键响应字段详解
 
-| 字段 | 说明 | 用途 |
-|------|------|------|
-| `attachments` | 附件信息字符串（~ 分隔的键值对） | 发帖时必须提交 |
-| `attachments_check` | 32 位 MD5 校验和 | 发帖时必须提交，与 auth 绑定 |
-| `url` | 图片相对路径 | 正文中用 `[img]./{url}[/img]` 引用 |
+| 字段                | 说明                             | 用途                               |
+| ------------------- | -------------------------------- | ---------------------------------- |
+| `attachments`       | 附件信息字符串（~ 分隔的键值对） | 发帖时必须提交                     |
+| `attachments_check` | 32 位 MD5 校验和                 | 发帖时必须提交，与 auth 绑定       |
+| `url`               | 图片相对路径                     | 正文中用 `[img]./{url}[/img]` 引用 |
 
 **attachments 字段解析：**
 
@@ -370,24 +370,24 @@ step=2
 
 ### 5.4 参数详解
 
-| 参数 | 必需 | 说明 |
-|------|------|------|
-| `action` | ✅ | `new`=新帖, `reply`=回复, `modify`=编辑, `quote`=引用 |
-| `fid` | ✅ | 版块 ID（如 `-34587507`） |
-| `tid` | 编辑时 | 主题 ID |
-| `post_subject` | ✅ | 标题 |
-| `post_content` | ✅ | **正文（BBCode 格式）** |
-| `attachments` | 有图片时✅ | **tab 分隔的附件信息字符串** |
-| `attachments_check` | 有图片时✅ | **tab 分隔的 MD5 校验和** |
-| `hidden` | | `2`=公开, `1`=版主可见 |
-| `self_reply` | | 仅作者和版主可回复 |
-| `anony` | | `1`=匿名 |
-| `mention` | | @提醒 |
-| `newvote` ~ `newvote_limit` | | 投票相关 |
-| `nojump` | ✅ | `1`=不跳转 |
-| `lite` | ✅ | `htmljs` |
-| `step` | ✅ | `2` |
-| `__inchst` | | `UTF-8`（告知服务器输入为 UTF-8） |
+| 参数                        | 必需      | 说明                                                  |
+| --------------------------- | --------- | ----------------------------------------------------- |
+| `action`                    | ✅         | `new`=新帖, `reply`=回复, `modify`=编辑, `quote`=引用 |
+| `fid`                       | ✅         | 版块 ID（如 `-34587507`）                             |
+| `tid`                       | 编辑时    | 主题 ID                                               |
+| `post_subject`              | ✅         | 标题                                                  |
+| `post_content`              | ✅         | **正文（BBCode 格式）**                               |
+| `attachments`               | 有图片时✅ | **tab 分隔的附件信息字符串**                          |
+| `attachments_check`         | 有图片时✅ | **tab 分隔的 MD5 校验和**                             |
+| `hidden`                    |           | `2`=公开, `1`=版主可见                                |
+| `self_reply`                |           | 仅作者和版主可回复                                    |
+| `anony`                     |           | `1`=匿名                                              |
+| `mention`                   |           | @提醒                                                 |
+| `newvote` ~ `newvote_limit` |           | 投票相关                                              |
+| `nojump`                    | ✅         | `1`=不跳转                                            |
+| `lite`                      | ✅         | `htmljs`                                              |
+| `step`                      | ✅         | `2`                                                   |
+| `__inchst`                  |           | `UTF-8`（告知服务器输入为 UTF-8）                     |
 
 ### 5.5 attachments 和 attachments_check 的拼接规则
 
@@ -567,9 +567,9 @@ result = client.submit_post(
 
 **请求格式:** `application/x-www-form-urlencoded`
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| `tid` | int | 主题 ID |
+| 参数  | 类型 | 说明    |
+| ----- | ---- | ------- |
+| `tid` | int  | 主题 ID |
 
 **完整请求示例：**
 
@@ -596,10 +596,10 @@ tid=46944336
 
 **请求格式:** `application/x-www-form-urlencoded`
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| `tid` | int | 主题 ID |
-| `pid` | int | 楼层 ID（主楼为 `0`） |
+| 参数  | 类型   | 说明                                                            |
+| ----- | ------ | --------------------------------------------------------------- |
+| `tid` | int    | 主题 ID                                                         |
+| `pid` | int    | 楼层 ID（主楼为 `0`）                                           |
 | `aid` | string | 附件标识符，值为附件数据中的 `name` 字段（即 NGA 存储的文件名） |
 
 **完整请求示例：**
@@ -673,10 +673,10 @@ publisher.publish(doc)  # → 先删旧附件，再上传新图，最后 submit_
 
 ### 6.5 HAR 参考文件
 
-| 文件 | 包含的 API |
-|------|-----------|
+| 文件                    | 包含的 API                                          |
+| ----------------------- | --------------------------------------------------- |
 | `docs/nga_编辑帖子.har` | `get_recent_attach`（获取旧附件列表）、编辑页面加载 |
-| `docs/nga_删除附件.har` | `del_attach`（删除单个附件） |
+| `docs/nga_删除附件.har` | `del_attach`（删除单个附件）                        |
 
 ---
 
@@ -684,25 +684,25 @@ publisher.publish(doc)  # → 先删旧附件，再上传新图，最后 submit_
 
 ### 6.1 转换映射表
 
-| IR 类型 | NGA BBCode | 说明 |
-|---------|-----------|------|
-| `Heading` (H1) | `[size=150%][b]标题[/b][/size]` | NGA 无独立标题标签 |
-| `Heading` (H2) | `[size=130%][b]标题[/b][/size]` | |
-| `Heading` (H3) | `[size=120%][b]标题[/b][/size]` | |
-| `Paragraph` | 纯文本 | 段落间空行分隔 |
-| `TextRun.bold` | `[b]text[/b]` | |
-| `TextRun.italic` | `[i]text[/i]` | 注意长度限制 |
-| `TextRun.underline` | `[u]text[/u]` | |
-| `TextRun.strikethrough` | `[del]text[/del]` | |
-| `TextRun.color` | `[color=预设颜色名称]text[/color]` | 所有来源颜色统一优先保持色相，再比较 Oklab 距离 |
-| `TextRun.inline_code` | `[color=crimson]text[/color]` | 默认来源色 `#c7254e` 映射后的结果 |
-| `TextRun.link_url` | `[url=url]text[/url]` | |
-| `ImageBlock` | `[img]./mon_xxx/...[/img]` | 先上传，后引用 |
-| `CodeBlock` | `[code]\ncontent\n[/code]` | |
-| `Blockquote` | `[quote]\n...\n[/quote]` | 支持嵌套 |
-| `OrderedList` | `[list=1]\n[*]item[/*]\n[/list]` | |
-| `UnorderedList` | `[list]\n[*]item[/*]\n[/list]` | |
-| `Divider` | `[h][/h]` | |
+| IR 类型                 | NGA BBCode                         | 说明                                            |
+| ----------------------- | ---------------------------------- | ----------------------------------------------- |
+| `Heading` (H1)          | `[size=150%][b]标题[/b][/size]`    | NGA 无独立标题标签                              |
+| `Heading` (H2)          | `[size=130%][b]标题[/b][/size]`    |                                                 |
+| `Heading` (H3)          | `[size=120%][b]标题[/b][/size]`    |                                                 |
+| `Paragraph`             | 纯文本                             | 段落间空行分隔                                  |
+| `TextRun.bold`          | `[b]text[/b]`                      |                                                 |
+| `TextRun.italic`        | `[i]text[/i]`                      | 注意长度限制                                    |
+| `TextRun.underline`     | `[u]text[/u]`                      |                                                 |
+| `TextRun.strikethrough` | `[del]text[/del]`                  |                                                 |
+| `TextRun.color`         | `[color=预设颜色名称]text[/color]` | 所有来源颜色统一优先保持色相，再比较 Oklab 距离 |
+| `TextRun.inline_code`   | `[color=crimson]text[/color]`      | 默认来源色 `#c7254e` 映射后的结果               |
+| `TextRun.link_url`      | `[url=url]text[/url]`              |                                                 |
+| `ImageBlock`            | `[img]./mon_xxx/...[/img]`         | 先上传，后引用                                  |
+| `CodeBlock`             | `[code]\ncontent\n[/code]`         |                                                 |
+| `Blockquote`            | `[quote]\n...\n[/quote]`           | 支持嵌套                                        |
+| `OrderedList`           | `[list=1]\n[*]item[/*]\n[/list]`   |                                                 |
+| `UnorderedList`         | `[list]\n[*]item[/*]\n[/list]`     |                                                 |
+| `Divider`               | `[h][/h]`                          |                                                 |
 
 ### 6.2 BBCode 生成示例
 
@@ -896,12 +896,12 @@ document.cookie
 
 ### 9.5 常见错误码
 
-| 错误 | 原因 |
-|------|------|
-| 你没有登录 | Cookie 过期或无效 |
-| attach checksum error | auth token 与校验和不匹配 |
-| 内容过短或过长(6~65530 byte) | 编码问题（GBK vs UTF-8） |
-| 发贴完毕 | **实际上是成功！** |
+| 错误                         | 原因                      |
+| ---------------------------- | ------------------------- |
+| 你没有登录                   | Cookie 过期或无效         |
+| attach checksum error        | auth token 与校验和不匹配 |
+| 内容过短或过长(6~65530 byte) | 编码问题（GBK vs UTF-8）  |
+| 发贴完毕                     | **实际上是成功！**        |
 
 ---
 
