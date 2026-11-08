@@ -1,10 +1,10 @@
 from enum import Enum
 
+from article_publisher.cache import CACHE_DIR
 from article_publisher.document import Alignment
-from article_publisher.log import ROOT_DIR as _PROJECT_ROOT
 
-# 临时图片目录（项目根目录内，用完清除）
-TEMP_IMAGES_DIR = _PROJECT_ROOT / "temp" / "lark_images"
+# 飞书文档图片缓存目录（发布后保留，由 `cache` 命令管理）
+IMAGES_CACHE_DIR = CACHE_DIR / "lark_images"
 LARK_API_BASE = "https://open.feishu.cn/open-apis"
 
 

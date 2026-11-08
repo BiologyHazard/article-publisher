@@ -1,4 +1,3 @@
-import shutil
 import urllib.parse
 lazy from pathlib import Path
 
@@ -27,8 +26,8 @@ from .consts import (
     ALIGN_KEY_MAP,
     CODE_LANG_MAP,
     HEADING_LEVELS,
+    IMAGES_CACHE_DIR,
     LARK_TO_ALIGNMENT,
-    TEMP_IMAGES_DIR,
     TEXT_COLOR_MAP,
     BlockType,
 )
@@ -37,6 +36,7 @@ lazy from .models import Document as LarkDocument
 lazy from .models import Text as LarkText
 lazy from .models import TextElement as LarkTextElement
 lazy from .models import TextRun as LarkTextRun
+lazy from .models.download_media import DownloadMediaResult
 
 
 class LarkDocxConverter(Converter):
@@ -84,16 +84,23 @@ class LarkDocxConverter(Converter):
 
         try:
             logger.info(f"正在下载封面图: token={cover_token}")
-            image = await self._client.download_media(cover_token)
-            TEMP_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-            filename = image.filename or f"{cover_token}.png"
-            temp_path = TEMP_IMAGES_DIR / filename
-            temp_path.write_bytes(image.buffer)
-            logger.info(f"  → 封面下载完成: {temp_path}")
-            return temp_path
+            media = await self._client.download_media(cover_token)
+            cover_path = self._write_cache_file(cover_token, media)
+            logger.info(f"  → 封面下载完成: {cover_path}")
+            return cover_path
         except Exception as e:
             logger.warning(f"封面下载失败: {e}")
             return None
+
+    @staticmethod
+    def _write_cache_file(token: str, media: DownloadMediaResult) -> Path:
+        """将下载的媒体写入图片缓存目录，返回本地文件路径。"""
+        IMAGES_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        # 用 token 前缀确保文件名唯一，避免同名文件覆盖
+        filename = f"{token}_{media.filename}" if media.filename else f"{token}.png"
+        path = IMAGES_CACHE_DIR / filename
+        path.write_bytes(media.buffer)
+        return path
 
     async def _load_blocks(self) -> None:
         """分页加载所有块，构建 block_id → block_dict 映射。"""
@@ -321,7 +328,7 @@ class LarkDocxConverter(Converter):
         return CodeBlock(language=lang, content=content)
 
     async def _convert_image(self, block: LarkBlock) -> ImageBlock | None:
-        """处理图片 (block_type=27)：下载到项目内临时目录。"""
+        """处理图片 (block_type=27)：下载到图片缓存目录。"""
         image = block.get("image")
         if not image:
             return None
@@ -333,15 +340,12 @@ class LarkDocxConverter(Converter):
 
         try:
             logger.info(f"正在下载图片: token={token}")
-            image = await self._client.download_media(token)
-            # 存到项目内临时目录
-            TEMP_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-            # 用 token 前缀确保文件名唯一，避免同名文件覆盖
-            filename = f"{token}_{image.filename}" if image.filename else f"{token}.png"
-            tmp_path = TEMP_IMAGES_DIR / filename
-            tmp_path.write_bytes(image.buffer)
-            logger.info(f"  → 下载完成: {tmp_path}")
-            return ImageBlock(source=tmp_path, alt_text=filename, caption=caption)
+            media = await self._client.download_media(token)
+            cache_path = self._write_cache_file(token, media)
+            logger.info(f"  → 下载完成: {cache_path}")
+            return ImageBlock(
+                source=cache_path, alt_text=cache_path.name, caption=caption
+            )
         except Exception as e:
             logger.error(f"  [错误] 图片下载失败: {e}")
             return None
@@ -431,10 +435,3 @@ class LarkDocxConverter(Converter):
 
     async def close(self) -> None:
         await self._client.close()
-
-
-def cleanup_temp_images() -> None:
-    """清理飞书转换器产生的临时图片目录。"""
-    if TEMP_IMAGES_DIR.exists():
-        shutil.rmtree(TEMP_IMAGES_DIR)
-        logger.info(f"已清理临时图片: {TEMP_IMAGES_DIR}")
